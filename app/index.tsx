@@ -1,6 +1,6 @@
 import {
   View, Text, TouchableOpacity, ScrollView, Image,
-  StyleSheet, ActivityIndicator, Alert,
+  StyleSheet, ActivityIndicator, Alert, Animated,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -208,6 +208,18 @@ export default function HomeScreen() {
     ? imageDescription.replace(/^この(教材|文書|画像)は[、,]?\s*/u, '').split('。')[0].slice(0, 36)
     : ''
 
+  const chipScales = useRef<Record<string, Animated.Value>>(
+    Object.fromEntries(STUDENTS.map((s) => [s.id, new Animated.Value(1)]))
+  ).current
+
+  const animateChip = (id: string) => {
+    const scale = chipScales[id]
+    Animated.sequence([
+      Animated.spring(scale, { toValue: 0.88, useNativeDriver: true, speed: 50, bounciness: 0 }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 12 }),
+    ]).start()
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -279,6 +291,8 @@ export default function HomeScreen() {
         {/* ── 状態3: 分析済み ── */}
         {hasContent && (
           <>
+            {/* 教材カード + 教材を見る を1ユニット（タイトな間隔） */}
+            <View style={styles.materialUnit}>
             {/* 選択中教材カード */}
             <View style={styles.contentCard}>
               <View style={styles.contentCardHeader}>
@@ -319,27 +333,32 @@ export default function HomeScreen() {
               </TouchableOpacity>
               <Text style={styles.actionNote}>授業中でも確認できます</Text>
             </View>
+            </View>{/* /materialUnit */}
 
-            {/* 授業セクション */}
-            <View style={styles.chatSection}>
+            {/* 授業セクション（セクションブレーク分余白を追加） */}
+            <View style={[styles.chatSection, { marginTop: 8 }]}>
               <Text style={styles.chatSectionLabel}>授業する生徒を選ぶ</Text>
               <View style={styles.studentChips}>
                 {STUDENTS.map((s) => {
                   const isSel = selectedStudentId === s.id
                   return (
-                    <TouchableOpacity
-                      key={s.id}
-                      style={[
-                        styles.studentChip,
-                        isSel && { borderColor: s.color, backgroundColor: s.color + '15' },
-                      ]}
-                      onPress={() => setSelectedStudentId(isSel ? null : s.id)}
-                    >
-                      <Image source={{ uri: s.avatar }} style={styles.studentChipAvatar} />
-                      <Text style={[styles.studentChipName, isSel && { color: s.color, fontWeight: '700' }]}>
-                        {s.name}
-                      </Text>
-                    </TouchableOpacity>
+                    <Animated.View key={s.id} style={{ flex: 1, transform: [{ scale: chipScales[s.id] }] }}>
+                      <TouchableOpacity
+                        style={[
+                          styles.studentChip,
+                          isSel && { borderColor: s.color, backgroundColor: s.color + '15' },
+                        ]}
+                        onPress={() => {
+                          animateChip(s.id)
+                          setSelectedStudentId(isSel ? null : s.id)
+                        }}
+                      >
+                        <Image source={{ uri: s.avatar }} style={styles.studentChipAvatar} />
+                        <Text style={[styles.studentChipName, isSel && { color: s.color, fontWeight: '700' }]}>
+                          {s.name}
+                        </Text>
+                      </TouchableOpacity>
+                    </Animated.View>
                   )
                 })}
               </View>
@@ -413,8 +432,9 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingVertical: 24, gap: 14 },
 
   header: { marginBottom: 4 },
-  appTitle: { fontSize: 24, fontWeight: 'bold', color: '#0c4a6e' },
-  appSubtitle: { fontSize: 12, color: '#0369a1', marginTop: 2 },
+  // ⑤ タイトルを極太化し、サブタイトルは細くして5段階の階層を作る
+  appTitle: { fontSize: 30, fontWeight: '900', color: '#0c4a6e', letterSpacing: -0.5 },
+  appSubtitle: { fontSize: 12, color: '#0369a1', marginTop: 2, fontWeight: '400', letterSpacing: 0.3 },
 
   // 状態1
   uploadBtnLarge: {
@@ -426,30 +446,49 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
     alignItems: 'center',
     gap: 6,
+    // ① 影で浮き感
+    shadowColor: '#7dd3fc',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   uploadBtnLargeIcon: { fontSize: 32 },
-  uploadBtnLargeText: { fontSize: 18, color: '#0369a1', fontWeight: '700' },
-  uploadBtnLargeSub: { fontSize: 12, color: '#94a3b8' },
+  uploadBtnLargeText: { fontSize: 19, color: '#0369a1', fontWeight: '800' },
+  uploadBtnLargeSub: { fontSize: 12, color: '#94a3b8', fontWeight: '400' },
 
   // 状態2
-  pendingCard: { backgroundColor: 'white', borderRadius: 20, padding: 16, gap: 12 },
+  pendingCard: {
+    backgroundColor: 'white', borderRadius: 20, padding: 16, gap: 12,
+    shadowColor: '#94a3b8', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
+  },
   thumbRowWrap: { flexDirection: 'row', alignItems: 'center' },
   thumbRow: { flex: 1 },
   thumb: { width: 72, height: 72, borderRadius: 12, marginRight: 8 },
   thumbCounter: { paddingLeft: 10, fontSize: 15, fontWeight: '700', color: '#94a3b8' },
   analyzeBtn: { backgroundColor: '#f472b6', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   analyzeBtnLoading: { backgroundColor: '#f9a8d4' },
-  analyzeBtnText: { fontSize: 16, color: 'white', fontWeight: 'bold' },
+  analyzeBtnText: { fontSize: 16, color: 'white', fontWeight: '800' },
   photoActions: { flexDirection: 'row', alignItems: 'center' },
   photoActionBtn: { flex: 1, alignItems: 'center', paddingVertical: 6 },
   photoActionText: { fontSize: 13, color: '#64748b' },
   photoActionDivider: { width: 1, height: 16, backgroundColor: '#e2e8f0' },
 
   // 状態3
-  contentCard: { backgroundColor: 'white', borderRadius: 16, overflow: 'hidden', borderWidth: 1.5, borderColor: '#bfdbfe' },
+  // ③ contentCard + preview を束ねるユニット（タイトな gap:10）
+  materialUnit: { gap: 10 },
+  // ① contentCard は最重要カード → 最も強い影
+  contentCard: {
+    backgroundColor: 'white', borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1.5, borderColor: '#bae6fd',
+    shadowColor: '#0369a1', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14, shadowRadius: 10, elevation: 5,
+  },
   contentCardInner: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 },
   contentThumb: { width: 44, height: 44, borderRadius: 8 },
-  contentTitle: { flex: 1, fontSize: 13, fontWeight: '600', color: '#1e293b', lineHeight: 18 },
+  // ⑤ カードタイトルを少し大きく
+  contentTitle: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1e293b', lineHeight: 19 },
   contentClear: { padding: 4 },
   contentClearText: { fontSize: 12, color: '#94a3b8' },
   contentCardHeader: {
@@ -458,24 +497,36 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: '#e0f2fe',
     backgroundColor: '#f0f9ff',
   },
-  contentCardHeaderLabel: { fontSize: 11, fontWeight: '700', color: '#0369a1', letterSpacing: 0.5 },
+  // ⑤ セクションラベルは極太＋letterSpacing で引き締める
+  contentCardHeaderLabel: { fontSize: 10, fontWeight: '800', color: '#0369a1', letterSpacing: 1.0 },
   contentCardHeaderAction: { fontSize: 11, color: '#94a3b8' },
 
-  // アクション：教材を見る
+  // アクション：教材を見る（① 青みのある背景で白より奥行きを出す）
   actionBtnPreview: {
-    backgroundColor: 'white',
+    backgroundColor: '#eff6ff',
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#7dd3fc',
+    borderWidth: 1.5,
+    borderColor: '#bfdbfe',
     paddingVertical: 18,
     alignItems: 'center',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  actionBtnPreviewText: { fontSize: 17, fontWeight: 'bold', color: '#0369a1' },
-  actionNote: { fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 6 },
+  actionBtnPreviewText: { fontSize: 18, fontWeight: '800', color: '#1d4ed8' },
+  // ⑤ 補助テキストは細く・小さく（最も低い階層）
+  actionNote: { fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 6, fontWeight: '300' },
 
-  // 授業セクション
-  chatSection: { backgroundColor: 'white', borderRadius: 20, padding: 16, gap: 12 },
-  chatSectionLabel: { fontSize: 12, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.5 },
+  // ① 授業セクション → 中程度の影
+  chatSection: {
+    backgroundColor: 'white', borderRadius: 20, padding: 16, gap: 12,
+    shadowColor: '#1e293b', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
+  },
+  // ⑤ セクションラベルは小さく・細く → ボタン類と差別化
+  chatSectionLabel: { fontSize: 11, fontWeight: '600', color: '#64748b', letterSpacing: 0.8 },
   studentChips: { flexDirection: 'row', gap: 10 },
   studentChip: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -483,10 +534,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10,
   },
   studentChipAvatar: { width: 34, height: 34, borderRadius: 17 },
-  studentChipName: { fontSize: 14, color: '#64748b' },
+  studentChipName: { fontSize: 14, color: '#64748b', fontWeight: '500' },
   actionBtnChat: { backgroundColor: '#f472b6', borderRadius: 14, paddingVertical: 18, alignItems: 'center' },
   actionBtnChatDisabled: { backgroundColor: 'white', borderWidth: 1.5, borderColor: '#e2e8f0' },
-  actionBtnChatText: { fontSize: 17, fontWeight: 'bold', color: 'white' },
+  // ⑤ 最重要CTA → fontWeight '800'
+  actionBtnChatText: { fontSize: 18, fontWeight: '800', color: 'white' },
   actionBtnChatTextDisabled: { color: '#cbd5e1' },
 
   row: { flexDirection: 'row', alignItems: 'center' },
@@ -502,16 +554,23 @@ const styles = StyleSheet.create({
     borderTopColor: '#bfdbfe',
   },
   historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  historyLabel: { fontSize: 12, fontWeight: '700', color: '#64748b', letterSpacing: 1 },
-  historyCount: { fontSize: 12, color: '#94a3b8' },
+  // ⑤ 履歴ラベルも極太
+  historyLabel: { fontSize: 11, fontWeight: '800', color: '#64748b', letterSpacing: 1.2 },
+  historyCount: { fontSize: 11, color: '#94a3b8', fontWeight: '400' },
   historyEmpty: { fontSize: 13, color: '#94a3b8', textAlign: 'center', paddingVertical: 16 },
-  historyItem: { backgroundColor: 'white', borderRadius: 14, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
+  // ① 履歴アイテムは最も軽い影（3段階の最下層）
+  historyItem: {
+    backgroundColor: 'white', borderRadius: 14, flexDirection: 'row', alignItems: 'center', overflow: 'hidden',
+    shadowColor: '#94a3b8', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+  },
   historyItemActive: { backgroundColor: '#fff0f6', borderWidth: 1.5, borderColor: '#fbcfe8' },
   historyMain: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 },
   historyThumb: { width: 42, height: 42, borderRadius: 8 },
   historyInfo: { flex: 1, minWidth: 0 },
   historyTitle: { fontSize: 13, fontWeight: '600', color: '#334155' },
-  historyDate: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
+  // ⑤ 日付は最も細く・小さく（補助情報の最下層）
+  historyDate: { fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: '300' },
   checkMark: { fontSize: 14, color: '#f472b6', fontWeight: 'bold' },
   deleteBtn: { paddingHorizontal: 14, paddingVertical: 12 },
   deleteBtnText: { fontSize: 12, color: '#cbd5e1' },
