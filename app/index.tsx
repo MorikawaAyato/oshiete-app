@@ -208,6 +208,16 @@ export default function HomeScreen() {
     ? imageDescription.replace(/^この(教材|文書|画像)は[、,]?\s*/u, '').split('。')[0].slice(0, 36)
     : ''
 
+  const toastOpacity = useRef(new Animated.Value(0)).current
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const showToast = () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    Animated.timing(toastOpacity, { toValue: 1, duration: 180, useNativeDriver: true }).start()
+    toastTimer.current = setTimeout(() => {
+      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start()
+    }, 1800)
+  }
+
   const chipScales = useRef<Record<string, Animated.Value>>(
     Object.fromEntries(STUDENTS.map((s) => [s.id, new Animated.Value(1)]))
   ).current
@@ -364,8 +374,7 @@ export default function HomeScreen() {
               </View>
               <TouchableOpacity
                 style={[styles.actionBtnChat, !selectedStudentId && styles.actionBtnChatDisabled]}
-                onPress={() => selectedStudentId && router.push('/chat')}
-                disabled={!selectedStudentId}
+                onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
               >
                 <Text style={[styles.actionBtnChatText, !selectedStudentId && styles.actionBtnChatTextDisabled]}>
                   🎓　授業をする
@@ -422,6 +431,11 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* トースト */}
+      <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
+        <Text style={styles.toastText}>先に生徒を選んでください</Text>
+      </Animated.View>
     </SafeAreaView>
   )
 }
@@ -542,6 +556,14 @@ const styles = StyleSheet.create({
   actionBtnChatTextDisabled: { color: '#cbd5e1' },
 
   row: { flexDirection: 'row', alignItems: 'center' },
+
+  toast: {
+    position: 'absolute', bottom: 32, alignSelf: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    paddingHorizontal: 20, paddingVertical: 12,
+    borderRadius: 24,
+  },
+  toastText: { color: 'white', fontSize: 14, fontWeight: '600' },
 
   // 履歴
   historyZone: {
