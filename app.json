@@ -1,13 +1,20 @@
 {
   "expo": {
-    "name": "oshiete-app",
+    "name": "OSHIETE!",
     "slug": "oshiete-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "scheme": "oshiete",
     "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.oshiete.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -16,7 +23,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.oshiete.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -1,16 +1,31 @@
 {
   "name": "oshiete-app",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "dependencies": {
-    "expo": "~56.0.12",
-    "expo-status-bar": "~56.0.4",
-    "react": "19.2.3",
-    "react-native": "0.85.3"
+    "@clerk/clerk-expo": "^0.20.36",
+    "@expo/ngrok": "^4.1.0",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~54.0.0",
+    "expo-application": "~7.0.8",
+    "expo-auth-session": "~7.0.11",
+    "expo-constants": "~18.0.13",
+    "expo-document-picker": "~14.0.8",
+    "expo-image-picker": "~17.0.11",
+    "expo-linking": "^56.0.14",
+    "expo-router": "~6.0.24",
+    "expo-secure-store": "~15.0.8",
+    "expo-status-bar": "~3.0.9",
+    "expo-web-browser": "~15.0.11",
+    "react": "^19.1.0",
+    "react-native": "^0.81.5",
+    "react-native-gesture-handler": "~2.28.0",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0"
   },
   "devDependencies": {
-    "@types/react": "~19.2.2",
-    "typescript": "~6.0.3"
+    "@types/react": "~19.1.10",
+    "typescript": "^5.3.3"
   },
   "scripts": {
     "start": "expo start",
