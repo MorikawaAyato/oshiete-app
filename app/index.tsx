@@ -240,7 +240,7 @@ export default function HomeScreen() {
         {/* ヘッダー */}
         <View style={styles.header}>
           <Text style={styles.appTitle}>OSHIETE!</Text>
-          <Text style={styles.appSubtitle}>教えて学べるAI学習アプリ</Text>
+          <Text style={styles.appSubtitle}>教えるほど、身につく。</Text>
         </View>
 
         {/* ── 状態1: 何も選ばれていない ── */}
