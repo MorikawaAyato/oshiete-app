@@ -492,10 +492,9 @@ const styles = StyleSheet.create({
   // 状態3
   // ③ contentCard + preview を束ねるユニット（タイトな gap:10）
   materialUnit: { gap: 10 },
-  // ① contentCard は最重要カード → 最も強い影
+  // ① contentCard は最重要カード → 最も強い影・枠線なし
   contentCard: {
     backgroundColor: 'white', borderRadius: 16, overflow: 'hidden',
-    borderWidth: 1.5, borderColor: '#bae6fd',
     shadowColor: '#0369a1', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.14, shadowRadius: 10, elevation: 5,
   },
@@ -515,12 +514,10 @@ const styles = StyleSheet.create({
   contentCardHeaderLabel: { fontSize: 10, fontWeight: '800', color: '#0369a1', letterSpacing: 1.0 },
   contentCardHeaderAction: { fontSize: 11, color: '#94a3b8' },
 
-  // アクション：教材を見る（① 青みのある背景で白より奥行きを出す）
+  // アクション：教材を見る（背景色＋影で区別、枠線なし）
   actionBtnPreview: {
     backgroundColor: '#eff6ff',
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#bfdbfe',
     paddingVertical: 18,
     alignItems: 'center',
     shadowColor: '#3b82f6',
@@ -544,13 +541,13 @@ const styles = StyleSheet.create({
   studentChips: { flexDirection: 'row', gap: 10 },
   studentChip: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 2, borderColor: '#e2e8f0',
+    backgroundColor: '#f1f5f9', borderRadius: 12,
     paddingHorizontal: 12, paddingVertical: 10,
   },
   studentChipAvatar: { width: 34, height: 34, borderRadius: 17 },
   studentChipName: { fontSize: 14, color: '#64748b', fontWeight: '500' },
   actionBtnChat: { backgroundColor: '#f472b6', borderRadius: 14, paddingVertical: 18, alignItems: 'center' },
-  actionBtnChatDisabled: { backgroundColor: 'white', borderWidth: 1.5, borderColor: '#e2e8f0' },
+  actionBtnChatDisabled: { backgroundColor: '#f1f5f9' },
   // ⑤ 最重要CTA → fontWeight '800'
   actionBtnChatText: { fontSize: 18, fontWeight: '800', color: 'white' },
   actionBtnChatTextDisabled: { color: '#cbd5e1' },
