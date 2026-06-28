@@ -385,7 +385,7 @@ export default function HomeScreen() {
         )}
 
         {/* 履歴ゾーン */}
-        <View style={styles.historyZone}>
+        <View style={[styles.historyZone, { marginTop: 8 }]}>
           <View style={styles.historyHeader}>
             <Text style={styles.historyLabel}>最近の教材</Text>
             <Text style={styles.historyCount}>{history.length} / 6件</Text>
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
   actionBtnPreview: {
     backgroundColor: '#eff6ff',
     borderRadius: 16,
-    paddingVertical: 18,
+    paddingVertical: 12,
     alignItems: 'center',
     shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 2 },
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  actionBtnPreviewText: { fontSize: 18, fontWeight: '800', color: '#1d4ed8' },
+  actionBtnPreviewText: { fontSize: 15, fontWeight: '600', color: '#1d4ed8' },
   // ⑤ 補助テキストは細く・小さく（最も低い階層）
   actionNote: { fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 6, fontWeight: '300' },
 
