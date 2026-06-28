@@ -1,6 +1,6 @@
 import {
   View, Text, TouchableOpacity, ScrollView, TextInput,
-  StyleSheet, ActivityIndicator, Image, KeyboardAvoidingView, Platform,
+  StyleSheet, Image, KeyboardAvoidingView, Platform,
   Animated, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -12,6 +12,37 @@ import { startChat, sendChat } from '@/lib/api'
 import type { ChatMessage } from '@/lib/types'
 
 const MAX_TURNS = 9
+
+function TypingDots({ color }: { color: string }) {
+  const dot0 = useRef(new Animated.Value(0)).current
+  const dot1 = useRef(new Animated.Value(0)).current
+  const dot2 = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    const bounce = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: -5, duration: 200, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 200, useNativeDriver: true }),
+          Animated.delay(600 - delay),
+        ])
+      )
+    const a0 = bounce(dot0, 0)
+    const a1 = bounce(dot1, 150)
+    const a2 = bounce(dot2, 300)
+    a0.start(); a1.start(); a2.start()
+    return () => { a0.stop(); a1.stop(); a2.stop() }
+  }, [])
+
+  return (
+    <View style={{ backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', gap: 5, alignItems: 'center' }}>
+      {[dot0, dot1, dot2].map((dot, i) => (
+        <Animated.View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color, opacity: 0.7, transform: [{ translateY: dot }] }} />
+      ))}
+    </View>
+  )
+}
 
 function EnteringRoom({ student }: { student: { name: string; avatar: string; color: string } }) {
   const msgs = [
@@ -241,9 +272,7 @@ export default function ChatScreen() {
           {loading && (
             <View style={[styles.bubble, styles.bubbleMana]}>
               <Image source={{ uri: student.avatar }} style={styles.bubbleAvatar} />
-              <View style={styles.typingDots}>
-                <ActivityIndicator size="small" color={student.color} />
-              </View>
+              <TypingDots color={student.color} />
             </View>
           )}
           {classEnded && (
