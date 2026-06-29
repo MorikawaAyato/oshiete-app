@@ -105,6 +105,12 @@ export default function ChatScreen() {
     : progressRatio > 0.55 ? '#34d399' : progressRatio > 0.3 ? '#fbbf24' : '#f87171'
 
   useEffect(() => {
+    if (chatMessages.length > 0) {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 100)
+    }
+  }, [])
+
+  useEffect(() => {
     // メッセージが既にある（教材画面から戻ってきた等）場合はstartChatしない
     if (!student || chatMessages.length > 0) return
     setStarting(true)
@@ -299,7 +305,6 @@ export default function ChatScreen() {
               placeholderTextColor="#94a3b8"
               multiline
               maxLength={500}
-              onSubmitEditing={send}
             />
             <TouchableOpacity
               style={[styles.sendBtn, { backgroundColor: student.color }, (!input.trim() || loading) && styles.sendBtnDisabled]}
