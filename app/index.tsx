@@ -296,7 +296,10 @@ export default function HomeScreen() {
             <Text style={styles.appSubtitle}>教えるほど、身につく。</Text>
           </View>
           <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
-            <Image source={require('../assets/senseishou.jpg')} style={styles.teacherIconImage} />
+            <View style={styles.teacherIconCircle}>
+              <Image source={require('../assets/senseishou.jpg')} style={styles.teacherIconImage} />
+            </View>
+            <Text style={styles.teacherIconLabel}>先生証</Text>
           </TouchableOpacity>
         </View>
 
@@ -685,11 +688,15 @@ const styles = StyleSheet.create({
   appTitle: { fontSize: 30, fontWeight: '900', color: '#0c4a6e', letterSpacing: -0.5 },
   appSubtitle: { fontSize: 12, color: '#0369a1', marginTop: 2, fontWeight: '400', letterSpacing: 0.3 },
   teacherIconBtn: {
+    alignItems: 'center', gap: 2,
+  },
+  teacherIconCircle: {
     width: 40, height: 40, borderRadius: 20, overflow: 'hidden',
     shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3, shadowRadius: 5, elevation: 6,
   },
-  teacherIconImage: { width: 40, height: 40, borderRadius: 20 },
+  teacherIconImage: { width: 40, height: 40 },
+  teacherIconLabel: { fontSize: 9, fontWeight: '700', color: '#0369a1', letterSpacing: 0.5 },
 
   // 先生証シート
   tcSheetBottom: { backgroundColor: '#0f172a', paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0 },
