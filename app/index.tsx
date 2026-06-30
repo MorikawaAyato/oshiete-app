@@ -569,11 +569,11 @@ export default function HomeScreen() {
             <View style={styles.tcCardContainer}>
               {/* 表面 */}
               <Animated.View style={[
-                styles.tcCard,
+                styles.tcCardWrapper,
                 { transform: [{ perspective: 1000 }, { rotateY: cardFlipAnim.interpolate({ inputRange: [0,1], outputRange: ['0deg','180deg'] }) }],
                   opacity: cardFlipAnim.interpolate({ inputRange: [0.5, 0.501], outputRange: [1, 0], extrapolate: 'clamp' }) },
               ]}>
-                <TouchableOpacity style={{ flex: 1 }} onPress={() => flipCard()} activeOpacity={0.92}>
+                <TouchableOpacity style={styles.tcCard} onPress={() => flipCard()} activeOpacity={0.92}>
                   <View style={[styles.tcDeco, { right: -30, top: -30, width: 120, height: 120 }]} />
                   <View style={[styles.tcDeco, { right: -12, top: -12, width: 68, height: 68 }]} />
                   <View style={[styles.tcDeco, { left: -20, bottom: -20, width: 88, height: 88 }]} />
@@ -609,10 +609,11 @@ export default function HomeScreen() {
 
               {/* 裏面 */}
               <Animated.View style={[
-                styles.tcCard, styles.tcCardBack,
+                styles.tcCardWrapper,
                 { transform: [{ perspective: 1000 }, { rotateY: cardFlipAnim.interpolate({ inputRange: [0,1], outputRange: ['180deg','360deg'] }) }],
                   opacity: cardFlipAnim.interpolate({ inputRange: [0.499, 0.5], outputRange: [0, 1], extrapolate: 'clamp' }) },
               ]}>
+              <View style={[styles.tcCard, styles.tcCardBack]}>
                 <View style={styles.tcBackHeader}>
                   <TouchableOpacity onPress={() => flipCard(true)} style={styles.tcBackBtn}>
                     <Text style={styles.tcBackBtnText}>← 先生証を見る</Text>
@@ -660,6 +661,7 @@ export default function HomeScreen() {
                     </View>
                   </View>
                 </ScrollView>
+              </View>
               </Animated.View>
             </View>
 
@@ -704,13 +706,16 @@ const styles = StyleSheet.create({
   tcCardContainer: {
     width: 240, height: 353, alignSelf: 'center', marginVertical: 24,
   },
-  tcCard: {
+  tcCardWrapper: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backfaceVisibility: 'hidden',
+  },
+  tcCard: {
+    flex: 1,
     borderRadius: 22, backgroundColor: '#0c4a6e',
     overflow: 'hidden', padding: 20, justifyContent: 'space-between',
     shadowColor: '#000', shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.5, shadowRadius: 28, elevation: 18,
-    backfaceVisibility: 'hidden',
   },
   tcCardBack: { backgroundColor: 'white', padding: 0 },
   tcDeco: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.05)' },
