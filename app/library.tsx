@@ -1,7 +1,7 @@
 import {
   View, Text, FlatList, TouchableOpacity, Image, StyleSheet,
   Modal, TextInput, KeyboardAvoidingView, Platform, Pressable,
-  ScrollView,
+  ScrollView, Dimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -18,6 +18,8 @@ import { BottomTabBar } from '@/components/BottomTabBar'
 type SheetMode = 'main' | 'detail' | 'rename' | 'group' | 'new-group' | 'delete'
 
 const TITLE_RE = /^この(教材|文書|画像|写真)は[、，]?\s*/u
+// 3カラム固定幅: (画面幅 - グリッドpadding12 - カードmargin合計18) / 3
+const CARD_W = Math.floor((Dimensions.get('window').width - 30) / 3)
 
 export default function LibraryScreen() {
   const router = useRouter()
@@ -577,7 +579,7 @@ const styles = StyleSheet.create({
   grid: { paddingHorizontal: 6, paddingBottom: 4 },
 
   card: {
-    flex: 1, margin: 3,
+    width: CARD_W, margin: 3,
     backgroundColor: 'white', borderRadius: 12, overflow: 'hidden',
     borderWidth: 2, borderColor: 'transparent',
     shadowColor: '#94a3b8', shadowOffset: { width: 0, height: 1 },

@@ -1,6 +1,6 @@
 import {
   View, Text, TouchableOpacity, ScrollView, Image,
-  StyleSheet, ActivityIndicator, Alert, Animated,
+  StyleSheet, ActivityIndicator, Alert, Animated, Modal, Pressable,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -36,8 +36,10 @@ export default function HomeScreen() {
   const [previewLoading, setPreviewLoading] = useState(false)
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
-  // 選択済みの画像データ（base64付き）。分析後も追加のために保持。
   const [pendingImages, setPendingImages] = useState<ImageData[]>([])
+  const [studentSheet, setStudentSheet] = useState<'profile' | 'picker' | null>(null)
+
+  const selectedStudent = STUDENTS.find(s => s.id === selectedStudentId) ?? null
 
   useEffect(() => {
     loadHistory().then(setHistory)
@@ -237,18 +239,6 @@ export default function HomeScreen() {
     }, 1800)
   }
 
-  const chipScales = useRef<Record<string, Animated.Value>>(
-    Object.fromEntries(STUDENTS.map((s) => [s.id, new Animated.Value(1)]))
-  ).current
-
-  const animateChip = (id: string) => {
-    const scale = chipScales[id]
-    Animated.sequence([
-      Animated.spring(scale, { toValue: 0.88, useNativeDriver: true, speed: 50, bounciness: 0 }),
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 12 }),
-    ]).start()
-  }
-
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
@@ -364,33 +354,34 @@ export default function HomeScreen() {
             </View>
             </View>{/* /materialUnit */}
 
-            {/* 授業セクション（セクションブレーク分余白を追加） */}
+            {/* 授業セクション */}
             <View style={[styles.chatSection, { marginTop: 8 }]}>
               <Text style={styles.chatSectionLabel}>授業する生徒を選ぶ</Text>
-              <View style={styles.studentChips}>
-                {STUDENTS.map((s) => {
-                  const isSel = selectedStudentId === s.id
-                  return (
-                    <Animated.View key={s.id} style={{ flex: 1, transform: [{ scale: chipScales[s.id] }] }}>
-                      <TouchableOpacity
-                        style={[
-                          styles.studentChip,
-                          isSel && { borderColor: s.color, backgroundColor: s.color + '15' },
-                        ]}
-                        onPress={() => {
-                          animateChip(s.id)
-                          setSelectedStudentId(isSel ? null : s.id)
-                        }}
-                      >
-                        <Image source={{ uri: s.avatar }} style={styles.studentChipAvatar} />
-                        <Text style={[styles.studentChipName, isSel && { color: s.color, fontWeight: '700' }]}>
-                          {s.name}
-                        </Text>
-                      </TouchableOpacity>
-                    </Animated.View>
-                  )
-                })}
-              </View>
+              <TouchableOpacity
+                style={styles.studentDisplayBtn}
+                onPress={() => setStudentSheet(selectedStudent ? 'profile' : 'picker')}
+              >
+                {selectedStudent ? (
+                  <>
+                    <Image source={{ uri: selectedStudent.avatar }} style={styles.studentDisplayAvatar} />
+                    <View style={styles.studentDisplayInfo}>
+                      <Text style={styles.studentDisplayName}>{selectedStudent.name}</Text>
+                      <Text style={styles.studentDisplayTagline}>{selectedStudent.tagline}</Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.studentDisplayEmpty}>
+                      <Text style={styles.studentDisplayEmptyIcon}>🐾</Text>
+                    </View>
+                    <View style={styles.studentDisplayInfo}>
+                      <Text style={styles.studentDisplayPlaceholder}>生徒を選ぼう</Text>
+                      <Text style={styles.studentDisplayPlaceholderSub}>タップして授業してくれる生徒を選ぶ</Text>
+                    </View>
+                  </>
+                )}
+                <Text style={styles.studentDisplayChevron}>›</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionBtnChat, !selectedStudentId && styles.actionBtnChatDisabled]}
                 onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
@@ -462,6 +453,65 @@ export default function HomeScreen() {
       <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
         <Text style={styles.toastText}>先に生徒を選んでください</Text>
       </Animated.View>
+
+      {/* 生徒シート */}
+      <Modal
+        visible={!!studentSheet}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setStudentSheet(null)}
+      >
+        <View style={styles.studentSheetContainer}>
+          <Pressable style={styles.studentSheetOverlay} onPress={() => setStudentSheet(null)} />
+          <View style={styles.studentSheetBottom}>
+            <View style={styles.studentSheetHandle} />
+
+            {studentSheet === 'profile' && selectedStudent && (
+              <>
+                <View style={styles.profileRow}>
+                  <Image source={{ uri: selectedStudent.avatar }} style={styles.profileAvatar} />
+                  <View>
+                    <Text style={styles.profileName}>{selectedStudent.name}</Text>
+                    <Text style={styles.profileTagline}>{selectedStudent.tagline}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity style={styles.sheetChangeBtn} onPress={() => setStudentSheet('picker')}>
+                  <Text style={styles.sheetChangeBtnText}>生徒を変える</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.sheetCloseBtn} onPress={() => setStudentSheet(null)}>
+                  <Text style={styles.sheetCloseBtnText}>閉じる</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {studentSheet === 'picker' && (
+              <>
+                <Text style={styles.pickerLabel}>生徒を選ぶ</Text>
+                {STUDENTS.map(s => {
+                  const isSel = selectedStudentId === s.id
+                  return (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={[styles.pickerItem, isSel && styles.pickerItemSel]}
+                      onPress={() => { setSelectedStudentId(s.id); setStudentSheet(null) }}
+                    >
+                      <Image source={{ uri: s.avatar }} style={styles.pickerItemAvatar} />
+                      <View style={styles.pickerItemInfo}>
+                        <Text style={[styles.pickerItemName, isSel && styles.pickerItemNameSel]}>{s.name}</Text>
+                        <Text style={styles.pickerItemTagline}>{s.tagline}</Text>
+                      </View>
+                      {isSel && <Text style={styles.pickerItemCheck}>✓</Text>}
+                    </TouchableOpacity>
+                  )
+                })}
+                <TouchableOpacity style={styles.sheetCloseBtn} onPress={() => setStudentSheet(null)}>
+                  <Text style={styles.sheetCloseBtnText}>閉じる</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       <BottomTabBar active="home" />
     </SafeAreaView>
@@ -564,16 +614,72 @@ const styles = StyleSheet.create({
     shadowColor: '#1e293b', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
   },
-  // ⑤ セクションラベルは小さく・細く → ボタン類と差別化
   chatSectionLabel: { fontSize: 11, fontWeight: '600', color: '#64748b', letterSpacing: 0.8 },
-  studentChips: { flexDirection: 'row', gap: 10 },
-  studentChip: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#f1f5f9', borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 10,
+
+  studentDisplayBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 12, borderRadius: 16,
+    backgroundColor: 'white', borderWidth: 1.5, borderColor: '#e2e8f0',
   },
-  studentChipAvatar: { width: 34, height: 34, borderRadius: 17 },
-  studentChipName: { fontSize: 14, color: '#64748b', fontWeight: '500' },
+  studentDisplayAvatar: { width: 48, height: 48, borderRadius: 24 },
+  studentDisplayInfo: { flex: 1, minWidth: 0 },
+  studentDisplayName: { fontSize: 14, fontWeight: '700', color: '#1e293b' },
+  studentDisplayTagline: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
+  studentDisplayEmpty: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center',
+  },
+  studentDisplayEmptyIcon: { fontSize: 22 },
+  studentDisplayPlaceholder: { fontSize: 13, fontWeight: '600', color: '#64748b' },
+  studentDisplayPlaceholderSub: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
+  studentDisplayChevron: { fontSize: 22, color: '#cbd5e1' },
+
+  // 生徒シート
+  studentSheetContainer: { flex: 1, justifyContent: 'flex-end' },
+  studentSheetOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+  studentSheetBottom: {
+    backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 16, paddingBottom: 40, paddingTop: 8,
+  },
+  studentSheetHandle: {
+    width: 36, height: 4, backgroundColor: '#e2e8f0',
+    borderRadius: 2, alignSelf: 'center', marginBottom: 16,
+  },
+  profileRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#f1f5f9', marginBottom: 12,
+  },
+  profileAvatar: { width: 56, height: 56, borderRadius: 28 },
+  profileName: { fontSize: 16, fontWeight: '700', color: '#1e293b' },
+  profileTagline: { fontSize: 12, color: '#94a3b8', marginTop: 3 },
+  sheetChangeBtn: {
+    backgroundColor: '#f1f5f9', borderRadius: 14,
+    paddingVertical: 14, alignItems: 'center', marginBottom: 8,
+  },
+  sheetChangeBtnText: { fontSize: 14, fontWeight: '700', color: '#475569' },
+  sheetCloseBtn: {
+    backgroundColor: '#f8fafc', borderRadius: 14,
+    paddingVertical: 14, alignItems: 'center',
+  },
+  sheetCloseBtnText: { fontSize: 14, fontWeight: '500', color: '#94a3b8' },
+  pickerLabel: {
+    fontSize: 13, fontWeight: '600', color: '#64748b',
+    paddingBottom: 8, borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#f1f5f9', marginBottom: 4,
+  },
+  pickerItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 4, paddingVertical: 12, borderRadius: 14,
+  },
+  pickerItemSel: { backgroundColor: '#fff0f6' },
+  pickerItemAvatar: { width: 48, height: 48, borderRadius: 24 },
+  pickerItemInfo: { flex: 1, minWidth: 0 },
+  pickerItemName: { fontSize: 14, fontWeight: '600', color: '#1e293b' },
+  pickerItemNameSel: { color: '#ec4899', fontWeight: '700' },
+  pickerItemTagline: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
+  pickerItemCheck: { fontSize: 16, color: '#ec4899', fontWeight: '700' },
+
   actionBtnChat: { backgroundColor: '#f472b6', borderRadius: 14, paddingVertical: 18, alignItems: 'center' },
   actionBtnChatDisabled: { backgroundColor: '#f1f5f9' },
   // ⑤ 最重要CTA → fontWeight '800'
