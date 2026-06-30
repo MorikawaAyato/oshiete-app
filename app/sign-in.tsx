@@ -23,7 +23,7 @@ export default function SignIn() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <Text style={styles.title}>せんせいごっこ</Text>
-        <Text style={styles.subtitle}>ごっこ遊びで、本気の学び。</Text>
+        <Text style={styles.subtitle}>教えると、わかる。</Text>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>ログインして始める</Text>
