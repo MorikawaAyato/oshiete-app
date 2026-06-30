@@ -585,8 +585,8 @@ export default function HomeScreen() {
       {/* 受信トレイ */}
       <Modal visible={showInbox} transparent animationType="slide" onRequestClose={() => setShowInbox(false)}>
         <View style={styles.studentSheetContainer}>
-          <Pressable style={styles.studentSheetBackdrop} onPress={() => setShowInbox(false)} />
-          <View style={[styles.studentSheetContent, { maxHeight: '75%' }]}>
+          <Pressable style={styles.studentSheetOverlay} onPress={() => setShowInbox(false)} />
+          <View style={[styles.studentSheetBottom, { maxHeight: '75%', paddingHorizontal: 0, paddingBottom: 32 }]}>
             <View style={styles.inboxHeader}>
               <Text style={styles.inboxTitle}>✉️ メールボックス</Text>
               <TouchableOpacity onPress={() => setShowInbox(false)}>
@@ -778,8 +778,7 @@ const styles = StyleSheet.create({
   },
   teacherIconCircle: {
     width: 40, height: 40, borderRadius: 20, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3, shadowRadius: 5, elevation: 6,
+    backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd',
   },
   teacherIconImage: { width: 40, height: 40 },
   teacherIconLabel: { fontSize: 9, fontWeight: '700', color: '#0369a1', letterSpacing: 0.5 },
