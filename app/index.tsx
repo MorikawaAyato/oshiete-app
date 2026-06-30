@@ -309,7 +309,7 @@ export default function HomeScreen() {
                   <Text style={[styles.analyzeBtnText, { marginLeft: 8 }]}>読み込み中...</Text>
                 </View>
               ) : (
-                <Text style={styles.analyzeBtnText}>🔍　この教材を分析する</Text>
+                <Text style={styles.analyzeBtnText}>🔍　この写真で教材を作る</Text>
               )}
             </TouchableOpacity>
 
