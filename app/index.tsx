@@ -42,12 +42,14 @@ export default function HomeScreen() {
   const [studentSheet, setStudentSheet] = useState<'profile' | 'picker' | null>(null)
   const [teacherSheet, setTeacherSheet] = useState(false)
   const [cardFlipped, setCardFlipped] = useState(false)
-  const cardFlipAnim = useRef(new Animated.Value(0)).current
+  const flipScaleAnim = useRef(new Animated.Value(1)).current
 
   const flipCard = (toFront?: boolean) => {
-    const target = toFront === true ? 0 : toFront === false ? 1 : cardFlipped ? 0 : 1
-    Animated.timing(cardFlipAnim, { toValue: target, duration: 500, useNativeDriver: true }).start()
-    setCardFlipped(target === 1)
+    const nextBack = toFront === true ? false : toFront === false ? true : !cardFlipped
+    Animated.timing(flipScaleAnim, { toValue: 0, duration: 180, useNativeDriver: true }).start(() => {
+      setCardFlipped(nextBack)
+      Animated.timing(flipScaleAnim, { toValue: 1, duration: 180, useNativeDriver: true }).start()
+    })
   }
 
   const selectedStudent = STUDENTS.find(s => s.id === selectedStudentId) ?? null
@@ -76,7 +78,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!teacherSheet) {
-      cardFlipAnim.setValue(0)
+      flipScaleAnim.setValue(1)
       setCardFlipped(false)
     }
   }, [teacherSheet])
@@ -566,13 +568,9 @@ export default function HomeScreen() {
             <View style={styles.studentSheetHandle} />
 
             {/* フリップカードコンテナ */}
-            <View style={styles.tcCardContainer}>
-              {/* 表面 */}
-              <Animated.View style={[
-                styles.tcCardWrapper,
-                { transform: [{ perspective: 1000 }, { rotateY: cardFlipAnim.interpolate({ inputRange: [0,1], outputRange: ['0deg','180deg'] }) }],
-                  opacity: cardFlipAnim.interpolate({ inputRange: [0.5, 0.501], outputRange: [1, 0], extrapolate: 'clamp' }) },
-              ]}>
+            <Animated.View style={[styles.tcCardContainer, { transform: [{ scaleX: flipScaleAnim }] }]}>
+              {!cardFlipped ? (
+                /* 表面 */
                 <TouchableOpacity style={styles.tcCard} onPress={() => flipCard()} activeOpacity={0.92}>
                   <View style={[styles.tcDeco, { right: -30, top: -30, width: 120, height: 120 }]} />
                   <View style={[styles.tcDeco, { right: -12, top: -12, width: 68, height: 68 }]} />
@@ -605,65 +603,59 @@ export default function HomeScreen() {
                     <Text style={styles.tcEditHintText}>✏️  タップして編集</Text>
                   </View>
                 </TouchableOpacity>
-              </Animated.View>
-
-              {/* 裏面 */}
-              <Animated.View style={[
-                styles.tcCardWrapper,
-                { transform: [{ perspective: 1000 }, { rotateY: cardFlipAnim.interpolate({ inputRange: [0,1], outputRange: ['180deg','360deg'] }) }],
-                  opacity: cardFlipAnim.interpolate({ inputRange: [0.499, 0.5], outputRange: [0, 1], extrapolate: 'clamp' }) },
-              ]}>
-              <View style={[styles.tcCard, styles.tcCardBack]}>
-                <View style={styles.tcBackHeader}>
-                  <TouchableOpacity onPress={() => flipCard(true)} style={styles.tcBackBtn}>
-                    <Text style={styles.tcBackBtnText}>← 先生証を見る</Text>
-                  </TouchableOpacity>
+              ) : (
+                /* 裏面 */
+                <View style={[styles.tcCard, styles.tcCardBack]}>
+                  <View style={styles.tcBackHeader}>
+                    <TouchableOpacity onPress={() => flipCard(true)} style={styles.tcBackBtn}>
+                      <Text style={styles.tcBackBtnText}>← 先生証を見る</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 18, paddingBottom: 24 }}>
+                    <View>
+                      <Text style={styles.teacherSectionLabel}>お名前</Text>
+                      <TextInput
+                        style={styles.teacherNameInput}
+                        value={teacherProfile.name}
+                        onChangeText={(t) => setTeacherProfile({ ...teacherProfile, name: t })}
+                        placeholder="例：田中"
+                        placeholderTextColor="#cbd5e1"
+                        maxLength={20}
+                      />
+                    </View>
+                    <View>
+                      <Text style={styles.teacherSectionLabel}>キャラクター</Text>
+                      <View style={styles.avatarGrid}>
+                        {TEACHER_AVATARS.map(({ id, label }) => (
+                          <TouchableOpacity
+                            key={id}
+                            style={[styles.avatarCell, teacherProfile.avatarId === id && styles.avatarCellSel]}
+                            onPress={() => setTeacherProfile({ ...teacherProfile, avatarId: id })}
+                          >
+                            <Image source={getTeacherAvatarImage(id)} style={styles.avatarCellImage} />
+                            <Text style={styles.avatarCellLabel}>{label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                    <View>
+                      <Text style={styles.teacherSectionLabel}>称号</Text>
+                      <View style={styles.titleRow}>
+                        {TEACHER_TITLES.map((title) => (
+                          <TouchableOpacity
+                            key={title}
+                            style={[styles.titleChip, teacherProfile.title === title && styles.titleChipSel]}
+                            onPress={() => setTeacherProfile({ ...teacherProfile, title })}
+                          >
+                            <Text style={[styles.titleChipText, teacherProfile.title === title && styles.titleChipTextSel]}>{title}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </ScrollView>
                 </View>
-                <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 18, paddingBottom: 24 }}>
-                  <View>
-                    <Text style={styles.teacherSectionLabel}>お名前</Text>
-                    <TextInput
-                      style={styles.teacherNameInput}
-                      value={teacherProfile.name}
-                      onChangeText={(t) => setTeacherProfile({ ...teacherProfile, name: t })}
-                      placeholder="例：田中"
-                      placeholderTextColor="#cbd5e1"
-                      maxLength={20}
-                    />
-                  </View>
-                  <View>
-                    <Text style={styles.teacherSectionLabel}>キャラクター</Text>
-                    <View style={styles.avatarGrid}>
-                      {TEACHER_AVATARS.map(({ id, label }) => (
-                        <TouchableOpacity
-                          key={id}
-                          style={[styles.avatarCell, teacherProfile.avatarId === id && styles.avatarCellSel]}
-                          onPress={() => setTeacherProfile({ ...teacherProfile, avatarId: id })}
-                        >
-                          <Image source={getTeacherAvatarImage(id)} style={styles.avatarCellImage} />
-                          <Text style={styles.avatarCellLabel}>{label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                  <View>
-                    <Text style={styles.teacherSectionLabel}>称号</Text>
-                    <View style={styles.titleRow}>
-                      {TEACHER_TITLES.map((title) => (
-                        <TouchableOpacity
-                          key={title}
-                          style={[styles.titleChip, teacherProfile.title === title && styles.titleChipSel]}
-                          onPress={() => setTeacherProfile({ ...teacherProfile, title })}
-                        >
-                          <Text style={[styles.titleChipText, teacherProfile.title === title && styles.titleChipTextSel]}>{title}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                </ScrollView>
-              </View>
-              </Animated.View>
-            </View>
+              )}
+            </Animated.View>
 
             <TouchableOpacity style={[styles.sheetCloseBtn, styles.tcCloseBtn]} onPress={() => setTeacherSheet(false)}>
               <Text style={styles.tcCloseBtnText}>閉じる</Text>
@@ -705,10 +697,7 @@ const styles = StyleSheet.create({
   // フリップカード
   tcCardContainer: {
     width: 240, height: 353, alignSelf: 'center', marginVertical: 24,
-  },
-  tcCardWrapper: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backfaceVisibility: 'hidden',
+    overflow: 'hidden', borderRadius: 22,
   },
   tcCard: {
     flex: 1,

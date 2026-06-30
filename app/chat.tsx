@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
 import { startChat, sendChat } from '@/lib/api'
+import { getTeacherCharacter } from '@/lib/teacherProfile'
 import type { ChatMessage } from '@/lib/types'
 
 const MAX_TURNS = 9
@@ -103,6 +104,7 @@ export default function ChatScreen() {
     resetChatSession,
   } = useApp()
   const teacherName = teacherProfile.name || undefined
+  const teacherCharacter = getTeacherCharacter(teacherProfile.avatarId)
   const student = getStudentById(selectedStudentId ?? '')
   const scrollRef = useRef<ScrollView>(null)
 
@@ -127,7 +129,7 @@ export default function ChatScreen() {
     // メッセージが既にある（教材画面から戻ってきた等）場合はstartChatしない
     if (!student || chatMessages.length > 0) return
     setStarting(true)
-    startChat(student.id, imageDescription, notes, teacherName)
+    startChat(student.id, imageDescription, notes, teacherName, teacherCharacter)
       .then((res) => {
         if (res.manaResponse) {
           setChatMessages([{ role: 'mana', text: res.manaResponse }])
@@ -151,7 +153,7 @@ export default function ChatScreen() {
     setLoading(true)
 
     try {
-      const res = await sendChat(student.id, imageDescription, notes, next, teacherName)
+      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter)
       if (res.text) {
         const newMessages: ChatMessage[] = [...next, { role: 'mana', text: res.text }]
         setChatMessages(newMessages)
