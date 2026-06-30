@@ -122,14 +122,14 @@ export default function HomeScreen() {
       const thumbs = pendingImages.map(a => a.uri)
 
       const currentHistory = await loadHistory()
-      const groupMap = new Map<string, string[]>()
+      const groupMap: Record<string, string[]> = {}
       for (const item of currentHistory) {
         if (item.groupName) {
-          if (!groupMap.has(item.groupName)) groupMap.set(item.groupName, [])
-          groupMap.get(item.groupName)!.push(item.title)
+          if (!groupMap[item.groupName]) groupMap[item.groupName] = []
+          groupMap[item.groupName].push(item.title)
         }
       }
-      const existingGroups = [...groupMap.entries()].map(([groupName, titles]) => ({ groupName, titles }))
+      const existingGroups = Object.entries(groupMap).map(([groupName, titles]) => ({ groupName, titles }))
 
       const res = await analyzeImages(images, existingGroups)
       if (res.error) throw new Error(res.error)
@@ -138,11 +138,15 @@ export default function HomeScreen() {
       setNotes(res.notes)
       setThumbnails(thumbs)
 
-      const suggestedGroupName: string | undefined = res.suggestedGroupName || undefined
+      let suggestedGroupName: string | undefined = res.suggestedGroupName || undefined
       if (suggestedGroupName) {
-        const groups = await loadSavedGroups()
-        if (!groups.includes(suggestedGroupName)) {
-          await saveGroupsList([...groups, suggestedGroupName])
+        try {
+          const groups = await loadSavedGroups()
+          if (!groups.includes(suggestedGroupName)) {
+            await saveGroupsList([...groups, suggestedGroupName])
+          }
+        } catch {
+          suggestedGroupName = undefined
         }
       }
 
@@ -158,7 +162,8 @@ export default function HomeScreen() {
       setActiveHistoryId(saved.id)
       setHistory(await loadHistory())
       void backgroundFetchPreview(res.imageDescription, saved.id)
-    } catch {
+    } catch (e) {
+      console.error('analyzeFromPending error:', e)
       Alert.alert('エラー', '教材の読み込みに失敗しました。もう一度試してください。')
     } finally {
       setAnalyzing(false)
