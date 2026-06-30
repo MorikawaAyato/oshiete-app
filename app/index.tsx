@@ -585,10 +585,13 @@ const styles = StyleSheet.create({
   analyzeBtn: { backgroundColor: '#f472b6', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   analyzeBtnLoading: { backgroundColor: '#f9a8d4' },
   analyzeBtnText: { fontSize: 16, color: 'white', fontWeight: '800' },
-  photoActions: { flexDirection: 'row', alignItems: 'center' },
-  photoActionBtn: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-  photoActionText: { fontSize: 13, color: '#64748b' },
-  photoActionDivider: { width: 1, height: 16, backgroundColor: '#e2e8f0' },
+  photoActions: {
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1, borderColor: '#fbcfe8', borderRadius: 14, overflow: 'hidden',
+  },
+  photoActionBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, backgroundColor: '#fdf2f8' },
+  photoActionText: { fontSize: 14, color: '#ec4899', fontWeight: '600' },
+  photoActionDivider: { width: 1, height: 28, backgroundColor: '#fbcfe8' },
 
   // 状態3
   // ③ contentCard + preview を束ねるユニット（タイトな gap:10）
