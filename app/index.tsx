@@ -13,8 +13,9 @@ import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvata
 import { analyzeImages, fetchPreviewContent } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, HISTORY_MAX,
-  loadSavedGroups, saveGroupsList,
+  loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead,
 } from '@/lib/storage'
+import type { MailMessage } from '@/lib/storage'
 import type { HistoryItem } from '@/lib/types'
 
 type ImageData = { data: string; mimeType: string; uri: string }
@@ -42,6 +43,8 @@ export default function HomeScreen() {
   const [studentSheet, setStudentSheet] = useState<'profile' | 'picker' | null>(null)
   const [teacherSheet, setTeacherSheet] = useState(false)
   const [cardFlipped, setCardFlipped] = useState(false)
+  const [mailMessages, setMailMessages] = useState<MailMessage[]>([])
+  const [showInbox, setShowInbox] = useState(false)
   const flipScaleAnim = useRef(new Animated.Value(1)).current
 
   const flipCard = (toFront?: boolean) => {
@@ -59,6 +62,7 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      loadMail().then(setMailMessages)
       if (currentHistoryId && currentHistoryId !== prevHistoryId.current) {
         prevHistoryId.current = currentHistoryId
         materialScale.setValue(0.92)
@@ -74,6 +78,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     loadHistory().then(setHistory)
+    loadMail().then(setMailMessages)
   }, [])
 
   useEffect(() => {
@@ -85,6 +90,7 @@ export default function HomeScreen() {
 
   const hasPending = pendingImages.length > 0
   const hasContent = !!imageDescription
+  const unreadCount = mailMessages.filter((m) => !m.read).length
 
   // ピッカーを開いて画像を選ぶ（replace or add）
   const openPicker = async (mode: 'replace' | 'add') => {
@@ -295,12 +301,25 @@ export default function HomeScreen() {
             <Text style={styles.appTitle}>せんせいごっこ</Text>
             <Text style={styles.appSubtitle}>ごっこ遊びで、本気の学び。</Text>
           </View>
-          <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
-            <View style={styles.teacherIconCircle}>
-              <Image source={require('../assets/senseishou.jpg')} style={styles.teacherIconImage} />
-            </View>
-            <Text style={styles.teacherIconLabel}>先生証</Text>
-          </TouchableOpacity>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity style={styles.mailIconBtn} onPress={() => setShowInbox(true)}>
+              <View style={styles.mailIconCircle}>
+                <Text style={styles.mailIconEmoji}>✉️</Text>
+              </View>
+              <Text style={styles.teacherIconLabel}>メール</Text>
+              {unreadCount > 0 && (
+                <View style={styles.mailBadge}>
+                  <Text style={styles.mailBadgeText}>{unreadCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
+              <View style={styles.teacherIconCircle}>
+                <Image source={require('../assets/senseishou.jpg')} style={styles.teacherIconImage} />
+              </View>
+              <Text style={styles.teacherIconLabel}>先生証</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ── 状態1: 何も選ばれていない ── */}
@@ -563,6 +582,57 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
+      {/* 受信トレイ */}
+      <Modal visible={showInbox} transparent animationType="slide" onRequestClose={() => setShowInbox(false)}>
+        <View style={styles.studentSheetContainer}>
+          <Pressable style={styles.studentSheetBackdrop} onPress={() => setShowInbox(false)} />
+          <View style={[styles.studentSheetContent, { maxHeight: '75%' }]}>
+            <View style={styles.inboxHeader}>
+              <Text style={styles.inboxTitle}>✉️ メールボックス</Text>
+              <TouchableOpacity onPress={() => setShowInbox(false)}>
+                <Text style={styles.inboxClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              {mailMessages.map((msg) => {
+                const student = msg.studentId ? STUDENTS.find((s) => s.id === msg.studentId) : null
+                return (
+                  <TouchableOpacity
+                    key={msg.id}
+                    style={styles.inboxItem}
+                    onPress={() => {
+                      if (!msg.read) {
+                        markMailRead(msg.id).then(setMailMessages)
+                      }
+                    }}
+                  >
+                    <View style={styles.inboxAvatar}>
+                      {student ? (
+                        <Image source={{ uri: student.avatar }} style={styles.inboxAvatarImg} />
+                      ) : (
+                        <Text style={{ fontSize: 18 }}>📢</Text>
+                      )}
+                    </View>
+                    <View style={styles.inboxBody}>
+                      <View style={styles.inboxMeta}>
+                        <Text style={styles.inboxFrom}>{msg.from}</Text>
+                        {!msg.read && <View style={styles.inboxUnreadDot} />}
+                        {new Date(msg.timestamp).getTime() !== 0 && (
+                          <Text style={styles.inboxDate}>
+                            {new Date(msg.timestamp).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={styles.inboxContent}>{msg.content}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* 先生証シート */}
       <Modal visible={teacherSheet} transparent animationType="slide" onRequestClose={() => setTeacherSheet(false)}>
         <View style={styles.studentSheetContainer}>
@@ -687,6 +757,22 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   appTitle: { fontSize: 30, fontWeight: '900', color: '#0c4a6e', letterSpacing: -0.5 },
   appSubtitle: { fontSize: 12, color: '#0369a1', marginTop: 2, fontWeight: '400', letterSpacing: 0.3 },
+  headerIcons: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+  mailIconBtn: { alignItems: 'center', gap: 2, position: 'relative' },
+  mailIconCircle: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  mailIconEmoji: { fontSize: 20 },
+  mailBadge: {
+    position: 'absolute', top: -4, right: -4,
+    backgroundColor: '#ef4444', borderRadius: 8,
+    minWidth: 16, height: 16,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  mailBadgeText: { color: 'white', fontSize: 9, fontWeight: '900' },
   teacherIconBtn: {
     alignItems: 'center', gap: 2,
   },
@@ -697,6 +783,31 @@ const styles = StyleSheet.create({
   },
   teacherIconImage: { width: 40, height: 40 },
   teacherIconLabel: { fontSize: 9, fontWeight: '700', color: '#0369a1', letterSpacing: 0.5 },
+
+  // 受信トレイ
+  inboxHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+  },
+  inboxTitle: { fontSize: 15, fontWeight: '900', color: '#1e293b' },
+  inboxClose: { fontSize: 18, color: '#94a3b8' },
+  inboxItem: {
+    flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: '#f8fafc',
+  },
+  inboxAvatar: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#e0f2fe', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    flexShrink: 0, marginTop: 2,
+  },
+  inboxAvatarImg: { width: 40, height: 40 },
+  inboxBody: { flex: 1 },
+  inboxMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  inboxFrom: { fontSize: 12, fontWeight: '700', color: '#334155' },
+  inboxUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#ef4444' },
+  inboxDate: { fontSize: 10, color: '#94a3b8', marginLeft: 'auto' },
+  inboxContent: { fontSize: 13, color: '#475569', lineHeight: 19 },
 
   // 先生証シート
   tcSheetBottom: { backgroundColor: '#0f172a', paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0 },

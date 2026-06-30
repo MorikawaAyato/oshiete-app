@@ -10,6 +10,7 @@ import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
 import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
+import { addMail } from '@/lib/storage'
 import type { ChatMessage } from '@/lib/types'
 
 const MAX_TURNS = 9
@@ -153,7 +154,8 @@ export default function ChatScreen() {
     setLoading(true)
 
     try {
-      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter)
+      const isFinalTurn = turnCount + 1 >= MAX_TURNS
+      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn)
       if (res.text) {
         const newMessages: ChatMessage[] = [...next, { role: 'mana', text: res.text }]
         setChatMessages(newMessages)
@@ -161,6 +163,17 @@ export default function ChatScreen() {
         setTurnCount(newTurnCount)
         if (newTurnCount >= MAX_TURNS) {
           setClassEnded(true)
+          if (res.mailContent) {
+            void addMail({
+              id: Date.now().toString(),
+              type: 'student',
+              from: student.name,
+              studentId: student.id,
+              content: res.mailContent,
+              timestamp: new Date().toISOString(),
+              read: false,
+            })
+          }
           setTimeout(() => {
             setChatMessages(prev => [...prev, { role: 'mana', text: student.endMessage }])
             setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)

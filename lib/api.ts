@@ -45,11 +45,12 @@ export async function sendChat(
   messages: { role: string; text: string }[],
   teacherName?: string,
   teacherCharacter?: string,
-): Promise<{ text?: string; error?: string }> {
+  isFinalTurn?: boolean,
+): Promise<{ text?: string; mailContent?: string; error?: string }> {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName, teacherCharacter }),
+    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName, teacherCharacter, isFinalTurn }),
   })
   return res.json()
 }

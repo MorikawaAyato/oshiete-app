@@ -1,6 +1,54 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { HistoryItem, PreviewContent } from './types'
 
+export type MailMessage = {
+  id: string
+  type: 'notice' | 'student'
+  from: string
+  studentId?: string
+  content: string
+  timestamp: string
+  read: boolean
+}
+
+const MAIL_KEY = 'senseigokko_mail'
+
+const WELCOME_MAIL: MailMessage = {
+  id: 'welcome',
+  type: 'notice',
+  from: 'せんせいごっこ',
+  content: 'ようこそ、せんせいごっこへ！\n生徒を選んで、はじめての授業を始めてみましょう ✨',
+  timestamp: new Date(0).toISOString(),
+  read: false,
+}
+
+export async function loadMail(): Promise<MailMessage[]> {
+  try {
+    const raw = await AsyncStorage.getItem(MAIL_KEY)
+    return raw ? (JSON.parse(raw) as MailMessage[]) : [WELCOME_MAIL]
+  } catch {
+    return [WELCOME_MAIL]
+  }
+}
+
+export async function saveMail(msgs: MailMessage[]): Promise<void> {
+  try { await AsyncStorage.setItem(MAIL_KEY, JSON.stringify(msgs)) } catch {}
+}
+
+export async function addMail(msg: MailMessage): Promise<MailMessage[]> {
+  const current = await loadMail()
+  const updated = [msg, ...current]
+  await saveMail(updated)
+  return updated
+}
+
+export async function markMailRead(id: string): Promise<MailMessage[]> {
+  const current = await loadMail()
+  const updated = current.map((m) => m.id === id ? { ...m, read: true } : m)
+  await saveMail(updated)
+  return updated
+}
+
 const KEY = 'oshiete_history'
 const GROUPS_KEY = 'oshiete_groups'
 export const HISTORY_MAX = 18
