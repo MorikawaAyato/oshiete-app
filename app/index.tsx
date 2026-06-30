@@ -547,62 +547,99 @@ export default function HomeScreen() {
       <Modal visible={teacherSheet} transparent animationType="slide" onRequestClose={() => setTeacherSheet(false)}>
         <View style={styles.studentSheetContainer}>
           <Pressable style={styles.studentSheetOverlay} onPress={() => setTeacherSheet(false)} />
-          <View style={[styles.studentSheetBottom, { paddingBottom: 48 }]}>
+          <View style={[styles.studentSheetBottom, styles.tcSheetBottom]}>
             <View style={styles.studentSheetHandle} />
-            {/* 先生証カード */}
-            <View style={styles.teacherCard}>
-              <Text style={styles.teacherCardEmoji}>{getTeacherEmoji(teacherProfile.avatarId)}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.teacherCardBadge}>先生証</Text>
-                <Text style={styles.teacherCardName}>{teacherProfile.name || '（名前未設定）'}先生</Text>
-                <Text style={styles.teacherCardTitle}>{teacherProfile.title}</Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+              {/* 先生証カード */}
+              <View style={styles.tcCardWrap}>
+                <View style={styles.tcCard}>
+                  {/* 装飾サークル */}
+                  <View style={[styles.tcDeco, { right: -30, top: -30, width: 120, height: 120 }]} />
+                  <View style={[styles.tcDeco, { right: -12, top: -12, width: 68, height: 68 }]} />
+                  <View style={[styles.tcDeco, { left: -20, bottom: -20, width: 88, height: 88 }]} />
+                  {/* ヘッダー */}
+                  <View style={styles.tcHeader}>
+                    <View>
+                      <Text style={styles.tcAppLabel}>OSHIETE!</Text>
+                      <Text style={styles.tcCardLabel}>先生証</Text>
+                    </View>
+                    <Text style={styles.tcStar}>✦</Text>
+                  </View>
+                  {/* アバター */}
+                  <View style={styles.tcAvatarWrap}>
+                    <View style={styles.tcAvatarCircle}>
+                      <Text style={styles.tcAvatarEmoji}>{getTeacherEmoji(teacherProfile.avatarId)}</Text>
+                    </View>
+                  </View>
+                  {/* 名前・称号 */}
+                  <View style={styles.tcNameArea}>
+                    <Text style={styles.tcName}>
+                      {teacherProfile.name
+                        ? <>{teacherProfile.name}<Text style={styles.tcNameSuffix}> 先生</Text></>
+                        : <Text style={styles.tcNameEmpty}>（名前未設定）</Text>
+                      }
+                    </Text>
+                    <View style={styles.tcTitleBadge}>
+                      <Text style={styles.tcTitleText}>{teacherProfile.title}</Text>
+                    </View>
+                  </View>
+                  {/* チップ装飾 */}
+                  <View style={styles.tcChip} />
+                </View>
               </View>
-            </View>
-            {/* 名前入力 */}
-            <View style={{ marginBottom: 20 }}>
-              <Text style={styles.teacherSectionLabel}>お名前</Text>
-              <TextInput
-                style={styles.teacherNameInput}
-                value={teacherProfile.name}
-                onChangeText={(t) => setTeacherProfile({ ...teacherProfile, name: t })}
-                placeholder="例：田中"
-                placeholderTextColor="#cbd5e1"
-                maxLength={20}
-              />
-            </View>
-            {/* アバター選択 */}
-            <View style={{ marginBottom: 20 }}>
-              <Text style={styles.teacherSectionLabel}>アバター</Text>
-              <View style={styles.avatarGrid}>
-                {TEACHER_AVATARS.map(({ id, emoji }) => (
-                  <TouchableOpacity
-                    key={id}
-                    style={[styles.avatarCell, teacherProfile.avatarId === id && styles.avatarCellSel]}
-                    onPress={() => setTeacherProfile({ ...teacherProfile, avatarId: id })}
-                  >
-                    <Text style={styles.avatarEmoji}>{emoji}</Text>
-                  </TouchableOpacity>
-                ))}
+
+              {/* 編集エリア */}
+              <View style={styles.tcEditCard}>
+                <View style={styles.tcEditHeader}>
+                  <Text style={styles.tcEditHeaderText}>カードを編集</Text>
+                </View>
+                <View style={styles.tcEditBody}>
+                  <View style={{ marginBottom: 20 }}>
+                    <Text style={styles.teacherSectionLabel}>お名前</Text>
+                    <TextInput
+                      style={styles.teacherNameInput}
+                      value={teacherProfile.name}
+                      onChangeText={(t) => setTeacherProfile({ ...teacherProfile, name: t })}
+                      placeholder="例：田中"
+                      placeholderTextColor="#cbd5e1"
+                      maxLength={20}
+                    />
+                  </View>
+                  <View style={{ marginBottom: 20 }}>
+                    <Text style={styles.teacherSectionLabel}>アバター</Text>
+                    <View style={styles.avatarGrid}>
+                      {TEACHER_AVATARS.map(({ id, emoji }) => (
+                        <TouchableOpacity
+                          key={id}
+                          style={[styles.avatarCell, teacherProfile.avatarId === id && styles.avatarCellSel]}
+                          onPress={() => setTeacherProfile({ ...teacherProfile, avatarId: id })}
+                        >
+                          <Text style={styles.avatarEmoji}>{emoji}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  <View>
+                    <Text style={styles.teacherSectionLabel}>称号</Text>
+                    <View style={styles.titleRow}>
+                      {TEACHER_TITLES.map((title) => (
+                        <TouchableOpacity
+                          key={title}
+                          style={[styles.titleChip, teacherProfile.title === title && styles.titleChipSel]}
+                          onPress={() => setTeacherProfile({ ...teacherProfile, title })}
+                        >
+                          <Text style={[styles.titleChipText, teacherProfile.title === title && styles.titleChipTextSel]}>{title}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
               </View>
-            </View>
-            {/* 称号選択 */}
-            <View style={{ marginBottom: 24 }}>
-              <Text style={styles.teacherSectionLabel}>称号</Text>
-              <View style={styles.titleRow}>
-                {TEACHER_TITLES.map((title) => (
-                  <TouchableOpacity
-                    key={title}
-                    style={[styles.titleChip, teacherProfile.title === title && styles.titleChipSel]}
-                    onPress={() => setTeacherProfile({ ...teacherProfile, title })}
-                  >
-                    <Text style={[styles.titleChipText, teacherProfile.title === title && styles.titleChipTextSel]}>{title}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <TouchableOpacity style={styles.sheetCloseBtn} onPress={() => setTeacherSheet(false)}>
-              <Text style={styles.sheetCloseBtnText}>閉じる</Text>
-            </TouchableOpacity>
+
+              <TouchableOpacity style={[styles.sheetCloseBtn, { marginHorizontal: 16 }]} onPress={() => setTeacherSheet(false)}>
+                <Text style={styles.sheetCloseBtnText}>閉じる</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -622,28 +659,69 @@ const styles = StyleSheet.create({
   appSubtitle: { fontSize: 12, color: '#0369a1', marginTop: 2, fontWeight: '400', letterSpacing: 0.3 },
   teacherIconBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd',
+    backgroundColor: '#0c4a6e',
     alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#0c4a6e', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.45, shadowRadius: 6, elevation: 6,
   },
   teacherIconEmoji: { fontSize: 22 },
 
   // 先生証シート
-  teacherCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    margin: 16, padding: 14, borderRadius: 16,
-    backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd',
+  tcSheetBottom: { backgroundColor: '#f1f5f9', paddingHorizontal: 0, maxHeight: '88%' },
+  tcCardWrap: { alignItems: 'center', paddingTop: 16, paddingBottom: 20 },
+  tcCard: {
+    width: 240, borderRadius: 22, backgroundColor: '#0c4a6e',
+    aspectRatio: 0.68, overflow: 'hidden', padding: 20,
+    justifyContent: 'space-between',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.32, shadowRadius: 24, elevation: 14,
   },
-  teacherCardEmoji: { fontSize: 36 },
-  teacherCardBadge: { fontSize: 9, fontWeight: '800', color: '#0ea5e9', letterSpacing: 1.2, textTransform: 'uppercase' },
-  teacherCardName: { fontSize: 16, fontWeight: '800', color: '#0c4a6e', marginTop: 1 },
-  teacherCardTitle: { fontSize: 11, color: '#64748b', marginTop: 1 },
-  teacherSectionLabel: { fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 1, marginBottom: 8, marginHorizontal: 16 },
+  tcDeco: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.05)' },
+  tcHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  tcAppLabel: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 3.5 },
+  tcCardLabel: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.85)', letterSpacing: 3, marginTop: 2 },
+  tcStar: { fontSize: 14, color: 'rgba(255,255,255,0.18)' },
+  tcAvatarWrap: { alignItems: 'center' },
+  tcAvatarCircle: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 3, borderColor: 'rgba(255,255,255,0.65)',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8,
+  },
+  tcAvatarEmoji: { fontSize: 44 },
+  tcNameArea: { alignItems: 'center', gap: 8 },
+  tcName: { fontSize: 22, fontWeight: '900', color: 'white', letterSpacing: 0.5 },
+  tcNameSuffix: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.7)' },
+  tcNameEmpty: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.35)' },
+  tcTitleBadge: {
+    paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+  },
+  tcTitleText: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5 },
+  tcChip: {
+    alignSelf: 'flex-end', width: 36, height: 24, borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+  },
+  tcEditCard: {
+    marginHorizontal: 16, marginBottom: 12,
+    borderRadius: 18, backgroundColor: 'white', overflow: 'hidden',
+  },
+  tcEditHeader: {
+    paddingHorizontal: 16, paddingVertical: 9,
+    backgroundColor: '#f8fafc', borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+  },
+  tcEditHeaderText: { fontSize: 9, fontWeight: '800', color: '#94a3b8', letterSpacing: 3 },
+  tcEditBody: { padding: 16 },
+
+  teacherSectionLabel: { fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 1, marginBottom: 8 },
   teacherNameInput: {
-    marginHorizontal: 16, paddingHorizontal: 14, paddingVertical: 12,
+    paddingHorizontal: 14, paddingVertical: 12,
     borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0',
-    fontSize: 14, fontWeight: '500', color: '#1e293b', backgroundColor: 'white',
+    fontSize: 14, fontWeight: '500', color: '#1e293b', backgroundColor: '#fafafa',
   },
-  avatarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16 },
+  avatarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   avatarCell: {
     width: 48, height: 48, borderRadius: 12,
     backgroundColor: '#f8fafc', borderWidth: 2, borderColor: 'transparent',
@@ -651,9 +729,9 @@ const styles = StyleSheet.create({
   },
   avatarCellSel: { backgroundColor: '#e0f2fe', borderColor: '#38bdf8' },
   avatarEmoji: { fontSize: 24 },
-  titleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16 },
+  titleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   titleChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f1f5f9' },
-  titleChipSel: { backgroundColor: '#0ea5e9' },
+  titleChipSel: { backgroundColor: '#0369a1' },
   titleChipText: { fontSize: 13, fontWeight: '600', color: '#475569' },
   titleChipTextSel: { color: 'white' },
 
