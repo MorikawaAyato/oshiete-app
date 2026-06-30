@@ -74,7 +74,7 @@ export default function LibraryScreen() {
     setCurrentHistoryId(item.id)
     setPreviewContent(item.previewContent ?? null)
     resetChatSession()
-    router.back()
+    setTimeout(() => router.back(), 280)
   }
 
   const openSheet = (item: HistoryItem) => {
@@ -208,6 +208,7 @@ export default function LibraryScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* ヘッダー */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>📚 教材ライブラリ</Text>
@@ -338,6 +339,7 @@ export default function LibraryScreen() {
           </TouchableOpacity>
         )}
       </View>
+      </KeyboardAvoidingView>
 
       {/* アクションシート */}
       <Modal
@@ -555,7 +557,7 @@ const styles = StyleSheet.create({
   },
   groupTitle: { fontSize: 13, fontWeight: '700', color: '#475569' },
   groupCount: { fontSize: 11, color: '#94a3b8' },
-  flex1: { flex: 1 },
+  flex1: { flex: 1, minHeight: 0 },
   groupIconBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   groupIconBtnText: { fontSize: 14 },
 
