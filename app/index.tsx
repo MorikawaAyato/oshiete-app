@@ -292,7 +292,7 @@ export default function HomeScreen() {
         {/* ヘッダー */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.appTitle}>OSHIETE!</Text>
+            <Text style={styles.appTitle}>せんせいごっこ</Text>
             <Text style={styles.appSubtitle}>教えるほど、身につく。</Text>
           </View>
           <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
@@ -580,7 +580,7 @@ export default function HomeScreen() {
                   <View style={[styles.tcDeco, { left: -20, bottom: -20, width: 88, height: 88 }]} />
                   <View style={styles.tcHeader}>
                     <View>
-                      <Text style={styles.tcAppLabel}>OSHIETE!</Text>
+                      <Text style={styles.tcAppLabel}></Text>
                       <Text style={styles.tcCardLabel}>先生証</Text>
                     </View>
                     <Text style={styles.tcStar}>✦</Text>
