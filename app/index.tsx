@@ -200,7 +200,7 @@ export default function HomeScreen() {
   }
 
   const selectHistory = (item: HistoryItem) => {
-    if (activeHistoryId === item.id) { clearSelection(); return }
+    if (activeHistoryId === item.id) return
     setPendingImages([])
     resetChatSession()
     setActiveHistoryId(item.id)
@@ -339,26 +339,22 @@ export default function HomeScreen() {
             <View style={styles.contentCard}>
               <View style={styles.contentCardHeader}>
                 <Text style={styles.contentCardHeaderLabel}>現在の教材</Text>
-              </View>
-              <View style={styles.contentCardInner}>
-                <TouchableOpacity onPress={() => openPicker('replace')} activeOpacity={0.75}>
-                  {thumbnails[0] ? (
-                    <Image source={{ uri: thumbnails[0] }} style={styles.contentThumb} />
-                  ) : (
-                    <View style={[styles.contentThumb, { backgroundColor: '#e2e8f0' }]} />
-                  )}
-                  <View style={styles.contentThumbBadge}>
-                    <Text style={styles.contentThumbBadgeText}>📷</Text>
-                  </View>
-                </TouchableOpacity>
-                <Text style={styles.contentTitle} numberOfLines={2}>{shortTitle}</Text>
-                <TouchableOpacity
-                  onPress={clearSelection}
-                  style={styles.contentClear}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
+                <TouchableOpacity onPress={clearSelection} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={styles.contentClearText}>✕</Text>
                 </TouchableOpacity>
+              </View>
+              <View>
+                {thumbnails[0] ? (
+                  <Image source={{ uri: thumbnails[0] }} style={styles.contentThumbFull} />
+                ) : (
+                  <View style={[styles.contentThumbFull, { backgroundColor: '#e2e8f0' }]} />
+                )}
+                <TouchableOpacity style={styles.contentThumbOverlay} onPress={() => openPicker('replace')} activeOpacity={0.85}>
+                  <Text style={styles.contentThumbOverlayText}>📷　新しい写真を選ぶ</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.contentCardBody}>
+                <Text style={styles.contentTitle} numberOfLines={2}>{shortTitle}</Text>
               </View>
             </View>
 
@@ -604,15 +600,14 @@ const styles = StyleSheet.create({
     shadowColor: '#0369a1', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.14, shadowRadius: 10, elevation: 5,
   },
-  contentCardInner: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 },
-  contentThumb: { width: 60, height: 60, borderRadius: 10 },
-  contentThumbBadge: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 22, height: 22, borderRadius: 6,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center', justifyContent: 'center',
+  contentThumbFull: { width: '100%', height: 130 },
+  contentThumbOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    paddingVertical: 12, backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
   },
-  contentThumbBadgeText: { fontSize: 11 },
+  contentThumbOverlayText: { fontSize: 14, fontWeight: '700', color: 'white' },
+  contentCardBody: { padding: 12, paddingTop: 10 },
   // ⑤ カードタイトルを少し大きく
   contentTitle: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1e293b', lineHeight: 19 },
   contentClear: { padding: 4 },
