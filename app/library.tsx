@@ -74,7 +74,7 @@ export default function LibraryScreen() {
     setCurrentHistoryId(item.id)
     setPreviewContent(item.previewContent ?? null)
     resetChatSession()
-    setTimeout(() => router.back(), 280)
+    requestAnimationFrame(() => router.back())
   }
 
   const openSheet = (item: HistoryItem) => {
