@@ -3,7 +3,7 @@ import type { HistoryItem, PreviewContent } from './types'
 
 const KEY = 'oshiete_history'
 const GROUPS_KEY = 'oshiete_groups'
-export const HISTORY_MAX = 20
+export const HISTORY_MAX = 18
 
 export async function loadHistory(): Promise<HistoryItem[]> {
   try {

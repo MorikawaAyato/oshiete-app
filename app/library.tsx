@@ -150,12 +150,11 @@ export default function LibraryScreen() {
   }
   const groups = savedGroups.map(name => ({ name, items: groupMap.get(name) ?? [] }))
 
-  const renderCard = ({ item, index }: { item: HistoryItem; index: number }) => {
+  const renderCard = ({ item }: { item: HistoryItem }) => {
     const isActive = currentHistoryId === item.id
     const title = item.title.replace(TITLE_RE, '')
-    const isOdd = index % 2 === 1
     return (
-      <View style={[styles.card, isActive && styles.cardActive, isOdd && styles.cardOdd]}>
+      <View style={[styles.card, isActive && styles.cardActive]}>
         <TouchableOpacity onPress={() => selectItem(item)} activeOpacity={0.85}>
           {item.thumbnails[0] ? (
             <Image source={{ uri: item.thumbnails[0] }} style={styles.cardThumb} />
@@ -263,7 +262,7 @@ export default function LibraryScreen() {
               <FlatList
                 data={items}
                 keyExtractor={item => item.id}
-                numColumns={2}
+                numColumns={3}
                 scrollEnabled={false}
                 contentContainerStyle={styles.grid}
                 renderItem={renderCard}
@@ -278,7 +277,7 @@ export default function LibraryScreen() {
               <FlatList
                 data={ungrouped}
                 keyExtractor={item => item.id}
-                numColumns={2}
+                numColumns={3}
                 scrollEnabled={false}
                 contentContainerStyle={styles.grid}
                 renderItem={renderCard}
@@ -575,38 +574,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10,
   },
 
-  grid: { paddingHorizontal: 8, paddingBottom: 4 },
+  grid: { paddingHorizontal: 6, paddingBottom: 4 },
 
   card: {
-    flex: 1, margin: 4,
-    backgroundColor: 'white', borderRadius: 16, overflow: 'hidden',
+    flex: 1, margin: 3,
+    backgroundColor: 'white', borderRadius: 12, overflow: 'hidden',
     borderWidth: 2, borderColor: 'transparent',
     shadowColor: '#94a3b8', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1, shadowRadius: 4, elevation: 2,
+    shadowOpacity: 0.1, shadowRadius: 3, elevation: 2,
   },
-  cardOdd: { marginLeft: 4 },
   cardActive: { borderColor: '#f472b6', shadowColor: '#f472b6', shadowOpacity: 0.2 },
   cardThumb: { width: '100%', aspectRatio: 1, backgroundColor: '#e2e8f0' },
   cardThumbEmpty: { alignItems: 'center', justifyContent: 'center' },
-  cardThumbIcon: { fontSize: 32, color: '#cbd5e1' },
-  cardInfo: { padding: 8, backgroundColor: 'white' },
+  cardThumbIcon: { fontSize: 24, color: '#cbd5e1' },
+  cardInfo: { padding: 6, backgroundColor: 'white' },
   cardInfoActive: { backgroundColor: '#fff0f6' },
-  cardTitle: { fontSize: 11, fontWeight: '600', color: '#1e293b', lineHeight: 16, minHeight: 32 },
+  cardTitle: { fontSize: 10, fontWeight: '600', color: '#1e293b', lineHeight: 14, minHeight: 28 },
   cardTitleActive: { color: '#ec4899' },
-  cardDate: { fontSize: 10, color: '#94a3b8', marginTop: 3 },
+  cardDate: { fontSize: 9, color: '#94a3b8', marginTop: 2 },
   cardMenuBtn: {
-    position: 'absolute', top: 6, right: 6,
-    width: 26, height: 26, borderRadius: 13,
+    position: 'absolute', top: 4, right: 4,
+    width: 22, height: 22, borderRadius: 11,
     backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center', justifyContent: 'center',
   },
-  cardMenuDot: { color: 'white', fontSize: 14, lineHeight: 20 },
+  cardMenuDot: { color: 'white', fontSize: 12, lineHeight: 18 },
   activeBadge: {
-    position: 'absolute', top: 6, left: 6,
-    backgroundColor: '#ec4899', borderRadius: 10,
-    paddingHorizontal: 7, paddingVertical: 2,
+    position: 'absolute', top: 4, left: 4,
+    backgroundColor: '#ec4899', borderRadius: 8,
+    paddingHorizontal: 5, paddingVertical: 1,
   },
-  activeBadgeText: { color: 'white', fontSize: 9, fontWeight: '700' },
+  activeBadgeText: { color: 'white', fontSize: 8, fontWeight: '700' },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   emptyIcon: { fontSize: 48 },
