@@ -236,7 +236,7 @@ export default function PreviewScreen() {
                 <TouchableOpacity
                   key={s.id}
                   style={[styles.studentCard, isSel && { borderColor: s.color, backgroundColor: s.color + '18' }]}
-                  onPress={() => setSelectedStudentId(isSel ? null : s.id)}
+                  onPress={() => setSelectedStudentId(s.id)}
                 >
                   <Image source={{ uri: s.avatar }} style={styles.studentAvatar} />
                   <Text style={[styles.studentName, isSel && { color: s.color }]}>{s.name}</Text>
