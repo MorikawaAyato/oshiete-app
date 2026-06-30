@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import * as ImagePicker from 'expo-image-picker'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
-import { TEACHER_AVATARS, TEACHER_TITLES, getTeacherEmoji } from '@/lib/teacherProfile'
+import { TEACHER_AVATARS, TEACHER_TITLES, getTeacherAvatarImage } from '@/lib/teacherProfile'
 import { analyzeImages, fetchPreviewContent } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, HISTORY_MAX,
@@ -294,7 +294,7 @@ export default function HomeScreen() {
             <Text style={styles.appSubtitle}>教えるほど、身につく。</Text>
           </View>
           <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
-            <Image source={require('../assets/senseishou.jpg')} style={styles.teacherIconImage} />
+            <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={styles.teacherIconImage} />
           </TouchableOpacity>
         </View>
 
@@ -586,7 +586,7 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.tcAvatarWrap}>
                     <View style={styles.tcAvatarCircle}>
-                      <Text style={styles.tcAvatarEmoji}>{getTeacherEmoji(teacherProfile.avatarId)}</Text>
+                      <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={styles.tcAvatarImage} />
                     </View>
                   </View>
                   <View style={styles.tcNameArea}>
@@ -631,15 +631,16 @@ export default function HomeScreen() {
                     />
                   </View>
                   <View>
-                    <Text style={styles.teacherSectionLabel}>アバター</Text>
+                    <Text style={styles.teacherSectionLabel}>キャラクター</Text>
                     <View style={styles.avatarGrid}>
-                      {TEACHER_AVATARS.map(({ id, emoji }) => (
+                      {TEACHER_AVATARS.map(({ id, label }) => (
                         <TouchableOpacity
                           key={id}
                           style={[styles.avatarCell, teacherProfile.avatarId === id && styles.avatarCellSel]}
                           onPress={() => setTeacherProfile({ ...teacherProfile, avatarId: id })}
                         >
-                          <Text style={styles.avatarEmoji}>{emoji}</Text>
+                          <Image source={getTeacherAvatarImage(id)} style={styles.avatarCellImage} />
+                          <Text style={styles.avatarCellLabel}>{label}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -717,7 +718,7 @@ const styles = StyleSheet.create({
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.65)',
     alignItems: 'center', justifyContent: 'center',
   },
-  tcAvatarEmoji: { fontSize: 44 },
+  tcAvatarImage: { width: 82, height: 82, borderRadius: 41 },
   tcNameArea: { alignItems: 'center', gap: 8 },
   tcName: { fontSize: 22, fontWeight: '900', color: 'white', letterSpacing: 0.5 },
   tcNameSuffix: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.7)' },
@@ -746,14 +747,15 @@ const styles = StyleSheet.create({
     borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0',
     fontSize: 14, fontWeight: '500', color: '#1e293b', backgroundColor: '#fafafa',
   },
-  avatarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  avatarGrid: { flexDirection: 'row', gap: 6 },
   avatarCell: {
-    width: 44, height: 44, borderRadius: 10,
+    flex: 1, borderRadius: 12, paddingVertical: 6,
     backgroundColor: '#f8fafc', borderWidth: 2, borderColor: 'transparent',
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', gap: 4,
   },
   avatarCellSel: { backgroundColor: '#e0f2fe', borderColor: '#38bdf8' },
-  avatarEmoji: { fontSize: 22 },
+  avatarCellImage: { width: 48, height: 48, borderRadius: 24 },
+  avatarCellLabel: { fontSize: 9, fontWeight: '700', color: '#64748b' },
   titleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   titleChip: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, backgroundColor: '#f1f5f9' },
   titleChipSel: { backgroundColor: '#0369a1' },
