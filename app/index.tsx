@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
   },
   tcEditHint: { position: 'absolute', bottom: 10, left: 0, right: 0, alignItems: 'center' },
-  tcEditHintText: { fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: 0.5 },
+  tcEditHintText: { fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 },
   tcBackHeader: {
     paddingHorizontal: 14, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
