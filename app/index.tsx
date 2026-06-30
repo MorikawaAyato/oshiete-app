@@ -293,7 +293,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.appTitle}>せんせいごっこ</Text>
-            <Text style={styles.appSubtitle}>教えるほど、身につく。</Text>
+            <Text style={styles.appSubtitle}>教えると、わかる。</Text>
           </View>
           <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
             <View style={styles.teacherIconCircle}>
