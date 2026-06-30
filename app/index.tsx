@@ -616,7 +616,11 @@ const styles = StyleSheet.create({
   },
   // ⑤ セクションラベルは極太＋letterSpacing で引き締める
   contentCardHeaderLabel: { fontSize: 10, fontWeight: '800', color: '#0369a1', letterSpacing: 1.0 },
-  contentCardHeaderAction: { fontSize: 11, color: '#94a3b8' },
+  contentCardHeaderAction: {
+    fontSize: 13, color: '#ec4899', fontWeight: '600',
+    backgroundColor: '#fdf2f8', paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 20, overflow: 'hidden',
+  },
 
   // アクション：教材を見る（背景色＋影で区別、枠線なし）
   actionBtnPreview: {
