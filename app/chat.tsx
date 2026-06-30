@@ -96,12 +96,13 @@ function EnteringRoom({ student }: { student: { name: string; avatar: string; co
 export default function ChatScreen() {
   const router = useRouter()
   const {
-    imageDescription, notes, selectedStudentId,
+    imageDescription, notes, selectedStudentId, teacherProfile,
     chatMessages, setChatMessages,
     turnCount, setTurnCount,
     classEnded, setClassEnded,
     resetChatSession,
   } = useApp()
+  const teacherName = teacherProfile.name || undefined
   const student = getStudentById(selectedStudentId ?? '')
   const scrollRef = useRef<ScrollView>(null)
 
@@ -126,7 +127,7 @@ export default function ChatScreen() {
     // メッセージが既にある（教材画面から戻ってきた等）場合はstartChatしない
     if (!student || chatMessages.length > 0) return
     setStarting(true)
-    startChat(student.id, imageDescription, notes)
+    startChat(student.id, imageDescription, notes, teacherName)
       .then((res) => {
         if (res.manaResponse) {
           setChatMessages([{ role: 'mana', text: res.manaResponse }])
@@ -150,7 +151,7 @@ export default function ChatScreen() {
     setLoading(true)
 
     try {
-      const res = await sendChat(student.id, imageDescription, notes, next)
+      const res = await sendChat(student.id, imageDescription, notes, next, teacherName)
       if (res.text) {
         const newMessages: ChatMessage[] = [...next, { role: 'mana', text: res.text }]
         setChatMessages(newMessages)

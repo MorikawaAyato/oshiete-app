@@ -1,6 +1,6 @@
 import {
   View, Text, TouchableOpacity, ScrollView, Image,
-  StyleSheet, ActivityIndicator, Alert, Animated, Modal, Pressable,
+  StyleSheet, ActivityIndicator, Alert, Animated, Modal, Pressable, TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useFocusEffect } from 'expo-router'
@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import * as ImagePicker from 'expo-image-picker'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
+import { TEACHER_AVATARS, TEACHER_TITLES, getTeacherEmoji } from '@/lib/teacherProfile'
 import { analyzeImages, fetchPreviewContent } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, HISTORY_MAX,
@@ -27,6 +28,7 @@ export default function HomeScreen() {
     setNotes,
     previewContent, setPreviewContent,
     selectedStudentId, setSelectedStudentId,
+    teacherProfile, setTeacherProfile,
     thumbnails, setThumbnails,
     currentHistoryId, setCurrentHistoryId,
     resetChatSession,
@@ -38,6 +40,7 @@ export default function HomeScreen() {
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<ImageData[]>([])
   const [studentSheet, setStudentSheet] = useState<'profile' | 'picker' | null>(null)
+  const [teacherSheet, setTeacherSheet] = useState(false)
 
   const selectedStudent = STUDENTS.find(s => s.id === selectedStudentId) ?? null
 
@@ -271,8 +274,13 @@ export default function HomeScreen() {
       >
         {/* ヘッダー */}
         <View style={styles.header}>
-          <Text style={styles.appTitle}>OSHIETE!</Text>
-          <Text style={styles.appSubtitle}>教えるほど、身につく。</Text>
+          <View>
+            <Text style={styles.appTitle}>OSHIETE!</Text>
+            <Text style={styles.appSubtitle}>教えるほど、身につく。</Text>
+          </View>
+          <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
+            <Text style={styles.teacherIconEmoji}>{getTeacherEmoji(teacherProfile.avatarId)}</Text>
+          </TouchableOpacity>
         </View>
 
         {/* ── 状態1: 何も選ばれていない ── */}
@@ -535,6 +543,70 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
+      {/* 先生証シート */}
+      <Modal visible={teacherSheet} transparent animationType="slide" onRequestClose={() => setTeacherSheet(false)}>
+        <View style={styles.studentSheetContainer}>
+          <Pressable style={styles.studentSheetOverlay} onPress={() => setTeacherSheet(false)} />
+          <View style={[styles.studentSheetBottom, { paddingBottom: 48 }]}>
+            <View style={styles.studentSheetHandle} />
+            {/* 先生証カード */}
+            <View style={styles.teacherCard}>
+              <Text style={styles.teacherCardEmoji}>{getTeacherEmoji(teacherProfile.avatarId)}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.teacherCardBadge}>先生証</Text>
+                <Text style={styles.teacherCardName}>{teacherProfile.name || '（名前未設定）'}先生</Text>
+                <Text style={styles.teacherCardTitle}>{teacherProfile.title}</Text>
+              </View>
+            </View>
+            {/* 名前入力 */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={styles.teacherSectionLabel}>お名前</Text>
+              <TextInput
+                style={styles.teacherNameInput}
+                value={teacherProfile.name}
+                onChangeText={(t) => setTeacherProfile({ ...teacherProfile, name: t })}
+                placeholder="例：田中"
+                placeholderTextColor="#cbd5e1"
+                maxLength={20}
+              />
+            </View>
+            {/* アバター選択 */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={styles.teacherSectionLabel}>アバター</Text>
+              <View style={styles.avatarGrid}>
+                {TEACHER_AVATARS.map(({ id, emoji }) => (
+                  <TouchableOpacity
+                    key={id}
+                    style={[styles.avatarCell, teacherProfile.avatarId === id && styles.avatarCellSel]}
+                    onPress={() => setTeacherProfile({ ...teacherProfile, avatarId: id })}
+                  >
+                    <Text style={styles.avatarEmoji}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            {/* 称号選択 */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={styles.teacherSectionLabel}>称号</Text>
+              <View style={styles.titleRow}>
+                {TEACHER_TITLES.map((title) => (
+                  <TouchableOpacity
+                    key={title}
+                    style={[styles.titleChip, teacherProfile.title === title && styles.titleChipSel]}
+                    onPress={() => setTeacherProfile({ ...teacherProfile, title })}
+                  >
+                    <Text style={[styles.titleChipText, teacherProfile.title === title && styles.titleChipTextSel]}>{title}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <TouchableOpacity style={styles.sheetCloseBtn} onPress={() => setTeacherSheet(false)}>
+              <Text style={styles.sheetCloseBtnText}>閉じる</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <BottomTabBar active="home" />
     </SafeAreaView>
   )
@@ -545,10 +617,45 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: 20, paddingVertical: 24, gap: 14 },
 
-  header: { marginBottom: 4 },
-  // ⑤ タイトルを極太化し、サブタイトルは細くして5段階の階層を作る
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   appTitle: { fontSize: 30, fontWeight: '900', color: '#0c4a6e', letterSpacing: -0.5 },
   appSubtitle: { fontSize: 12, color: '#0369a1', marginTop: 2, fontWeight: '400', letterSpacing: 0.3 },
+  teacherIconBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  teacherIconEmoji: { fontSize: 22 },
+
+  // 先生証シート
+  teacherCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    margin: 16, padding: 14, borderRadius: 16,
+    backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd',
+  },
+  teacherCardEmoji: { fontSize: 36 },
+  teacherCardBadge: { fontSize: 9, fontWeight: '800', color: '#0ea5e9', letterSpacing: 1.2, textTransform: 'uppercase' },
+  teacherCardName: { fontSize: 16, fontWeight: '800', color: '#0c4a6e', marginTop: 1 },
+  teacherCardTitle: { fontSize: 11, color: '#64748b', marginTop: 1 },
+  teacherSectionLabel: { fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 1, marginBottom: 8, marginHorizontal: 16 },
+  teacherNameInput: {
+    marginHorizontal: 16, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0',
+    fontSize: 14, fontWeight: '500', color: '#1e293b', backgroundColor: 'white',
+  },
+  avatarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16 },
+  avatarCell: {
+    width: 48, height: 48, borderRadius: 12,
+    backgroundColor: '#f8fafc', borderWidth: 2, borderColor: 'transparent',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarCellSel: { backgroundColor: '#e0f2fe', borderColor: '#38bdf8' },
+  avatarEmoji: { fontSize: 24 },
+  titleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16 },
+  titleChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f1f5f9' },
+  titleChipSel: { backgroundColor: '#0ea5e9' },
+  titleChipText: { fontSize: 13, fontWeight: '600', color: '#475569' },
+  titleChipTextSel: { color: 'white' },
 
   // 状態1
   uploadBtnLarge: {

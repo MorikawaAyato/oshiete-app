@@ -27,11 +27,12 @@ export async function startChat(
   studentId: string,
   imageDescription: string,
   notes: string,
+  teacherName?: string,
 ): Promise<{ manaResponse?: string; error?: string }> {
   const res = await fetch(`${API_BASE}/api/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, imageDescription, notes }),
+    body: JSON.stringify({ studentId, imageDescription, notes, teacherName }),
   })
   return res.json()
 }
@@ -41,11 +42,12 @@ export async function sendChat(
   imageDescription: string,
   notes: string,
   messages: { role: string; text: string }[],
+  teacherName?: string,
 ): Promise<{ text?: string; error?: string }> {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, imageDescription, notes, messages }),
+    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName }),
   })
   return res.json()
 }

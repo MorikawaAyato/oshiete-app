@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { PreviewContent, ChatMessage } from './types'
+import { type TeacherProfile, DEFAULT_TEACHER } from './teacherProfile'
 
 const STUDENT_KEY = 'oshiete_student'
+const TEACHER_KEY = 'oshiete_teacher'
 
 type AppState = {
   imageDescription: string
@@ -17,6 +19,8 @@ type AppState = {
   setThumbnails: (v: string[]) => void
   currentHistoryId: string | null
   setCurrentHistoryId: (v: string | null) => void
+  teacherProfile: TeacherProfile
+  setTeacherProfile: (v: TeacherProfile) => void
   // チャット状態（画面遷移をまたいで保持）
   chatMessages: ChatMessage[]
   setChatMessages: (v: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => void
@@ -33,6 +37,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [imageDescription, setImageDescription] = useState('')
   const [notes, setNotes] = useState('')
   const [previewContent, setPreviewContent] = useState<PreviewContent | null>(null)
+
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
   const studentLoaded = useRef(false)
 
@@ -51,6 +56,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.removeItem(STUDENT_KEY).catch(() => {})
     }
   }, [selectedStudentId])
+
+  const [teacherProfile, setTeacherProfileRaw] = useState<TeacherProfile>(DEFAULT_TEACHER)
+  const teacherLoaded = useRef(false)
+
+  useEffect(() => {
+    AsyncStorage.getItem(TEACHER_KEY).then(v => {
+      if (v) { try { setTeacherProfileRaw(JSON.parse(v)) } catch {} }
+      teacherLoaded.current = true
+    }).catch(() => { teacherLoaded.current = true })
+  }, [])
+
+  useEffect(() => {
+    if (!teacherLoaded.current) return
+    AsyncStorage.setItem(TEACHER_KEY, JSON.stringify(teacherProfile)).catch(() => {})
+  }, [teacherProfile])
+
+  const setTeacherProfile = (v: TeacherProfile) => setTeacherProfileRaw(v)
 
   const [thumbnails, setThumbnails] = useState<string[]>([])
   const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null)
@@ -71,6 +93,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         notes, setNotes,
         previewContent, setPreviewContent,
         selectedStudentId, setSelectedStudentId,
+        teacherProfile, setTeacherProfile,
         thumbnails, setThumbnails,
         currentHistoryId, setCurrentHistoryId,
         chatMessages, setChatMessages,
