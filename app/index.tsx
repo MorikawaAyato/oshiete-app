@@ -339,16 +339,18 @@ export default function HomeScreen() {
             <View style={styles.contentCard}>
               <View style={styles.contentCardHeader}>
                 <Text style={styles.contentCardHeaderLabel}>現在の教材</Text>
-                <TouchableOpacity onPress={() => openPicker('replace')}>
-                  <Text style={styles.contentCardHeaderAction}>写真を選ぶ →</Text>
-                </TouchableOpacity>
               </View>
               <View style={styles.contentCardInner}>
-                {thumbnails[0] ? (
-                  <Image source={{ uri: thumbnails[0] }} style={styles.contentThumb} />
-                ) : (
-                  <View style={[styles.contentThumb, { backgroundColor: '#e2e8f0' }]} />
-                )}
+                <TouchableOpacity onPress={() => openPicker('replace')} activeOpacity={0.75}>
+                  {thumbnails[0] ? (
+                    <Image source={{ uri: thumbnails[0] }} style={styles.contentThumb} />
+                  ) : (
+                    <View style={[styles.contentThumb, { backgroundColor: '#e2e8f0' }]} />
+                  )}
+                  <View style={styles.contentThumbBadge}>
+                    <Text style={styles.contentThumbBadgeText}>📷</Text>
+                  </View>
+                </TouchableOpacity>
                 <Text style={styles.contentTitle} numberOfLines={2}>{shortTitle}</Text>
                 <TouchableOpacity
                   onPress={clearSelection}
@@ -603,7 +605,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.14, shadowRadius: 10, elevation: 5,
   },
   contentCardInner: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 },
-  contentThumb: { width: 44, height: 44, borderRadius: 8 },
+  contentThumb: { width: 60, height: 60, borderRadius: 10 },
+  contentThumbBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 22, height: 22, borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  contentThumbBadgeText: { fontSize: 11 },
   // ⑤ カードタイトルを少し大きく
   contentTitle: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1e293b', lineHeight: 19 },
   contentClear: { padding: 4 },
