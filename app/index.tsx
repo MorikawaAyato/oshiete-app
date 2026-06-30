@@ -377,13 +377,14 @@ export default function HomeScreen() {
 
             {/* 授業セクション */}
             <View style={[styles.chatSection, { marginTop: 8 }]}>
-              <Text style={styles.chatSectionLabel}>授業する生徒を選ぶ</Text>
+              {!selectedStudent && <Text style={styles.chatSectionLabel}>授業する生徒を選ぶ</Text>}
               <TouchableOpacity
                 style={[styles.studentDisplayBtn, !selectedStudent && styles.studentDisplayBtnEmpty]}
                 onPress={() => setStudentSheet(selectedStudent ? 'profile' : 'picker')}
               >
                 {selectedStudent ? (
                   <>
+                    <Text style={styles.studentDisplayRole}>生徒</Text>
                     <Image source={{ uri: selectedStudent.avatar }} style={styles.studentDisplayAvatar} />
                     <View style={styles.studentDisplayInfo}>
                       <Text style={styles.studentDisplayName}>{selectedStudent.name}</Text>
@@ -654,6 +655,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     padding: 12, borderRadius: 16,
     backgroundColor: 'white', borderWidth: 1.5, borderColor: '#e2e8f0',
+  },
+  studentDisplayRole: {
+    position: 'absolute', top: 6, right: 10,
+    fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.5,
   },
   studentDisplayAvatar: { width: 48, height: 48, borderRadius: 24 },
   studentDisplayInfo: { flex: 1, minWidth: 0 },
