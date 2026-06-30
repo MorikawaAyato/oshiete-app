@@ -13,6 +13,17 @@ import type { ChatMessage } from '@/lib/types'
 
 const MAX_TURNS = 9
 
+const NG_PATTERNS = [
+  /死[にねの]/, /死んで/, /氏ね/,
+  /[殺コロ][しすせそ]/, /ぶ[っ]?殺/,
+  /ちんこ/i, /ちんちん/i, /まんこ/i, /おっぱい/i,
+  /[セせ][ッっ][クく][スす]/, /エロ/i, /ポルノ/i, /フェラ/i, /手コキ/i, /オナニー/i,
+]
+
+function containsNG(text: string): boolean {
+  return NG_PATTERNS.some((p) => p.test(text))
+}
+
 function TypingDots({ color }: { color: string }) {
   const dot0 = useRef(new Animated.Value(0)).current
   const dot1 = useRef(new Animated.Value(0)).current
@@ -97,6 +108,7 @@ export default function ChatScreen() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [inputBlocked, setInputBlocked] = useState(false)
 
   const remainingMins = classEnded ? 0 : (MAX_TURNS - turnCount) * 5
   const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
@@ -126,6 +138,11 @@ export default function ChatScreen() {
 
   const send = async () => {
     if (!input.trim() || loading || !student) return
+    if (containsNG(input)) {
+      setInputBlocked(true)
+      setTimeout(() => setInputBlocked(false), 3000)
+      return
+    }
     const userMsg: ChatMessage = { role: 'user', text: input.trim() }
     const next = [...chatMessages, userMsg]
     setChatMessages(next)
@@ -293,23 +310,28 @@ export default function ChatScreen() {
 
         {/* 入力エリア */}
         {!classEnded && (
-          <View style={styles.inputArea}>
-            <TextInput
-              style={styles.input}
-              value={input}
-              onChangeText={setInput}
-              placeholder="先生として説明してみよう..."
-              placeholderTextColor="#94a3b8"
-              multiline
-              maxLength={500}
-            />
-            <TouchableOpacity
-              style={[styles.sendBtn, { backgroundColor: student.color }, (!input.trim() || loading) && styles.sendBtnDisabled]}
-              onPress={send}
-              disabled={!input.trim() || loading}
-            >
-              <Text style={styles.sendBtnText}>送信</Text>
-            </TouchableOpacity>
+          <View style={styles.inputAreaWrap}>
+            <View style={styles.inputArea}>
+              <TextInput
+                style={styles.input}
+                value={input}
+                onChangeText={setInput}
+                placeholder="先生として説明してみよう..."
+                placeholderTextColor="#94a3b8"
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity
+                style={[styles.sendBtn, { backgroundColor: student.color }, (!input.trim() || loading) && styles.sendBtnDisabled]}
+                onPress={send}
+                disabled={!input.trim() || loading}
+              >
+                <Text style={styles.sendBtnText}>送信</Text>
+              </TouchableOpacity>
+            </View>
+            {inputBlocked && (
+              <Text style={styles.ngWarning}>⚠️ その内容は送信できません</Text>
+            )}
           </View>
         )}
       </KeyboardAvoidingView>
@@ -384,10 +406,16 @@ const styles = StyleSheet.create({
   finishBtnText: { fontSize: 14, fontWeight: '700', color: '#475569' },
   finishBtnTextPreview: { fontSize: 14, fontWeight: '700', color: '#1d4ed8' },
 
+  inputAreaWrap: {
+    backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e2e8f0',
+  },
   inputArea: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 8,
     paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e2e8f0',
+  },
+  ngWarning: {
+    fontSize: 12, color: '#ef4444', textAlign: 'center',
+    paddingBottom: 8,
   },
   input: {
     flex: 1, backgroundColor: '#f8fafc', borderRadius: 12,

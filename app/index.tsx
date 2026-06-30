@@ -12,6 +12,7 @@ import { STUDENTS } from '@/lib/students'
 import { analyzeImages, fetchPreviewContent } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, HISTORY_MAX,
+  loadSavedGroups, saveGroupsList,
 } from '@/lib/storage'
 import type { HistoryItem } from '@/lib/types'
 
@@ -117,12 +118,31 @@ export default function HomeScreen() {
     try {
       const images = pendingImages.map(({ data, mimeType }) => ({ data, mimeType }))
       const thumbs = pendingImages.map(a => a.uri)
-      const res = await analyzeImages(images)
+
+      const currentHistory = await loadHistory()
+      const groupMap = new Map<string, string[]>()
+      for (const item of currentHistory) {
+        if (item.groupName) {
+          if (!groupMap.has(item.groupName)) groupMap.set(item.groupName, [])
+          groupMap.get(item.groupName)!.push(item.title)
+        }
+      }
+      const existingGroups = [...groupMap.entries()].map(([groupName, titles]) => ({ groupName, titles }))
+
+      const res = await analyzeImages(images, existingGroups)
       if (res.error) throw new Error(res.error)
 
       setImageDescription(res.imageDescription)
       setNotes(res.notes)
       setThumbnails(thumbs)
+
+      const suggestedGroupName: string | undefined = res.suggestedGroupName || undefined
+      if (suggestedGroupName) {
+        const groups = await loadSavedGroups()
+        if (!groups.includes(suggestedGroupName)) {
+          await saveGroupsList([...groups, suggestedGroupName])
+        }
+      }
 
       const title = res.imageDescription.split('。')[0].slice(0, 30)
       const saved = await saveToHistory({
@@ -130,6 +150,7 @@ export default function HomeScreen() {
         imageDescription: res.imageDescription,
         notes: res.notes,
         thumbnails: thumbs,
+        groupName: suggestedGroupName,
       })
       setCurrentHistoryId(saved.id)
       setActiveHistoryId(saved.id)

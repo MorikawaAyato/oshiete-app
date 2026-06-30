@@ -2,11 +2,12 @@ const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? ''
 
 export async function analyzeImages(
   images: { data: string; mimeType: string }[],
-): Promise<{ imageDescription: string; notes: string; error?: string }> {
+  existingGroups: { groupName: string; titles: string[] }[] = [],
+): Promise<{ imageDescription: string; notes: string; suggestedGroupName?: string; error?: string }> {
   const res = await fetch(`${API_BASE}/api/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ images }),
+    body: JSON.stringify({ images, existingGroups }),
   })
   return res.json()
 }
