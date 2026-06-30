@@ -381,7 +381,7 @@ export default function HomeScreen() {
             <View style={[styles.chatSection, { marginTop: 8 }]}>
               <Text style={styles.chatSectionLabel}>授業する生徒を選ぶ</Text>
               <TouchableOpacity
-                style={styles.studentDisplayBtn}
+                style={[styles.studentDisplayBtn, !selectedStudent && styles.studentDisplayBtnEmpty]}
                 onPress={() => setStudentSheet(selectedStudent ? 'profile' : 'picker')}
               >
                 {selectedStudent ? (
@@ -410,7 +410,7 @@ export default function HomeScreen() {
                 onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
               >
                 <Text style={[styles.actionBtnChatText, !selectedStudentId && styles.actionBtnChatTextDisabled]}>
-                  🎓　授業をする
+                  {selectedStudentId ? '🎓　授業をする' : '生徒を選んでからスタート →'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -655,13 +655,17 @@ const styles = StyleSheet.create({
   studentDisplayInfo: { flex: 1, minWidth: 0 },
   studentDisplayName: { fontSize: 14, fontWeight: '700', color: '#1e293b' },
   studentDisplayTagline: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
+  studentDisplayBtnEmpty: {
+    borderColor: '#f9a8d4',
+    backgroundColor: '#fff0f6',
+  },
   studentDisplayEmpty: {
     width: 48, height: 48, borderRadius: 24,
-    backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#fce7f3', alignItems: 'center', justifyContent: 'center',
   },
   studentDisplayEmptyIcon: { fontSize: 22 },
-  studentDisplayPlaceholder: { fontSize: 13, fontWeight: '600', color: '#64748b' },
-  studentDisplayPlaceholderSub: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
+  studentDisplayPlaceholder: { fontSize: 14, fontWeight: '700', color: '#ec4899' },
+  studentDisplayPlaceholderSub: { fontSize: 11, color: '#f9a8d4', marginTop: 2 },
   studentDisplayChevron: { fontSize: 22, color: '#cbd5e1' },
 
   // 生徒シート
@@ -711,10 +715,10 @@ const styles = StyleSheet.create({
   pickerItemCheck: { fontSize: 16, color: '#ec4899', fontWeight: '700' },
 
   actionBtnChat: { backgroundColor: '#f472b6', borderRadius: 14, paddingVertical: 18, alignItems: 'center' },
-  actionBtnChatDisabled: { backgroundColor: '#f1f5f9' },
+  actionBtnChatDisabled: { backgroundColor: '#fdf2f8', borderWidth: 1.5, borderColor: '#fbcfe8' },
   // ⑤ 最重要CTA → fontWeight '800'
   actionBtnChatText: { fontSize: 18, fontWeight: '800', color: 'white' },
-  actionBtnChatTextDisabled: { color: '#cbd5e1' },
+  actionBtnChatTextDisabled: { color: '#f9a8d4', fontSize: 15, fontWeight: '600' },
 
   row: { flexDirection: 'row', alignItems: 'center' },
 
@@ -757,5 +761,5 @@ const styles = StyleSheet.create({
   historyDate: { fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: '300' },
   checkMark: { fontSize: 14, color: '#f472b6', fontWeight: 'bold' },
   deleteBtn: { paddingHorizontal: 14, paddingVertical: 12 },
-  deleteBtnText: { fontSize: 12, color: '#cbd5e1' },
+  deleteBtnText: { fontSize: 13, color: '#94a3b8' },
 })
