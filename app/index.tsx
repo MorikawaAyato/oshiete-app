@@ -603,7 +603,7 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.tcChip} />
                   <View style={styles.tcEditHint}>
-                    <Text style={styles.tcEditHintText}>✏️  タップして編集</Text>
+                    <Text style={styles.tcEditHintText}>タップして編集</Text>
                   </View>
                 </TouchableOpacity>
               ) : (
