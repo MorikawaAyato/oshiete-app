@@ -1,5 +1,8 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { PreviewContent, ChatMessage } from './types'
+
+const STUDENT_KEY = 'oshiete_student'
 
 type AppState = {
   imageDescription: string
@@ -31,6 +34,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [notes, setNotes] = useState('')
   const [previewContent, setPreviewContent] = useState<PreviewContent | null>(null)
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
+  const studentLoaded = useRef(false)
+
+  useEffect(() => {
+    AsyncStorage.getItem(STUDENT_KEY).then(v => {
+      if (v) setSelectedStudentId(v)
+      studentLoaded.current = true
+    }).catch(() => { studentLoaded.current = true })
+  }, [])
+
+  useEffect(() => {
+    if (!studentLoaded.current) return
+    if (selectedStudentId) {
+      AsyncStorage.setItem(STUDENT_KEY, selectedStudentId).catch(() => {})
+    } else {
+      AsyncStorage.removeItem(STUDENT_KEY).catch(() => {})
+    }
+  }, [selectedStudentId])
+
   const [thumbnails, setThumbnails] = useState<string[]>([])
   const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
