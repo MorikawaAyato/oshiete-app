@@ -43,7 +43,23 @@ export default function LibraryScreen() {
   useEffect(() => {
     Promise.all([loadHistory(), loadSavedGroups()]).then(([h, g]) => {
       setHistory(h)
-      setSavedGroups(g)
+      // 履歴内のgroupNameがsavedGroupsに含まれていない場合はマージして保存
+      const inStorage: Record<string, true> = {}
+      for (const name of g) inStorage[name] = true
+      const missing: string[] = []
+      for (const item of h) {
+        if (item.groupName && !inStorage[item.groupName]) {
+          inStorage[item.groupName] = true
+          missing.push(item.groupName)
+        }
+      }
+      if (missing.length > 0) {
+        const merged = [...g, ...missing]
+        setSavedGroups(merged)
+        saveGroupsList(merged).catch(() => {})
+      } else {
+        setSavedGroups(g)
+      }
     })
   }, [])
 
