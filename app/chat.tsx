@@ -284,9 +284,6 @@ export default function ChatScreen() {
           {classEnded && (
             <View style={styles.endedActions}>
               <Text style={styles.endedLabel}>授業が終わりました</Text>
-              <TouchableOpacity style={styles.finishBtn} onPress={() => router.push('/preview')}>
-                <Text style={styles.finishBtnTextPreview}>📖 教材を見る</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={styles.finishBtn} onPress={handleBack}>
                 <Text style={styles.finishBtnText}>ホームに戻る</Text>
               </TouchableOpacity>

@@ -71,7 +71,6 @@ export default function HomeScreen() {
       setActiveHistoryId(null)
       setCurrentHistoryId(null)
       setPreviewContent(null)
-      setSelectedStudentId(null)
       setImageDescription('')
       setNotes('')
     } else {
@@ -151,7 +150,6 @@ export default function HomeScreen() {
     setNotes('')
     setPreviewContent(null)
     setThumbnails([])
-    setSelectedStudentId(null)
     resetChatSession()
   }
 
@@ -164,7 +162,6 @@ export default function HomeScreen() {
     setImageDescription(item.imageDescription)
     setNotes(item.notes)
     setThumbnails(item.thumbnails)
-    setSelectedStudentId(null)
     setPreviewContent(item.previewContent ?? null)
     if (!item.previewContent) {
       void backgroundFetchPreview(item.imageDescription, item.id)
@@ -309,7 +306,7 @@ export default function HomeScreen() {
               <View style={styles.contentCardHeader}>
                 <Text style={styles.contentCardHeaderLabel}>現在の教材</Text>
                 <TouchableOpacity onPress={() => openPicker('replace')}>
-                  <Text style={styles.contentCardHeaderAction}>教材を変更する →</Text>
+                  <Text style={styles.contentCardHeaderAction}>写真を選ぶ →</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.contentCardInner}>

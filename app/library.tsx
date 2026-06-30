@@ -55,7 +55,6 @@ export default function LibraryScreen() {
     setThumbnails(item.thumbnails)
     setCurrentHistoryId(item.id)
     setPreviewContent(item.previewContent ?? null)
-    setSelectedStudentId(null)
     resetChatSession()
     router.back()
   }
