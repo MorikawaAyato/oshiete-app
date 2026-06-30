@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import * as ImagePicker from 'expo-image-picker'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
-import { TEACHER_AVATARS, TEACHER_TITLES, getTeacherAvatarImage } from '@/lib/teacherProfile'
+import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage } from '@/lib/teacherProfile'
 import { analyzeImages, fetchPreviewContent } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, HISTORY_MAX,
@@ -670,6 +670,13 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
+      {/* 画像プリロード：初回表示を高速化 */}
+      <View style={{ width: 0, height: 0, overflow: 'hidden', position: 'absolute' }}>
+        {Object.values(TEACHER_AVATAR_IMAGES).map((src, i) => (
+          <Image key={i} source={src} style={{ width: 1, height: 1 }} />
+        ))}
+      </View>
+
       <BottomTabBar active="home" />
     </SafeAreaView>
   )
@@ -751,10 +758,10 @@ const styles = StyleSheet.create({
   avatarCell: {
     flex: 1, borderRadius: 12, paddingVertical: 6,
     backgroundColor: '#f8fafc', borderWidth: 2, borderColor: 'transparent',
-    alignItems: 'center', gap: 4,
+    alignItems: 'center', gap: 4, overflow: 'hidden',
   },
   avatarCellSel: { backgroundColor: '#e0f2fe', borderColor: '#38bdf8' },
-  avatarCellImage: { width: 48, height: 48, borderRadius: 24 },
+  avatarCellImage: { width: 38, height: 38, borderRadius: 19 },
   avatarCellLabel: { fontSize: 9, fontWeight: '700', color: '#64748b' },
   titleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   titleChip: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, backgroundColor: '#f1f5f9' },
