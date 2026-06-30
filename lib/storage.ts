@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { HistoryItem, PreviewContent } from './types'
 
 const KEY = 'oshiete_history'
-const MAX = 6
+export const HISTORY_MAX = 20
 
 export async function loadHistory(): Promise<HistoryItem[]> {
   try {
@@ -22,7 +22,7 @@ export async function saveToHistory(
     id: Date.now().toString(),
     savedAt: new Date().toISOString(),
   }
-  const updated = [newItem, ...history].slice(0, MAX)
+  const updated = [newItem, ...history].slice(0, HISTORY_MAX)
   await AsyncStorage.setItem(KEY, JSON.stringify(updated))
   return newItem
 }
@@ -30,6 +30,12 @@ export async function saveToHistory(
 export async function deleteFromHistory(id: string): Promise<void> {
   const history = await loadHistory()
   await AsyncStorage.setItem(KEY, JSON.stringify(history.filter((h) => h.id !== id)))
+}
+
+export async function renameHistoryItem(id: string, newTitle: string): Promise<void> {
+  const history = await loadHistory()
+  const updated = history.map((h) => h.id === id ? { ...h, title: newTitle } : h)
+  await AsyncStorage.setItem(KEY, JSON.stringify(updated))
 }
 
 export async function updateHistoryPreview(id: string, previewContent: PreviewContent): Promise<void> {

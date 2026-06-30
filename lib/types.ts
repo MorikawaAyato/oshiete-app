@@ -11,6 +11,7 @@ export type HistoryItem = {
   notes: string
   thumbnails: string[]
   previewContent?: PreviewContent | null
+  groupName?: string
 }
 
 export type Visual =

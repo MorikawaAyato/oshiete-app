@@ -4,13 +4,14 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { BottomTabBar } from '@/components/BottomTabBar'
 import { useEffect, useRef, useState } from 'react'
 import * as ImagePicker from 'expo-image-picker'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { analyzeImages, fetchPreviewContent } from '@/lib/api'
 import {
-  loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview,
+  loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, HISTORY_MAX,
 } from '@/lib/storage'
 import type { HistoryItem } from '@/lib/types'
 
@@ -231,7 +232,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -388,14 +389,16 @@ export default function HomeScreen() {
         <View style={[styles.historyZone, { marginTop: 8 }]}>
           <View style={styles.historyHeader}>
             <Text style={styles.historyLabel}>最近の教材</Text>
-            <Text style={styles.historyCount}>{history.length} / 6件</Text>
+            <TouchableOpacity onPress={() => router.push('/library')}>
+              <Text style={styles.historyAll}>すべて見る →</Text>
+            </TouchableOpacity>
           </View>
 
           {history.length === 0 ? (
             <Text style={styles.historyEmpty}>教材をアップロードすると履歴が表示されます</Text>
           ) : (
             <View style={{ gap: 10 }}>
-              {history.map((item) => {
+              {history.slice(0, 3).map((item) => {
                 const isActive = activeHistoryId === item.id
                 const itemTitle = item.title
                   .replace(/^この(教材|文書|画像)は[、,]?\s*/u, '')
@@ -427,6 +430,11 @@ export default function HomeScreen() {
                   </View>
                 )
               })}
+              {history.length > 3 && (
+                <TouchableOpacity style={styles.seeAllBtn} onPress={() => router.push('/library')}>
+                  <Text style={styles.seeAllText}>他 {history.length - 3} 件を見る →</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -436,6 +444,8 @@ export default function HomeScreen() {
       <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
         <Text style={styles.toastText}>先に生徒を選んでください</Text>
       </Animated.View>
+
+      <BottomTabBar active="home" />
     </SafeAreaView>
   )
 }
@@ -573,9 +583,10 @@ const styles = StyleSheet.create({
     borderTopColor: '#bfdbfe',
   },
   historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  // ⑤ 履歴ラベルも極太
   historyLabel: { fontSize: 11, fontWeight: '800', color: '#64748b', letterSpacing: 1.2 },
-  historyCount: { fontSize: 11, color: '#94a3b8', fontWeight: '400' },
+  historyAll: { fontSize: 12, color: '#0ea5e9', fontWeight: '500' },
+  seeAllBtn: { paddingVertical: 10, alignItems: 'center' },
+  seeAllText: { fontSize: 13, color: '#0ea5e9', fontWeight: '500' },
   historyEmpty: { fontSize: 13, color: '#94a3b8', textAlign: 'center', paddingVertical: 16 },
   // ① 履歴アイテムは最も軽い影（3段階の最下層）
   historyItem: {
