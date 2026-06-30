@@ -46,7 +46,7 @@ export default function HomeScreen() {
 
   const flipCard = (toFront?: boolean) => {
     const target = toFront === true ? 0 : toFront === false ? 1 : cardFlipped ? 0 : 1
-    Animated.spring(cardFlipAnim, { toValue: target, friction: 8, tension: 8, useNativeDriver: true }).start()
+    Animated.timing(cardFlipAnim, { toValue: target, duration: 500, useNativeDriver: true }).start()
     setCardFlipped(target === 1)
   }
 
@@ -294,7 +294,7 @@ export default function HomeScreen() {
             <Text style={styles.appSubtitle}>教えるほど、身につく。</Text>
           </View>
           <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
-            <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={styles.teacherIconImage} />
+            <Image source={require('../assets/senseishou.jpg')} style={styles.teacherIconImage} />
           </TouchableOpacity>
         </View>
 
@@ -570,7 +570,7 @@ export default function HomeScreen() {
               {/* 表面 */}
               <Animated.View style={[
                 styles.tcCard,
-                { transform: [{ rotateY: cardFlipAnim.interpolate({ inputRange: [0,1], outputRange: ['0deg','180deg'] }) }],
+                { transform: [{ perspective: 1000 }, { rotateY: cardFlipAnim.interpolate({ inputRange: [0,1], outputRange: ['0deg','180deg'] }) }],
                   opacity: cardFlipAnim.interpolate({ inputRange: [0.5, 0.501], outputRange: [1, 0], extrapolate: 'clamp' }) },
               ]}>
                 <TouchableOpacity style={{ flex: 1 }} onPress={() => flipCard()} activeOpacity={0.92}>
@@ -610,7 +610,7 @@ export default function HomeScreen() {
               {/* 裏面 */}
               <Animated.View style={[
                 styles.tcCard, styles.tcCardBack,
-                { transform: [{ rotateY: cardFlipAnim.interpolate({ inputRange: [0,1], outputRange: ['180deg','360deg'] }) }],
+                { transform: [{ perspective: 1000 }, { rotateY: cardFlipAnim.interpolate({ inputRange: [0,1], outputRange: ['180deg','360deg'] }) }],
                   opacity: cardFlipAnim.interpolate({ inputRange: [0.499, 0.5], outputRange: [0, 1], extrapolate: 'clamp' }) },
               ]}>
                 <View style={styles.tcBackHeader}>
