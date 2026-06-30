@@ -1,16 +1,21 @@
 import {
   View, Text, FlatList, TouchableOpacity, Image, StyleSheet,
   Modal, TextInput, KeyboardAvoidingView, Platform, Pressable,
+  ScrollView,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { useApp } from '@/lib/AppContext'
-import { loadHistory, deleteFromHistory, renameHistoryItem, HISTORY_MAX } from '@/lib/storage'
+import {
+  loadHistory, deleteFromHistory, renameHistoryItem, HISTORY_MAX,
+  loadSavedGroups, saveGroupsList, moveItemToGroup,
+  renameGroupInStorage, deleteGroupFromStorage,
+} from '@/lib/storage'
 import type { HistoryItem } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
 
-type SheetMode = 'main' | 'detail' | 'rename' | 'delete'
+type SheetMode = 'main' | 'detail' | 'rename' | 'group' | 'new-group' | 'delete'
 
 const TITLE_RE = /^この(教材|文書|画像|写真)は[、，]?\s*/u
 
@@ -23,15 +28,26 @@ export default function LibraryScreen() {
   } = useApp()
 
   const [history, setHistory] = useState<HistoryItem[]>([])
+  const [savedGroups, setSavedGroups] = useState<string[]>([])
   const [actionItem, setActionItem] = useState<HistoryItem | null>(null)
   const [sheetMode, setSheetMode] = useState<SheetMode>('main')
   const [renameValue, setRenameValue] = useState('')
+  const [renamingGroup, setRenamingGroup] = useState<string | null>(null)
+  const [renameGroupValue, setRenameGroupValue] = useState('')
+  const [deletingGroup, setDeletingGroup] = useState<string | null>(null)
+  const [creatingGroup, setCreatingGroup] = useState(false)
+  const [createGroupValue, setCreateGroupValue] = useState('')
 
   useEffect(() => {
-    loadHistory().then(setHistory)
+    Promise.all([loadHistory(), loadSavedGroups()]).then(([h, g]) => {
+      setHistory(h)
+      setSavedGroups(g)
+    })
   }, [])
 
-  const refresh = async () => setHistory(await loadHistory())
+  const refresh = async () => {
+    setHistory(await loadHistory())
+  }
 
   const selectItem = (item: HistoryItem) => {
     setImageDescription(item.imageDescription)
@@ -65,12 +81,75 @@ export default function LibraryScreen() {
     closeSheet()
   }
 
-  const handleRename = async () => {
+  const handleRenameItem = async () => {
     if (!actionItem || !renameValue.trim()) return
     await renameHistoryItem(actionItem.id, renameValue.trim())
     await refresh()
     closeSheet()
   }
+
+  const handleMoveToGroup = async (itemId: string, groupName: string | undefined) => {
+    await moveItemToGroup(itemId, groupName)
+    await refresh()
+    closeSheet()
+  }
+
+  const handleCreateGroupAndMove = async (itemId: string) => {
+    const trimmed = renameValue.trim()
+    if (!trimmed) return
+    const newGroups = savedGroups.includes(trimmed) ? savedGroups : [...savedGroups, trimmed]
+    setSavedGroups(newGroups)
+    await saveGroupsList(newGroups)
+    await moveItemToGroup(itemId, trimmed)
+    await refresh()
+    closeSheet()
+  }
+
+  const handleRenameGroup = async () => {
+    if (!renamingGroup) return
+    const trimmed = renameGroupValue.trim()
+    if (!trimmed || trimmed === renamingGroup) { setRenamingGroup(null); return }
+    const newGroups = savedGroups.map(g => g === renamingGroup ? trimmed : g)
+    setSavedGroups(newGroups)
+    await saveGroupsList(newGroups)
+    await renameGroupInStorage(renamingGroup, trimmed)
+    setHistory(await loadHistory())
+    setRenamingGroup(null)
+  }
+
+  const handleDeleteGroup = async (name: string) => {
+    const newGroups = savedGroups.filter(g => g !== name)
+    setSavedGroups(newGroups)
+    await saveGroupsList(newGroups)
+    await deleteGroupFromStorage(name)
+    setHistory(await loadHistory())
+    setDeletingGroup(null)
+  }
+
+  const handleCreateGroupStandalone = async () => {
+    const trimmed = createGroupValue.trim()
+    if (!trimmed) return
+    if (!savedGroups.includes(trimmed)) {
+      const newGroups = [...savedGroups, trimmed]
+      setSavedGroups(newGroups)
+      await saveGroupsList(newGroups)
+    }
+    setCreatingGroup(false)
+    setCreateGroupValue('')
+  }
+
+  // グループマップを計算
+  const groupMap = new Map<string, HistoryItem[]>()
+  const ungrouped: HistoryItem[] = []
+  for (const item of history) {
+    if (item.groupName) {
+      if (!groupMap.has(item.groupName)) groupMap.set(item.groupName, [])
+      groupMap.get(item.groupName)!.push(item)
+    } else {
+      ungrouped.push(item)
+    }
+  }
+  const groups = savedGroups.map(name => ({ name, items: groupMap.get(name) ?? [] }))
 
   const renderCard = ({ item, index }: { item: HistoryItem; index: number }) => {
     const isActive = currentHistoryId === item.id
@@ -119,8 +198,8 @@ export default function LibraryScreen() {
         <Text style={styles.headerCount}>{history.length} / {HISTORY_MAX}件</Text>
       </View>
 
-      {/* グリッド */}
-      {history.length === 0 ? (
+      {/* ボディ */}
+      {history.length === 0 && savedGroups.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>📷</Text>
           <Text style={styles.emptyText}>教材がまだありません</Text>
@@ -129,14 +208,120 @@ export default function LibraryScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
-          data={history}
-          keyExtractor={item => item.id}
-          numColumns={2}
-          contentContainerStyle={styles.grid}
-          renderItem={renderCard}
-        />
+        <ScrollView style={styles.bodyScroll} contentContainerStyle={styles.bodyContent}>
+          {groups.map(({ name, items }) => (
+            <View key={name} style={styles.groupSection}>
+              {renamingGroup === name ? (
+                <View style={styles.groupEditRow}>
+                  <TextInput
+                    autoFocus
+                    value={renameGroupValue}
+                    onChangeText={setRenameGroupValue}
+                    onSubmitEditing={handleRenameGroup}
+                    returnKeyType="done"
+                    style={styles.groupEditInput}
+                  />
+                  <TouchableOpacity onPress={handleRenameGroup} style={styles.groupSaveBtn}>
+                    <Text style={styles.groupSaveBtnText}>保存</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setRenamingGroup(null)} style={styles.groupXBtn}>
+                    <Text style={styles.groupXBtnText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : deletingGroup === name ? (
+                <View style={styles.groupEditRow}>
+                  <Text style={styles.groupDeleteConfirmText} numberOfLines={2}>
+                    「{name}」を削除{items.length > 0 ? `（${items.length}件が未分類に）` : ''}しますか？
+                  </Text>
+                  <TouchableOpacity onPress={() => handleDeleteGroup(name)} style={styles.groupDeleteConfirmBtn}>
+                    <Text style={styles.groupDeleteConfirmBtnText}>削除</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setDeletingGroup(null)} style={styles.groupXBtn}>
+                    <Text style={styles.groupXBtnText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.groupHeader}>
+                  <Text style={styles.groupTitle}>📁 {name}</Text>
+                  <Text style={styles.groupCount}>{items.length}件</Text>
+                  <View style={styles.flex1} />
+                  <TouchableOpacity
+                    onPress={() => { setRenamingGroup(name); setRenameGroupValue(name) }}
+                    style={styles.groupIconBtn}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Text style={styles.groupIconBtnText}>✏️</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setDeletingGroup(name)}
+                    style={styles.groupIconBtn}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Text style={styles.groupIconBtnText}>🗑️</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <FlatList
+                data={items}
+                keyExtractor={item => item.id}
+                numColumns={2}
+                scrollEnabled={false}
+                contentContainerStyle={styles.grid}
+                renderItem={renderCard}
+              />
+            </View>
+          ))}
+          {ungrouped.length > 0 && (
+            <View style={styles.groupSection}>
+              {groups.length > 0 && (
+                <Text style={styles.ungroupedLabel}>未分類</Text>
+              )}
+              <FlatList
+                data={ungrouped}
+                keyExtractor={item => item.id}
+                numColumns={2}
+                scrollEnabled={false}
+                contentContainerStyle={styles.grid}
+                renderItem={renderCard}
+              />
+            </View>
+          )}
+        </ScrollView>
       )}
+
+      {/* フッター：グループ作成 */}
+      <View style={styles.footer}>
+        {creatingGroup ? (
+          <View style={styles.footerInputRow}>
+            <TextInput
+              autoFocus
+              value={createGroupValue}
+              onChangeText={setCreateGroupValue}
+              onSubmitEditing={handleCreateGroupStandalone}
+              returnKeyType="done"
+              placeholder="グループ名を入力"
+              style={styles.footerInput}
+            />
+            <TouchableOpacity
+              onPress={handleCreateGroupStandalone}
+              style={[styles.groupSaveBtn, !createGroupValue.trim() && styles.groupSaveBtnDisabled]}
+              disabled={!createGroupValue.trim()}
+            >
+              <Text style={styles.groupSaveBtnText}>作成</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => { setCreatingGroup(false); setCreateGroupValue('') }}
+              style={styles.groupXBtn}
+            >
+              <Text style={styles.groupXBtnText}>×</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => setCreatingGroup(true)} style={styles.footerCreateBtn}>
+            <Text style={styles.footerCreateBtnText}>＋ グループを作成</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* アクションシート */}
       <Modal
@@ -170,6 +355,13 @@ export default function LibraryScreen() {
                     <Text style={styles.sheetRowIcon}>✏️</Text>
                     <Text style={styles.sheetRowText}>名前を変更</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity style={styles.sheetRow} onPress={() => setSheetMode('group')}>
+                    <Text style={styles.sheetRowIcon}>📁</Text>
+                    <Text style={styles.sheetRowText}>グループを変更</Text>
+                    {actionItem.groupName && (
+                      <Text style={styles.sheetRowSub} numberOfLines={1}>{actionItem.groupName}</Text>
+                    )}
+                  </TouchableOpacity>
                   <TouchableOpacity style={styles.sheetRow} onPress={() => setSheetMode('delete')}>
                     <Text style={styles.sheetRowIcon}>🗑️</Text>
                     <Text style={[styles.sheetRowText, styles.sheetRowTextRed]}>削除</Text>
@@ -188,6 +380,9 @@ export default function LibraryScreen() {
                   <Text style={styles.detailTitle}>{actionItem.title.replace(TITLE_RE, '')}</Text>
                   {actionItem.imageDescription ? (
                     <Text style={styles.detailDesc}>{actionItem.imageDescription}</Text>
+                  ) : null}
+                  {actionItem.groupName ? (
+                    <Text style={styles.detailGroup}>📁 {actionItem.groupName}</Text>
                   ) : null}
                   <Text style={styles.detailDate}>
                     {new Date(actionItem.savedAt).toLocaleDateString('ja-JP')}
@@ -209,20 +404,92 @@ export default function LibraryScreen() {
                   autoFocus
                   value={renameValue}
                   onChangeText={setRenameValue}
-                  onSubmitEditing={handleRename}
+                  onSubmitEditing={handleRenameItem}
                   returnKeyType="done"
                   style={styles.renameInput}
                   placeholder="教材名を入力"
                 />
                 <TouchableOpacity
                   style={[styles.primaryBtn, !renameValue.trim() && styles.primaryBtnDisabled]}
-                  onPress={handleRename}
+                  onPress={handleRenameItem}
                   disabled={!renameValue.trim()}
                 >
                   <Text style={styles.primaryBtnText}>保存</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.cancelBtn} onPress={() => setSheetMode('main')}>
                   <Text style={styles.cancelBtnText}>キャンセル</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {sheetMode === 'group' && actionItem && (
+              <>
+                <Text style={styles.sheetSubLabel}>グループを選ぶ</Text>
+                <ScrollView style={styles.groupPickerScroll} bounces={false}>
+                  {savedGroups.map(name => {
+                    const isCurrent = name === actionItem.groupName
+                    return (
+                      <TouchableOpacity
+                        key={name}
+                        style={styles.sheetRow}
+                        onPress={() => { if (!isCurrent) handleMoveToGroup(actionItem.id, name) }}
+                        disabled={isCurrent}
+                      >
+                        <Text style={styles.sheetRowIcon}>📁</Text>
+                        <Text style={[styles.sheetRowText, isCurrent && styles.sheetRowTextPink]}>
+                          {name}
+                        </Text>
+                        {isCurrent && <Text style={styles.sheetRowCheck}>✓</Text>}
+                      </TouchableOpacity>
+                    )
+                  })}
+                  {actionItem.groupName ? (
+                    <TouchableOpacity
+                      style={styles.sheetRow}
+                      onPress={() => handleMoveToGroup(actionItem.id, undefined)}
+                    >
+                      <Text style={[styles.sheetRowIcon, styles.sheetRowIconSm]}>✕</Text>
+                      <Text style={[styles.sheetRowText, styles.sheetRowTextMuted]}>グループから外す</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {savedGroups.length === 0 && (
+                    <Text style={styles.groupPickerEmpty}>グループがありません</Text>
+                  )}
+                </ScrollView>
+                <TouchableOpacity
+                  style={styles.newGroupRow}
+                  onPress={() => { setRenameValue(''); setSheetMode('new-group') }}
+                >
+                  <Text style={styles.newGroupRowIcon}>＋</Text>
+                  <Text style={styles.newGroupRowText}>新しいグループを作成</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setSheetMode('main')}>
+                  <Text style={styles.cancelBtnText}>戻る</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {sheetMode === 'new-group' && actionItem && (
+              <>
+                <Text style={styles.sheetItemTitle}>新しいグループを作成</Text>
+                <TextInput
+                  autoFocus
+                  value={renameValue}
+                  onChangeText={setRenameValue}
+                  onSubmitEditing={() => handleCreateGroupAndMove(actionItem.id)}
+                  returnKeyType="done"
+                  style={styles.renameInput}
+                  placeholder="グループ名を入力"
+                />
+                <TouchableOpacity
+                  style={[styles.primaryBtn, !renameValue.trim() && styles.primaryBtnDisabled]}
+                  onPress={() => handleCreateGroupAndMove(actionItem.id)}
+                  disabled={!renameValue.trim()}
+                >
+                  <Text style={styles.primaryBtnText}>作成してここに入れる</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setSheetMode('group')}>
+                  <Text style={styles.cancelBtnText}>戻る</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -262,7 +529,54 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
   headerCount: { fontSize: 12, color: '#94a3b8' },
 
-  grid: { padding: 12 },
+  bodyScroll: { flex: 1 },
+  bodyContent: { paddingBottom: 8 },
+
+  groupSection: { marginBottom: 4 },
+  groupHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 16, paddingVertical: 10,
+  },
+  groupTitle: { fontSize: 13, fontWeight: '700', color: '#475569' },
+  groupCount: { fontSize: 11, color: '#94a3b8' },
+  flex1: { flex: 1 },
+  groupIconBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  groupIconBtnText: { fontSize: 14 },
+
+  groupEditRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 8,
+  },
+  groupEditInput: {
+    flex: 1, borderWidth: 1, borderColor: '#7dd3fc',
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6,
+    fontSize: 13, color: '#1e293b', backgroundColor: 'white',
+  },
+  groupSaveBtn: {
+    backgroundColor: '#38bdf8', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  groupSaveBtnDisabled: { backgroundColor: '#bae6fd' },
+  groupSaveBtnText: { fontSize: 12, fontWeight: '700', color: 'white' },
+  groupDeleteConfirmText: { flex: 1, fontSize: 12, color: '#475569' },
+  groupDeleteConfirmBtn: {
+    backgroundColor: '#ef4444', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  groupDeleteConfirmBtnText: { fontSize: 12, fontWeight: '700', color: 'white' },
+  groupXBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center',
+  },
+  groupXBtnText: { fontSize: 14, color: '#64748b', fontWeight: '600' },
+
+  ungroupedLabel: {
+    fontSize: 11, fontWeight: '700', color: '#94a3b8',
+    letterSpacing: 0.8, textTransform: 'uppercase',
+    paddingHorizontal: 16, paddingVertical: 10,
+  },
+
+  grid: { paddingHorizontal: 8, paddingBottom: 4 },
 
   card: {
     flex: 1, margin: 4,
@@ -300,11 +614,28 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, color: '#94a3b8' },
   emptyLink: { fontSize: 14, color: '#ec4899', fontWeight: '600' },
 
+  footer: {
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e2e8f0',
+    backgroundColor: 'white', paddingHorizontal: 12, paddingVertical: 8,
+  },
+  footerInputRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  footerInput: {
+    flex: 1, borderWidth: 1.5, borderColor: '#f9a8d4',
+    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+    fontSize: 13, color: '#1e293b', backgroundColor: 'white',
+  },
+  footerCreateBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 4, paddingVertical: 8,
+  },
+  footerCreateBtnText: { fontSize: 14, color: '#64748b', fontWeight: '500' },
+
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheetWrap: { justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: 16, paddingBottom: 40, paddingTop: 8,
+    maxHeight: '85%',
   },
   sheetHandle: {
     width: 36, height: 4, backgroundColor: '#e2e8f0',
@@ -329,12 +660,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#f8fafc',
   },
   sheetRowIcon: { fontSize: 18, width: 24, textAlign: 'center' },
-  sheetRowText: { fontSize: 14, color: '#334155', fontWeight: '500' },
+  sheetRowIconSm: { fontSize: 12 },
+  sheetRowText: { fontSize: 14, color: '#334155', fontWeight: '500', flex: 1 },
   sheetRowTextRed: { color: '#ef4444' },
+  sheetRowTextPink: { color: '#ec4899', fontWeight: '600' },
+  sheetRowTextMuted: { color: '#94a3b8' },
+  sheetRowSub: { fontSize: 12, color: '#94a3b8', maxWidth: 100 },
+  sheetRowCheck: { fontSize: 14, color: '#ec4899', fontWeight: '700' },
+
+  groupPickerScroll: { maxHeight: 220 },
+  groupPickerEmpty: { fontSize: 13, color: '#94a3b8', paddingHorizontal: 4, paddingVertical: 12 },
+  newGroupRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 4, paddingVertical: 14,
+    borderWidth: 1, borderColor: '#fbcfe8', borderRadius: 14,
+    marginTop: 8, marginBottom: 8,
+  },
+  newGroupRowIcon: { fontSize: 18, color: '#ec4899', width: 24, textAlign: 'center', fontWeight: '700' },
+  newGroupRowText: { fontSize: 14, color: '#ec4899', fontWeight: '500' },
 
   detailBody: { paddingVertical: 12, gap: 8, marginBottom: 12 },
   detailTitle: { fontSize: 14, fontWeight: '700', color: '#1e293b' },
   detailDesc: { fontSize: 13, color: '#64748b', lineHeight: 20 },
+  detailGroup: { fontSize: 12, color: '#38bdf8' },
   detailDate: { fontSize: 11, color: '#94a3b8' },
 
   renameInput: {

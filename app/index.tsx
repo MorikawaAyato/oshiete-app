@@ -416,7 +416,7 @@ export default function HomeScreen() {
                           {itemTitle}
                         </Text>
                         <Text style={styles.historyDate}>
-                          {new Date(item.savedAt).toLocaleDateString('ja-JP')}
+                          {item.groupName ? `📁 ${item.groupName}　` : ''}{new Date(item.savedAt).toLocaleDateString('ja-JP')}
                         </Text>
                       </View>
                       {isActive && <Text style={styles.checkMark}>✓</Text>}
