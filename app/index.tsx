@@ -3,9 +3,9 @@ import {
   StyleSheet, ActivityIndicator, Alert, Animated, Modal, Pressable,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { BottomTabBar } from '@/components/BottomTabBar'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import * as ImagePicker from 'expo-image-picker'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
@@ -40,6 +40,24 @@ export default function HomeScreen() {
   const [studentSheet, setStudentSheet] = useState<'profile' | 'picker' | null>(null)
 
   const selectedStudent = STUDENTS.find(s => s.id === selectedStudentId) ?? null
+
+  const materialScale = useRef(new Animated.Value(1)).current
+  const prevHistoryId = useRef<string | null>(null)
+
+  useFocusEffect(
+    useCallback(() => {
+      if (currentHistoryId && currentHistoryId !== prevHistoryId.current) {
+        prevHistoryId.current = currentHistoryId
+        materialScale.setValue(0.92)
+        Animated.spring(materialScale, {
+          toValue: 1,
+          useNativeDriver: true,
+          bounciness: 10,
+          speed: 13,
+        }).start()
+      }
+    }, [currentHistoryId])
+  )
 
   useEffect(() => {
     loadHistory().then(setHistory)
@@ -316,7 +334,7 @@ export default function HomeScreen() {
         {hasContent && (
           <>
             {/* 教材カード + 教材を見る を1ユニット（タイトな間隔） */}
-            <View style={styles.materialUnit}>
+            <Animated.View style={[styles.materialUnit, { transform: [{ scale: materialScale }] }]}>
             {/* 選択中教材カード */}
             <View style={styles.contentCard}>
               <View style={styles.contentCardHeader}>
@@ -357,7 +375,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
               <Text style={styles.actionNote}>授業中でも確認できます</Text>
             </View>
-            </View>{/* /materialUnit */}
+            </Animated.View>{/* /materialUnit */}
 
             {/* 授業セクション */}
             <View style={[styles.chatSection, { marginTop: 8 }]}>
