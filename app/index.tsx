@@ -92,7 +92,6 @@ export default function HomeScreen() {
   const hasContent = !!imageDescription
   const unreadCount = mailMessages.filter((m) => !m.read).length
 
-  // ピッカーを開いて画像を選ぶ（replace or add）
   const openPicker = async (mode: 'replace' | 'add') => {
     const remaining = mode === 'add' ? MAX_IMAGES - pendingImages.length : MAX_IMAGES
     if (remaining <= 0) return
@@ -257,7 +256,7 @@ export default function HomeScreen() {
 
   const handlePreview = async () => {
     if (previewContent) { router.push('/preview'); return }
-    if (previewLoading) return // バックグラウンド処理中はボタン無効のため到達しない
+    if (previewLoading) return
     setPreviewLoading(true)
     try {
       const content = await fetchPreviewContent(imageDescription)
@@ -298,8 +297,19 @@ export default function HomeScreen() {
         {/* ヘッダー */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.appTitle}>せんせいごっこ</Text>
-            <Text style={styles.appSubtitle}>ごっこ遊びで、本気の学び。</Text>
+            <Text style={styles.appSubtitle}>せんせいごっこ</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+              <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: 36, height: 36, borderRadius: 18 }} />
+              <View style={{ gap: 1 }}>
+                <Text style={styles.appTitle}>
+                  {teacherProfile.name ? `${teacherProfile.name}先生` : '先生'}
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981' }} />
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#059669' }}>オンライン</Text>
+                </View>
+              </View>
+            </View>
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.mailIconBtn} onPress={() => setShowInbox(true)}>
@@ -322,158 +332,157 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── 状態1: 何も選ばれていない ── */}
-        {!hasPending && !hasContent && (
-          <TouchableOpacity style={styles.uploadBtnLarge} onPress={() => openPicker('replace')}>
-            <Text style={styles.uploadBtnLargeIcon}>📷</Text>
-            <Text style={styles.uploadBtnLargeText}>教材の写真を選ぶ</Text>
-            <Text style={styles.uploadBtnLargeSub}>PNG / JPG・最大{MAX_IMAGES}枚</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* ── 状態2: 写真選択済み・未分析 ── */}
-        {hasPending && !hasContent && (
-          <View style={styles.pendingCard}>
-            {/* サムネイル + 枚数表示 */}
-            <View style={styles.thumbRowWrap}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbRow}>
-                {pendingImages.map((img, i) => (
-                  <Image key={i} source={{ uri: img.uri }} style={styles.thumb} />
-                ))}
-              </ScrollView>
-              <Text style={styles.thumbCounter}>{pendingImages.length}/{MAX_IMAGES}</Text>
-            </View>
-
-            {/* 分析ボタン */}
-            <TouchableOpacity
-              style={[styles.analyzeBtn, analyzing && styles.analyzeBtnLoading]}
-              onPress={analyzeFromPending}
-              disabled={analyzing}
-            >
-              {analyzing ? (
-                <View style={styles.row}>
-                  <ActivityIndicator color="white" />
-                  <Text style={[styles.analyzeBtnText, { marginLeft: 8 }]}>読み込み中...</Text>
-                </View>
-              ) : (
-                <Text style={styles.analyzeBtnText}>🔍　この写真で教材を作る</Text>
-              )}
-            </TouchableOpacity>
-
-            {/* 写真を追加 / 変更 */}
-            <View style={styles.photoActions}>
-              {pendingImages.length < MAX_IMAGES && (
-                <>
-                  <TouchableOpacity style={styles.photoActionBtn} onPress={() => openPicker('add')}>
-                    <Text style={styles.photoActionText}>＋ 写真を追加する</Text>
-                  </TouchableOpacity>
-                  <View style={styles.photoActionDivider} />
-                </>
-              )}
-              <TouchableOpacity style={styles.photoActionBtn} onPress={() => openPicker('replace')}>
-                <Text style={styles.photoActionText}>写真を変更する</Text>
+        {/* 今日の授業 */}
+        <View style={styles.todaySection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>次の授業</Text>
+            {hasContent && (
+              <TouchableOpacity onPress={clearSelection}>
+                <Text style={styles.sectionClear}>✕ 選択を解除</Text>
               </TouchableOpacity>
-            </View>
+            )}
           </View>
-        )}
 
-        {/* ── 状態3: 分析済み ── */}
-        {hasContent && (
-          <>
-            {/* 教材カード + 教材を見る を1ユニット（タイトな間隔） */}
-            <Animated.View style={[styles.materialUnit, { transform: [{ scale: materialScale }] }]}>
-            {/* 選択中教材カード */}
-            <View style={styles.contentCard}>
-              <View style={styles.contentCardHeader}>
-                <Text style={styles.contentCardHeaderLabel}>現在の教材</Text>
-                <TouchableOpacity onPress={clearSelection} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={styles.contentClearText}>✕</Text>
-                </TouchableOpacity>
+          {/* 状態1: 何もない */}
+          {!hasPending && !hasContent && (
+            <TouchableOpacity style={styles.uploadCard} onPress={() => openPicker('replace')}>
+              <Text style={styles.uploadCardIcon}>📷</Text>
+              <Text style={styles.uploadCardText}>教材の写真を選ぶ</Text>
+              <Text style={styles.uploadCardSub}>PNG / JPG・最大{MAX_IMAGES}枚</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* 状態2: 写真選択済み・未分析 */}
+          {hasPending && !hasContent && (
+            <View style={styles.pendingCard}>
+              <View style={styles.thumbRowWrap}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbRow}>
+                  {pendingImages.map((img, i) => (
+                    <Image key={i} source={{ uri: img.uri }} style={styles.thumb} />
+                  ))}
+                </ScrollView>
+                <Text style={styles.thumbCounter}>{pendingImages.length}/{MAX_IMAGES}</Text>
               </View>
-              <View>
-                {thumbnails[0] ? (
-                  <Image source={{ uri: thumbnails[0] }} style={styles.contentThumbFull} />
+              <TouchableOpacity
+                style={[styles.analyzeBtn, analyzing && styles.analyzeBtnLoading]}
+                onPress={analyzeFromPending}
+                disabled={analyzing}
+              >
+                {analyzing ? (
+                  <View style={styles.row}>
+                    <ActivityIndicator color="white" />
+                    <Text style={[styles.analyzeBtnText, { marginLeft: 8 }]}>読み込み中...</Text>
+                  </View>
                 ) : (
-                  <View style={[styles.contentThumbFull, { backgroundColor: '#e2e8f0' }]} />
+                  <Text style={styles.analyzeBtnText}>🔍　この写真で教材を作る</Text>
                 )}
-                <TouchableOpacity style={styles.contentThumbOverlay} onPress={() => openPicker('replace')} activeOpacity={0.85}>
-                  <Text style={styles.contentThumbOverlayText}>📷　新しい写真を選ぶ</Text>
+              </TouchableOpacity>
+              <View style={styles.photoActions}>
+                {pendingImages.length < MAX_IMAGES && (
+                  <>
+                    <TouchableOpacity style={styles.photoActionBtn} onPress={() => openPicker('add')}>
+                      <Text style={styles.photoActionText}>＋ 写真を追加する</Text>
+                    </TouchableOpacity>
+                    <View style={styles.photoActionDivider} />
+                  </>
+                )}
+                <TouchableOpacity style={styles.photoActionBtn} onPress={() => openPicker('replace')}>
+                  <Text style={styles.photoActionText}>写真を変更する</Text>
                 </TouchableOpacity>
-              </View>
-              <View style={styles.contentCardBody}>
-                <Text style={styles.contentTitle} numberOfLines={2}>{shortTitle}</Text>
               </View>
             </View>
+          )}
 
-            {/* 教材を見るボタン */}
-            <View>
+          {/* 状態3: 分析済み */}
+          {hasContent && (
+            <Animated.View style={{ transform: [{ scale: materialScale }] }}>
+              {/* 教材＋生徒 分割カード */}
+              <View style={styles.lessonCard}>
+                {/* 左：教材 */}
+                <View style={styles.lessonMaterial}>
+                  {thumbnails[0] ? (
+                    <Image source={{ uri: thumbnails[0] }} style={styles.lessonThumb} />
+                  ) : (
+                    <View style={[styles.lessonThumb, { backgroundColor: '#e2e8f0' }]} />
+                  )}
+                  <Text style={styles.lessonMaterialTitle} numberOfLines={3}>{shortTitle}</Text>
+                  <TouchableOpacity style={styles.lessonChangeBtn} onPress={() => openPicker('replace')}>
+                    <Text style={styles.lessonChangeBtnText}>📷 写真を変える</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 縦区切り */}
+                <View style={styles.lessonDivider} />
+
+                {/* 右：生徒 */}
+                <TouchableOpacity
+                  style={styles.lessonStudent}
+                  onPress={() => setStudentSheet(selectedStudent ? 'profile' : 'picker')}
+                  activeOpacity={0.85}
+                >
+                  {selectedStudent ? (
+                    <>
+                      <Image source={{ uri: selectedStudent.avatar }} style={styles.lessonStudentAvatar} />
+                      <View style={{ gap: 1 }}>
+                        <Text style={styles.lessonStudentName}>{selectedStudent.name}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981' }} />
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#059669' }}>オンライン</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.lessonStudentAppeal} numberOfLines={4}>
+                        {selectedStudent.appeal}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.lessonStudentEmpty}>
+                        <Text style={{ fontSize: 26 }}>🐾</Text>
+                      </View>
+                      <Text style={styles.lessonStudentPickText}>生徒を{'\n'}選ぶ</Text>
+                      <Text style={styles.lessonStudentPickSub}>タップ →</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* 教材を確認するボタン */}
               <TouchableOpacity
-                style={styles.actionBtnPreview}
+                style={styles.lessonPreviewBtn}
                 onPress={handlePreview}
                 disabled={previewLoading}
               >
                 {previewLoading ? (
-                  <ActivityIndicator color="#0369a1" />
+                  <ActivityIndicator color="#0369a1" size="small" />
                 ) : (
-                  <Text style={styles.actionBtnPreviewText}>📖　教材を見る</Text>
+                  <Text style={styles.lessonPreviewBtnText}>📖 教材を確認する</Text>
                 )}
               </TouchableOpacity>
-              <Text style={styles.actionNote}>授業中でも確認できます</Text>
-            </View>
-            </Animated.View>{/* /materialUnit */}
 
-            {/* 授業セクション */}
-            <View style={[styles.chatSection, { marginTop: 8 }]}>
-              {!selectedStudent && <Text style={styles.chatSectionLabel}>授業する生徒を選ぶ</Text>}
+              {/* 授業をするボタン */}
               <TouchableOpacity
-                style={[styles.studentDisplayBtn, !selectedStudent && styles.studentDisplayBtnEmpty]}
-                onPress={() => setStudentSheet(selectedStudent ? 'profile' : 'picker')}
-              >
-                {selectedStudent ? (
-                  <>
-                    <Text style={styles.studentDisplayRole}>生徒</Text>
-                    <Image source={{ uri: selectedStudent.avatar }} style={styles.studentDisplayAvatar} />
-                    <View style={styles.studentDisplayInfo}>
-                      <Text style={styles.studentDisplayName}>{selectedStudent.name}</Text>
-                      <Text style={styles.studentDisplayTagline}>{selectedStudent.tagline}</Text>
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <View style={styles.studentDisplayEmpty}>
-                      <Text style={styles.studentDisplayEmptyIcon}>🐾</Text>
-                    </View>
-                    <View style={styles.studentDisplayInfo}>
-                      <Text style={styles.studentDisplayPlaceholder}>生徒を選ぼう</Text>
-                      <Text style={styles.studentDisplayPlaceholderSub}>タップして授業してくれる生徒を選ぶ</Text>
-                    </View>
-                  </>
-                )}
-                <Text style={styles.studentDisplayChevron}>›</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionBtnChat, !selectedStudentId && styles.actionBtnChatDisabled]}
+                style={[styles.startBtn, !selectedStudentId && styles.startBtnDisabled]}
                 onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
               >
-                <Text style={[styles.actionBtnChatText, !selectedStudentId && styles.actionBtnChatTextDisabled]}>
+                <Text style={[styles.startBtnText, !selectedStudentId && styles.startBtnTextDisabled]}>
                   {selectedStudentId ? '🎓　授業をする' : '生徒を選んでからスタート →'}
                 </Text>
               </TouchableOpacity>
-            </View>
-          </>
-        )}
+            </Animated.View>
+          )}
+        </View>
 
-        {/* 履歴ゾーン */}
-        <View style={[styles.historyZone, { marginTop: 8 }]}>
-          <View style={styles.historyHeader}>
-            <Text style={styles.historyLabel}>最近の教材</Text>
+        {/* 最近の授業 */}
+        <View style={styles.recentSection}>
+          <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
+            <Text style={styles.sectionTitle}>最近の授業</Text>
             <TouchableOpacity onPress={() => router.push('/library')}>
-              <Text style={styles.historyAll}>すべて見る →</Text>
+              <Text style={styles.sectionAction}>すべて見る →</Text>
             </TouchableOpacity>
           </View>
 
           {history.length === 0 ? (
-            <Text style={styles.historyEmpty}>教材をアップロードすると履歴が表示されます</Text>
+            <Text style={styles.recentEmpty}>教材をアップロードすると履歴が表示されます</Text>
           ) : (
             <View style={{ gap: 10 }}>
               {history.slice(0, 3).map((item) => {
@@ -482,18 +491,18 @@ export default function HomeScreen() {
                   .replace(/^この(教材|文書|画像)は[、,]?\s*/u, '')
                   .slice(0, 30)
                 return (
-                  <View key={item.id} style={[styles.historyItem, isActive && styles.historyItemActive]}>
-                    <TouchableOpacity style={styles.historyMain} onPress={() => selectHistory(item)}>
+                  <View key={item.id} style={[styles.recentItem, isActive && styles.recentItemActive]}>
+                    <TouchableOpacity style={styles.recentMain} onPress={() => selectHistory(item)}>
                       {item.thumbnails[0] ? (
-                        <Image source={{ uri: item.thumbnails[0] }} style={styles.historyThumb} />
+                        <Image source={{ uri: item.thumbnails[0] }} style={styles.recentThumb} />
                       ) : (
-                        <View style={[styles.historyThumb, { backgroundColor: '#e2e8f0' }]} />
+                        <View style={[styles.recentThumb, { backgroundColor: '#e2e8f0' }]} />
                       )}
-                      <View style={styles.historyInfo}>
-                        <Text numberOfLines={1} style={[styles.historyTitle, isActive && { color: '#ec4899' }]}>
+                      <View style={styles.recentInfo}>
+                        <Text numberOfLines={1} style={[styles.recentTitle, isActive && { color: '#ec4899' }]}>
                           {itemTitle}
                         </Text>
-                        <Text style={styles.historyDate}>
+                        <Text style={styles.recentDate}>
                           {item.groupName ? `📁 ${item.groupName}　` : ''}{new Date(item.savedAt).toLocaleDateString('ja-JP')}
                         </Text>
                       </View>
@@ -640,10 +649,8 @@ export default function HomeScreen() {
           <View style={[styles.studentSheetBottom, styles.tcSheetBottom]}>
             <View style={styles.studentSheetHandle} />
 
-            {/* フリップカードコンテナ */}
             <Animated.View style={[styles.tcCardContainer, { transform: [{ scaleX: flipScaleAnim }] }]}>
               {!cardFlipped ? (
-                /* 表面 */
                 <TouchableOpacity style={styles.tcCard} onPress={() => flipCard()} activeOpacity={0.92}>
                   <View style={[styles.tcDeco, { right: -30, top: -30, width: 120, height: 120 }]} />
                   <View style={[styles.tcDeco, { right: -12, top: -12, width: 68, height: 68 }]} />
@@ -677,7 +684,6 @@ export default function HomeScreen() {
                   </View>
                 </TouchableOpacity>
               ) : (
-                /* 裏面 */
                 <View style={[styles.tcCard, styles.tcCardBack]}>
                   <View style={styles.tcBackHeader}>
                     <TouchableOpacity onPress={() => flipCard(true)} style={styles.tcBackBtn}>
@@ -752,11 +758,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#e0f2fe' },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingVertical: 24, gap: 14 },
+  content: { paddingHorizontal: 20, paddingVertical: 24, gap: 16 },
 
+  // ヘッダー
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  appTitle: { fontSize: 30, fontWeight: '900', color: '#0c4a6e', letterSpacing: -0.5 },
-  appSubtitle: { fontSize: 12, color: '#0369a1', marginTop: 2, fontWeight: '400', letterSpacing: 0.3 },
+  appTitle: { fontSize: 18, fontWeight: '900', color: '#0c4a6e', letterSpacing: -0.3 },
+  appSubtitle: { fontSize: 10, color: '#7dd3fc', fontWeight: '700', letterSpacing: 0.3 },
   headerIcons: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
   mailIconBtn: { alignItems: 'center', gap: 2, position: 'relative' },
   mailIconCircle: {
@@ -773,9 +780,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   mailBadgeText: { color: 'white', fontSize: 9, fontWeight: '900' },
-  teacherIconBtn: {
-    alignItems: 'center', gap: 2,
-  },
+  teacherIconBtn: { alignItems: 'center', gap: 2 },
   teacherIconCircle: {
     width: 40, height: 40, borderRadius: 20, overflow: 'hidden',
     backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd',
@@ -783,127 +788,34 @@ const styles = StyleSheet.create({
   teacherIconImage: { width: 40, height: 40 },
   teacherIconLabel: { fontSize: 9, fontWeight: '700', color: '#0369a1', letterSpacing: 0.5 },
 
-  // 受信トレイ
-  inboxHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
-  },
-  inboxTitle: { fontSize: 15, fontWeight: '900', color: '#1e293b' },
-  inboxClose: { fontSize: 18, color: '#94a3b8' },
-  inboxItem: {
-    flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#f8fafc',
-  },
-  inboxAvatar: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#e0f2fe', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-    flexShrink: 0, marginTop: 2,
-  },
-  inboxAvatarImg: { width: 40, height: 40 },
-  inboxBody: { flex: 1 },
-  inboxMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  inboxFrom: { fontSize: 12, fontWeight: '700', color: '#334155' },
-  inboxUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#ef4444' },
-  inboxDate: { fontSize: 10, color: '#94a3b8', marginLeft: 'auto' },
-  inboxContent: { fontSize: 13, color: '#475569', lineHeight: 19 },
+  // セクション共通
+  todaySection: { gap: 10 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitle: { fontSize: 13, fontWeight: '800', color: '#0c4a6e', letterSpacing: 0.8 },
+  sectionAction: { fontSize: 12, color: '#0ea5e9', fontWeight: '500' },
+  sectionClear: { fontSize: 11, color: '#94a3b8', fontWeight: '500' },
 
-  // 先生証シート
-  tcSheetBottom: { backgroundColor: '#0f172a', paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0 },
-
-  // フリップカード
-  tcCardContainer: {
-    width: 240, height: 353, alignSelf: 'center', marginVertical: 24,
-    overflow: 'hidden', borderRadius: 22,
-  },
-  tcCard: {
-    flex: 1,
-    borderRadius: 22, backgroundColor: '#0c4a6e',
-    overflow: 'hidden', padding: 20, justifyContent: 'space-between',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.5, shadowRadius: 28, elevation: 18,
-  },
-  tcCardBack: { backgroundColor: 'white', padding: 0 },
-  tcDeco: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.05)' },
-  tcHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  tcAppLabel: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 3.5 },
-  tcCardLabel: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.85)', letterSpacing: 3, marginTop: 2 },
-  tcStar: { fontSize: 14, color: 'rgba(255,255,255,0.18)' },
-  tcAvatarWrap: { alignItems: 'center' },
-  tcAvatarCircle: {
-    width: 88, height: 88, borderRadius: 44,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 3, borderColor: 'rgba(255,255,255,0.65)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  tcAvatarImage: { width: 82, height: 82, borderRadius: 41 },
-  tcNameArea: { alignItems: 'center', gap: 8 },
-  tcName: { fontSize: 22, fontWeight: '900', color: 'white', letterSpacing: 0.5 },
-  tcNameSuffix: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.7)' },
-  tcNameEmpty: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.35)' },
-  tcTitleBadge: {
-    paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
-  },
-  tcTitleText: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5 },
-  tcChip: {
-    alignSelf: 'flex-end', width: 36, height: 24, borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
-  },
-  tcEditHint: { position: 'absolute', bottom: 10, left: 0, right: 0, alignItems: 'center' },
-  tcEditHintText: { fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 },
-  tcBackHeader: {
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
-  },
-  tcBackBtn: { flexDirection: 'row', alignItems: 'center' },
-  tcBackBtnText: { fontSize: 12, fontWeight: '700', color: '#0369a1' },
-
-  teacherSectionLabel: { fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 1, marginBottom: 8 },
-  teacherNameInput: {
-    paddingHorizontal: 14, paddingVertical: 11,
-    borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0',
-    fontSize: 14, fontWeight: '500', color: '#1e293b', backgroundColor: '#fafafa',
-  },
-  avatarGrid: { flexDirection: 'row', gap: 6 },
-  avatarCell: {
-    flex: 1, borderRadius: 12, paddingVertical: 6,
-    backgroundColor: '#f8fafc', borderWidth: 2, borderColor: 'transparent',
-    alignItems: 'center', gap: 4, overflow: 'hidden',
-  },
-  avatarCellSel: { backgroundColor: '#e0f2fe', borderColor: '#38bdf8' },
-  avatarCellImage: { width: 38, height: 38, borderRadius: 19 },
-  avatarCellLabel: { fontSize: 9, fontWeight: '700', color: '#64748b' },
-  titleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  titleChip: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, backgroundColor: '#f1f5f9' },
-  titleChipSel: { backgroundColor: '#0369a1' },
-  titleChipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  titleChipTextSel: { color: 'white' },
-  tcCloseBtn: { marginHorizontal: 16, marginTop: 0, marginBottom: 36, backgroundColor: 'rgba(255,255,255,0.08)' },
-  tcCloseBtnText: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.45)', textAlign: 'center', paddingVertical: 14 },
-
-  // 状態1
-  uploadBtnLarge: {
+  // 状態1：アップロード
+  uploadCard: {
     backgroundColor: 'white',
     borderRadius: 20,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderColor: '#7dd3fc',
-    paddingVertical: 32,
+    paddingVertical: 36,
     alignItems: 'center',
     gap: 6,
-    // ① 影で浮き感
     shadowColor: '#7dd3fc',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 3,
   },
-  uploadBtnLargeIcon: { fontSize: 32 },
-  uploadBtnLargeText: { fontSize: 19, color: '#0369a1', fontWeight: '800' },
-  uploadBtnLargeSub: { fontSize: 12, color: '#94a3b8', fontWeight: '400' },
+  uploadCardIcon: { fontSize: 32 },
+  uploadCardText: { fontSize: 19, color: '#0369a1', fontWeight: '800' },
+  uploadCardSub: { fontSize: 12, color: '#94a3b8', fontWeight: '400' },
 
-  // 状態2
+  // 状態2：ペンディング
   pendingCard: {
     backgroundColor: 'white', borderRadius: 20, padding: 16, gap: 12,
     shadowColor: '#94a3b8', shadowOffset: { width: 0, height: 3 },
@@ -924,90 +836,108 @@ const styles = StyleSheet.create({
   photoActionText: { fontSize: 14, color: '#ec4899', fontWeight: '600' },
   photoActionDivider: { width: 1, height: 28, backgroundColor: '#fbcfe8' },
 
-  // 状態3
-  // ③ contentCard + preview を束ねるユニット（タイトな gap:10）
-  materialUnit: { gap: 10 },
-  // ① contentCard は最重要カード → 最も強い影・枠線なし
-  contentCard: {
-    backgroundColor: 'white', borderRadius: 16, overflow: 'hidden',
-    shadowColor: '#0369a1', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.14, shadowRadius: 10, elevation: 5,
+  // 状態3：分割カード
+  lessonCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    shadowColor: '#0369a1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  contentThumbFull: { width: '100%', height: 130 },
-  contentThumbOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingVertical: 12, backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-  },
-  contentThumbOverlayText: { fontSize: 14, fontWeight: '700', color: 'white' },
-  contentCardBody: { padding: 12, paddingTop: 10 },
-  // ⑤ カードタイトルを少し大きく
-  contentTitle: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1e293b', lineHeight: 19 },
-  contentClear: { padding: 4 },
-  contentClearText: { fontSize: 12, color: '#94a3b8' },
-  contentCardHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderBottomWidth: 1, borderBottomColor: '#e0f2fe',
+  lessonMaterial: { flex: 1, padding: 14, gap: 8 },
+  lessonThumb: { width: '100%', aspectRatio: 1.4, borderRadius: 12 },
+  lessonMaterialTitle: { fontSize: 13, fontWeight: '700', color: '#1e293b', lineHeight: 18 },
+  lessonPreviewBtn: {
     backgroundColor: '#f0f9ff',
-  },
-  // ⑤ セクションラベルは極太＋letterSpacing で引き締める
-  contentCardHeaderLabel: { fontSize: 10, fontWeight: '800', color: '#0369a1', letterSpacing: 1.0 },
-  contentCardHeaderAction: {
-    fontSize: 13, color: '#ec4899', fontWeight: '600',
-    backgroundColor: '#fdf2f8', paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 20, overflow: 'hidden',
-  },
-
-  // アクション：教材を見る（背景色＋影で区別、枠線なし）
-  actionBtnPreview: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 16,
-    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+    paddingVertical: 14,
     alignItems: 'center',
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 6,
-    elevation: 3,
+    marginTop: 10,
   },
-  actionBtnPreviewText: { fontSize: 15, fontWeight: '600', color: '#1d4ed8' },
-  // ⑤ 補助テキストは細く・小さく（最も低い階層）
-  actionNote: { fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 6, fontWeight: '300' },
-
-  // ① 授業セクション → 中程度の影
-  chatSection: {
-    backgroundColor: 'white', borderRadius: 20, padding: 16, gap: 12,
-    shadowColor: '#1e293b', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
+  lessonPreviewBtnText: { fontSize: 14, fontWeight: '700', color: '#0369a1' },
+  lessonChangeBtn: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: '#f8fafc', borderRadius: 20,
   },
-  chatSectionLabel: { fontSize: 11, fontWeight: '600', color: '#64748b', letterSpacing: 0.8 },
-
-  studentDisplayBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 12, borderRadius: 16,
-    backgroundColor: 'white', borderWidth: 1.5, borderColor: '#e2e8f0',
+  lessonChangeBtnText: { fontSize: 11, fontWeight: '600', color: '#64748b' },
+  lessonDivider: { width: 1, backgroundColor: '#f1f5f9', marginVertical: 16 },
+  lessonStudent: {
+    width: 118, padding: 14,
+    alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#fdf2f8',
   },
-  studentDisplayRole: {
-    position: 'absolute', top: 6, right: 10,
-    fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.5,
-  },
-  studentDisplayAvatar: { width: 48, height: 48, borderRadius: 24 },
-  studentDisplayInfo: { flex: 1, minWidth: 0 },
-  studentDisplayName: { fontSize: 14, fontWeight: '700', color: '#1e293b' },
-  studentDisplayTagline: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
-  studentDisplayBtnEmpty: {
-    borderColor: '#f9a8d4',
-    backgroundColor: '#fff0f6',
-  },
-  studentDisplayEmpty: {
-    width: 48, height: 48, borderRadius: 24,
+  lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32 },
+  lessonStudentName: { fontSize: 12, fontWeight: '700', color: '#1e293b' },
+  lessonStudentAppeal: { fontSize: 11, color: '#be185d', textAlign: 'center', lineHeight: 16 },
+  lessonStudentEmpty: {
+    width: 64, height: 64, borderRadius: 32,
     backgroundColor: '#fce7f3', alignItems: 'center', justifyContent: 'center',
   },
-  studentDisplayEmptyIcon: { fontSize: 22 },
-  studentDisplayPlaceholder: { fontSize: 14, fontWeight: '700', color: '#ec4899' },
-  studentDisplayPlaceholderSub: { fontSize: 11, color: '#f9a8d4', marginTop: 2 },
-  studentDisplayChevron: { fontSize: 22, color: '#cbd5e1' },
+  lessonStudentPickText: { fontSize: 13, fontWeight: '700', color: '#ec4899', textAlign: 'center' },
+  lessonStudentPickSub: { fontSize: 10, color: '#f9a8d4' },
+
+  // 授業スタートボタン
+  startBtn: {
+    backgroundColor: '#f472b6',
+    borderRadius: 16,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: '#ec4899',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  startBtnDisabled: { backgroundColor: '#fdf2f8', borderWidth: 1.5, borderColor: '#fbcfe8', shadowOpacity: 0, elevation: 0 },
+  startBtnText: { fontSize: 18, fontWeight: '800', color: 'white' },
+  startBtnTextDisabled: { color: '#f9a8d4', fontSize: 15, fontWeight: '600' },
+
+  row: { flexDirection: 'row', alignItems: 'center' },
+
+  // トースト
+  toast: {
+    position: 'absolute', bottom: 32, alignSelf: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    paddingHorizontal: 20, paddingVertical: 12,
+    borderRadius: 24,
+  },
+  toastText: { color: 'white', fontSize: 14, fontWeight: '600' },
+
+  // 最近の授業
+  recentSection: {
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 32,
+    backgroundColor: '#f1f5f9',
+    borderTopWidth: 1.5,
+    borderTopColor: '#bfdbfe',
+  },
+  recentEmpty: { fontSize: 13, color: '#94a3b8', textAlign: 'center', paddingVertical: 16 },
+  recentItem: {
+    backgroundColor: 'white', borderRadius: 14, flexDirection: 'row', alignItems: 'center', overflow: 'hidden',
+    shadowColor: '#94a3b8', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+  },
+  recentItemActive: { backgroundColor: '#fff0f6', borderWidth: 1.5, borderColor: '#fbcfe8' },
+  recentMain: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 },
+  recentThumb: { width: 52, height: 52, borderRadius: 10, flexShrink: 0 },
+  recentInfo: { flex: 1, minWidth: 0 },
+  recentTitle: { fontSize: 13, fontWeight: '600', color: '#334155' },
+  recentDate: { fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: '300' },
+  checkMark: { fontSize: 14, color: '#f472b6', fontWeight: 'bold' },
+  deleteBtn: { paddingHorizontal: 14, paddingVertical: 12 },
+  deleteBtnText: { fontSize: 13, color: '#94a3b8' },
+  seeAllBtn: { paddingVertical: 10, alignItems: 'center' },
+  seeAllText: { fontSize: 13, color: '#0ea5e9', fontWeight: '500' },
 
   // 生徒シート
   studentSheetContainer: { flex: 1, justifyContent: 'flex-end' },
@@ -1055,52 +985,99 @@ const styles = StyleSheet.create({
   pickerItemTagline: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
   pickerItemCheck: { fontSize: 16, color: '#ec4899', fontWeight: '700' },
 
-  actionBtnChat: { backgroundColor: '#f472b6', borderRadius: 14, paddingVertical: 18, alignItems: 'center' },
-  actionBtnChatDisabled: { backgroundColor: '#fdf2f8', borderWidth: 1.5, borderColor: '#fbcfe8' },
-  // ⑤ 最重要CTA → fontWeight '800'
-  actionBtnChatText: { fontSize: 18, fontWeight: '800', color: 'white' },
-  actionBtnChatTextDisabled: { color: '#f9a8d4', fontSize: 15, fontWeight: '600' },
-
-  row: { flexDirection: 'row', alignItems: 'center' },
-
-  toast: {
-    position: 'absolute', bottom: 32, alignSelf: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 20, paddingVertical: 12,
-    borderRadius: 24,
+  // 受信トレイ
+  inboxHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
   },
-  toastText: { color: 'white', fontSize: 14, fontWeight: '600' },
+  inboxTitle: { fontSize: 15, fontWeight: '900', color: '#1e293b' },
+  inboxClose: { fontSize: 18, color: '#94a3b8' },
+  inboxItem: {
+    flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: '#f8fafc',
+  },
+  inboxAvatar: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#e0f2fe', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    flexShrink: 0, marginTop: 2,
+  },
+  inboxAvatarImg: { width: 40, height: 40 },
+  inboxBody: { flex: 1 },
+  inboxMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  inboxFrom: { fontSize: 12, fontWeight: '700', color: '#334155' },
+  inboxUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#ef4444' },
+  inboxDate: { fontSize: 10, color: '#94a3b8', marginLeft: 'auto' },
+  inboxContent: { fontSize: 13, color: '#475569', lineHeight: 19 },
 
-  // 履歴
-  historyZone: {
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 32,
-    backgroundColor: '#f1f5f9',
-    borderTopWidth: 1.5,
-    borderTopColor: '#bfdbfe',
+  // 先生証シート
+  tcSheetBottom: { backgroundColor: '#0f172a', paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0 },
+  tcCardContainer: {
+    width: 240, height: 353, alignSelf: 'center', marginVertical: 24,
+    overflow: 'hidden', borderRadius: 22,
   },
-  historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  historyLabel: { fontSize: 11, fontWeight: '800', color: '#64748b', letterSpacing: 1.2 },
-  historyAll: { fontSize: 12, color: '#0ea5e9', fontWeight: '500' },
-  seeAllBtn: { paddingVertical: 10, alignItems: 'center' },
-  seeAllText: { fontSize: 13, color: '#0ea5e9', fontWeight: '500' },
-  historyEmpty: { fontSize: 13, color: '#94a3b8', textAlign: 'center', paddingVertical: 16 },
-  // ① 履歴アイテムは最も軽い影（3段階の最下層）
-  historyItem: {
-    backgroundColor: 'white', borderRadius: 14, flexDirection: 'row', alignItems: 'center', overflow: 'hidden',
-    shadowColor: '#94a3b8', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+  tcCard: {
+    flex: 1,
+    borderRadius: 22, backgroundColor: '#0c4a6e',
+    overflow: 'hidden', padding: 20, justifyContent: 'space-between',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.5, shadowRadius: 28, elevation: 18,
   },
-  historyItemActive: { backgroundColor: '#fff0f6', borderWidth: 1.5, borderColor: '#fbcfe8' },
-  historyMain: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 },
-  historyThumb: { width: 42, height: 42, borderRadius: 8 },
-  historyInfo: { flex: 1, minWidth: 0 },
-  historyTitle: { fontSize: 13, fontWeight: '600', color: '#334155' },
-  // ⑤ 日付は最も細く・小さく（補助情報の最下層）
-  historyDate: { fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: '300' },
-  checkMark: { fontSize: 14, color: '#f472b6', fontWeight: 'bold' },
-  deleteBtn: { paddingHorizontal: 14, paddingVertical: 12 },
-  deleteBtnText: { fontSize: 13, color: '#94a3b8' },
+  tcCardBack: { backgroundColor: 'white', padding: 0 },
+  tcDeco: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.05)' },
+  tcHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  tcAppLabel: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 3.5 },
+  tcCardLabel: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.85)', letterSpacing: 3, marginTop: 2 },
+  tcStar: { fontSize: 14, color: 'rgba(255,255,255,0.18)' },
+  tcAvatarWrap: { alignItems: 'center' },
+  tcAvatarCircle: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 3, borderColor: 'rgba(255,255,255,0.65)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  tcAvatarImage: { width: 82, height: 82, borderRadius: 41 },
+  tcNameArea: { alignItems: 'center', gap: 8 },
+  tcName: { fontSize: 22, fontWeight: '900', color: 'white', letterSpacing: 0.5 },
+  tcNameSuffix: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.7)' },
+  tcNameEmpty: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.35)' },
+  tcTitleBadge: {
+    paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+  },
+  tcTitleText: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5 },
+  tcChip: {
+    alignSelf: 'flex-end', width: 36, height: 24, borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+  },
+  tcEditHint: { position: 'absolute', bottom: 10, left: 0, right: 0, alignItems: 'center' },
+  tcEditHintText: { fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 },
+  tcBackHeader: {
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+  },
+  tcBackBtn: { flexDirection: 'row', alignItems: 'center' },
+  tcBackBtnText: { fontSize: 12, fontWeight: '700', color: '#0369a1' },
+  teacherSectionLabel: { fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 1, marginBottom: 8 },
+  teacherNameInput: {
+    paddingHorizontal: 14, paddingVertical: 11,
+    borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0',
+    fontSize: 14, fontWeight: '500', color: '#1e293b', backgroundColor: '#fafafa',
+  },
+  avatarGrid: { flexDirection: 'row', gap: 6 },
+  avatarCell: {
+    flex: 1, borderRadius: 12, paddingVertical: 6,
+    backgroundColor: '#f8fafc', borderWidth: 2, borderColor: 'transparent',
+    alignItems: 'center', gap: 4, overflow: 'hidden',
+  },
+  avatarCellSel: { backgroundColor: '#e0f2fe', borderColor: '#38bdf8' },
+  avatarCellImage: { width: 38, height: 38, borderRadius: 19 },
+  avatarCellLabel: { fontSize: 9, fontWeight: '700', color: '#64748b' },
+  titleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  titleChip: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, backgroundColor: '#f1f5f9' },
+  titleChipSel: { backgroundColor: '#0369a1' },
+  titleChipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
+  titleChipTextSel: { color: 'white' },
+  tcCloseBtn: { marginHorizontal: 16, marginTop: 0, marginBottom: 36, backgroundColor: 'rgba(255,255,255,0.08)' },
+  tcCloseBtnText: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.45)', textAlign: 'center', paddingVertical: 14 },
 })

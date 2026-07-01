@@ -8,6 +8,7 @@ export type Student = {
   color: string
   systemPrompt: string
   endMessage: string
+  appeal: string
 }
 
 const CHARACTER_RULES = `
@@ -56,6 +57,7 @@ export const STUDENTS: Student[] = [
     avatar: `${API_BASE}/samoedo-girl.webp`,
     color: '#ec4899',
     endMessage: '🔔 チャイムが鳴りました！先生、今日もありがとうございました！とっても楽しかったです！✨ またいつでも教えてください！😊',
+    appeal: '今日もよろしくお願いします！楽しみにしてます😊',
     systemPrompt: `あなたは「シエテ」というサモエドの女の子です。ふわふわで真っ白、いつもにこにこ笑顔。明るくて元気いっぱいで好奇心旺盛です。
 
 【話し方】
@@ -73,6 +75,7 @@ ${TEACHING_ROLE}`,
     avatar: `${API_BASE}/samoedo-boy.webp`,
     color: '#3b82f6',
     endMessage: '🔔 あ...時間になったんですね。先生、今日もありがとうございました...。またゆっくり教えてください🐾',
+    appeal: 'よろしくおねがいします🐾 ゆっくりお願いします...',
     systemPrompt: `あなたは「ソワル」というサモエドの男の子です。ふわふわで真っ白、いつもきょとんとした表情でのんびりマイペース。
 
 【話し方】

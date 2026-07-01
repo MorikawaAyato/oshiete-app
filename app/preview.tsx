@@ -226,26 +226,6 @@ export default function PreviewScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 生徒選択 */}
-        <View style={styles.studentSection}>
-          <Text style={styles.studentSectionLabel}>生徒を選ぶ</Text>
-          <View style={styles.studentRow}>
-            {STUDENTS.map((s) => {
-              const isSel = selectedStudentId === s.id
-              return (
-                <TouchableOpacity
-                  key={s.id}
-                  style={[styles.studentCard, isSel && { borderColor: s.color, backgroundColor: s.color + '18' }]}
-                  onPress={() => setSelectedStudentId(s.id)}
-                >
-                  <Image source={{ uri: s.avatar }} style={styles.studentAvatar} />
-                  <Text style={[styles.studentName, isSel && { color: s.color }]}>{s.name}</Text>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
-        </View>
-
         {/* 授業ボタン */}
         {student ? (
           <TouchableOpacity
@@ -369,21 +349,6 @@ const styles = StyleSheet.create({
   hiddenPillText: { fontSize: 12, fontWeight: '700', color: '#94a3b8' },
   hiddenPillTextOn: { color: '#db2777' },
   hiddenPillSpace: { minWidth: 56 },
-
-  studentSection: {
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8,
-    backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e2e8f0',
-  },
-  studentSectionLabel: { fontSize: 11, color: '#94a3b8', fontWeight: '600', marginBottom: 8 },
-  studentRow: { flexDirection: 'row', gap: 10 },
-  studentCard: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#f8fafc', borderRadius: 12,
-    borderWidth: 2, borderColor: '#e2e8f0',
-    paddingHorizontal: 12, paddingVertical: 8,
-  },
-  studentAvatar: { width: 32, height: 32, borderRadius: 16 },
-  studentName: { fontSize: 13, fontWeight: '600', color: '#64748b' },
 
   startClassBtn: {
     marginHorizontal: 16, marginBottom: 8, paddingVertical: 13,
