@@ -95,6 +95,11 @@ export default function HomeScreen() {
   const openPicker = async (mode: 'replace' | 'add') => {
     const remaining = mode === 'add' ? MAX_IMAGES - pendingImages.length : MAX_IMAGES
     if (remaining <= 0) return
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert('写真へのアクセスが必要です', '設定からカメラロールの許可をオンにしてください。')
+      return
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
