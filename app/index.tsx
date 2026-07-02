@@ -43,6 +43,7 @@ export default function HomeScreen() {
   const [studentSheet, setStudentSheet] = useState<'profile' | 'picker' | null>(null)
   const [teacherSheet, setTeacherSheet] = useState(false)
   const [showTeacherAvatar, setShowTeacherAvatar] = useState(false)
+  const [showStudentAvatar, setShowStudentAvatar] = useState(false)
   const [cardFlipped, setCardFlipped] = useState(false)
   const [mailMessages, setMailMessages] = useState<MailMessage[]>([])
   const [showInbox, setShowInbox] = useState(false)
@@ -559,7 +560,9 @@ export default function HomeScreen() {
             {studentSheet === 'profile' && selectedStudent && (
               <>
                 <View style={styles.profileRow}>
-                  <Image source={{ uri: selectedStudent.avatar }} style={styles.profileAvatar} />
+                  <TouchableOpacity onPress={() => setShowStudentAvatar(true)} activeOpacity={0.75}>
+                    <Image source={{ uri: selectedStudent.avatar }} style={styles.profileAvatar} />
+                  </TouchableOpacity>
                   <View>
                     <Text style={styles.profileName}>{selectedStudent.name}</Text>
                     <Text style={styles.profileTagline}>{selectedStudent.tagline}</Text>
@@ -612,6 +615,15 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
+      {/* 生徒アバター拡大表示 */}
+      <Modal visible={showStudentAvatar} transparent animationType="fade" onRequestClose={() => setShowStudentAvatar(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowStudentAvatar(false)}>
+          <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white' }}>
+            {selectedStudent && <Image source={{ uri: selectedStudent.avatar }} style={{ width: '100%', height: '100%' }} />}
+          </View>
+        </Pressable>
+      </Modal>
+
       {/* 受信トレイ */}
       <Modal visible={showInbox} transparent animationType="slide" onRequestClose={() => setShowInbox(false)}>
         <View style={styles.studentSheetContainer}>
@@ -653,6 +665,7 @@ export default function HomeScreen() {
                           </Text>
                         )}
                       </View>
+                      {msg.subject ? <Text style={styles.inboxSubject}>{msg.subject}</Text> : null}
                       <Text style={styles.inboxContent}>{msg.content}</Text>
                     </View>
                   </TouchableOpacity>
@@ -1029,6 +1042,7 @@ const styles = StyleSheet.create({
   inboxFrom: { fontSize: 12, fontWeight: '700', color: '#334155' },
   inboxUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#ef4444' },
   inboxDate: { fontSize: 10, color: '#94a3b8', marginLeft: 'auto' },
+  inboxSubject: { fontSize: 12, fontWeight: '600', color: '#334155', marginBottom: 2 },
   inboxContent: { fontSize: 13, color: '#475569', lineHeight: 19 },
 
   // 先生証シート

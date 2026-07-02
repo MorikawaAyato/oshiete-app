@@ -6,6 +6,7 @@ export type MailMessage = {
   type: 'notice' | 'student'
   from: string
   studentId?: string
+  subject?: string
   content: string
   timestamp: string
   read: boolean

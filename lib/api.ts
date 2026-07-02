@@ -46,7 +46,7 @@ export async function sendChat(
   teacherName?: string,
   teacherCharacter?: string,
   isFinalTurn?: boolean,
-): Promise<{ text?: string; mailContent?: string; error?: string }> {
+): Promise<{ text?: string; mailSubject?: string; mailContent?: string; error?: string }> {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

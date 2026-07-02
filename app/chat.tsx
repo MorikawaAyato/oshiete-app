@@ -169,6 +169,7 @@ export default function ChatScreen() {
               type: 'student',
               from: student.name,
               studentId: student.id,
+              subject: res.mailSubject,
               content: res.mailContent,
               timestamp: new Date().toISOString(),
               read: false,
