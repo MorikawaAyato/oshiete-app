@@ -47,6 +47,7 @@ export default function HomeScreen() {
   const [cardFlipped, setCardFlipped] = useState(false)
   const [mailMessages, setMailMessages] = useState<MailMessage[]>([])
   const [showInbox, setShowInbox] = useState(false)
+  const [expandedMailId, setExpandedMailId] = useState<string | null>(null)
   const flipScaleAnim = useRef(new Animated.Value(1)).current
 
   const flipCard = (toFront?: boolean) => {
@@ -638,6 +639,7 @@ export default function HomeScreen() {
             <ScrollView>
               {mailMessages.map((msg) => {
                 const student = msg.studentId ? STUDENTS.find((s) => s.id === msg.studentId) : null
+                const isExpanded = expandedMailId === msg.id
                 return (
                   <TouchableOpacity
                     key={msg.id}
@@ -646,6 +648,7 @@ export default function HomeScreen() {
                       if (!msg.read) {
                         markMailRead(msg.id).then(setMailMessages)
                       }
+                      setExpandedMailId(isExpanded ? null : msg.id)
                     }}
                   >
                     <View style={styles.inboxAvatar}>
@@ -665,8 +668,8 @@ export default function HomeScreen() {
                           </Text>
                         )}
                       </View>
-                      {msg.subject ? <Text style={styles.inboxSubject}>{msg.subject}</Text> : null}
-                      <Text style={styles.inboxContent}>{msg.content}</Text>
+                      <Text style={styles.inboxSubject} numberOfLines={isExpanded ? undefined : 1}>{msg.subject ?? msg.content}</Text>
+                      {isExpanded && <Text style={styles.inboxContent}>{msg.content}</Text>}
                     </View>
                   </TouchableOpacity>
                 )
@@ -905,7 +908,7 @@ const styles = StyleSheet.create({
   lessonStudent: {
     width: 118, padding: 14,
     alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#fef5fb',
+    gap: 8, backgroundColor: '#fdf6ef',
   },
   lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32 },
   lessonStudentName: { fontSize: 12, fontWeight: '700', color: '#1e293b' },
@@ -1042,8 +1045,8 @@ const styles = StyleSheet.create({
   inboxFrom: { fontSize: 12, fontWeight: '700', color: '#334155' },
   inboxUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#ef4444' },
   inboxDate: { fontSize: 10, color: '#94a3b8', marginLeft: 'auto' },
-  inboxSubject: { fontSize: 12, fontWeight: '600', color: '#334155', marginBottom: 2 },
-  inboxContent: { fontSize: 13, color: '#475569', lineHeight: 19 },
+  inboxSubject: { fontSize: 12, fontWeight: '600', color: '#334155', marginTop: 1 },
+  inboxContent: { fontSize: 13, color: '#475569', lineHeight: 19, marginTop: 6 },
 
   // 先生証シート
   tcSheetBottom: { backgroundColor: '#0f172a', paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0 },
