@@ -626,13 +626,13 @@ export default function HomeScreen() {
       </Modal>
 
       {/* 受信トレイ */}
-      <Modal visible={showInbox} transparent animationType="slide" onRequestClose={() => setShowInbox(false)}>
+      <Modal visible={showInbox} transparent animationType="slide" onRequestClose={() => { setShowInbox(false); setExpandedMailId(null); }}>
         <View style={styles.studentSheetContainer}>
-          <Pressable style={styles.studentSheetOverlay} onPress={() => setShowInbox(false)} />
+          <Pressable style={styles.studentSheetOverlay} onPress={() => { setShowInbox(false); setExpandedMailId(null); }} />
           <View style={[styles.studentSheetBottom, { maxHeight: '75%', paddingHorizontal: 0, paddingBottom: 32 }]}>
             <View style={styles.inboxHeader}>
               <Text style={styles.inboxTitle}>✉️ メールボックス</Text>
-              <TouchableOpacity onPress={() => setShowInbox(false)}>
+              <TouchableOpacity onPress={() => { setShowInbox(false); setExpandedMailId(null); }}>
                 <Text style={styles.inboxClose}>✕</Text>
               </TouchableOpacity>
             </View>
