@@ -42,6 +42,7 @@ export default function HomeScreen() {
   const [pendingImages, setPendingImages] = useState<ImageData[]>([])
   const [studentSheet, setStudentSheet] = useState<'profile' | 'picker' | null>(null)
   const [teacherSheet, setTeacherSheet] = useState(false)
+  const [showTeacherAvatar, setShowTeacherAvatar] = useState(false)
   const [cardFlipped, setCardFlipped] = useState(false)
   const [mailMessages, setMailMessages] = useState<MailMessage[]>([])
   const [showInbox, setShowInbox] = useState(false)
@@ -209,6 +210,8 @@ export default function HomeScreen() {
       setCurrentHistoryId(saved.id)
       setActiveHistoryId(saved.id)
       setHistory(await loadHistory())
+      materialScale.setValue(0.92)
+      Animated.spring(materialScale, { toValue: 1, useNativeDriver: true, bounciness: 10, speed: 13 }).start()
       void backgroundFetchPreview(res.imageDescription, saved.id)
     } catch (e) {
       console.error('analyzeFromPending error:', e)
@@ -235,6 +238,8 @@ export default function HomeScreen() {
     resetChatSession()
     setActiveHistoryId(item.id)
     setCurrentHistoryId(item.id)
+    materialScale.setValue(0.92)
+    Animated.spring(materialScale, { toValue: 1, useNativeDriver: true, bounciness: 10, speed: 13 }).start()
     setImageDescription(item.imageDescription)
     setNotes(item.notes)
     setThumbnails(item.thumbnails)
@@ -303,8 +308,10 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.appSubtitle}>せんせいごっこ</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
-              <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: 36, height: 36, borderRadius: 18 }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+              <TouchableOpacity onPress={() => setShowTeacherAvatar(true)} activeOpacity={0.75}>
+                <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: 36, height: 36, borderRadius: 18 }} />
+              </TouchableOpacity>
               <View style={{ gap: 1 }}>
                 <Text style={styles.appTitle}>
                   {teacherProfile.name ? `${teacherProfile.name}先生` : '先生'}
@@ -596,6 +603,15 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
+      {/* アバター拡大表示 */}
+      <Modal visible={showTeacherAvatar} transparent animationType="fade" onRequestClose={() => setShowTeacherAvatar(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowTeacherAvatar(false)}>
+          <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white' }}>
+            <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: '100%', height: '100%' }} />
+          </View>
+        </Pressable>
+      </Modal>
+
       {/* 受信トレイ */}
       <Modal visible={showInbox} transparent animationType="slide" onRequestClose={() => setShowInbox(false)}>
         <View style={styles.studentSheetContainer}>
@@ -872,11 +888,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc', borderRadius: 20,
   },
   lessonChangeBtnText: { fontSize: 11, fontWeight: '600', color: '#64748b' },
-  lessonDivider: { width: 1, backgroundColor: '#f1f5f9', marginVertical: 16 },
+  lessonDivider: { width: 1, backgroundColor: '#e2e8f0', marginVertical: 16 },
   lessonStudent: {
     width: 118, padding: 14,
     alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#fdf2f8',
+    gap: 8, backgroundColor: '#fef5fb',
   },
   lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32 },
   lessonStudentName: { fontSize: 12, fontWeight: '700', color: '#1e293b' },
