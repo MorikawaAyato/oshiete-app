@@ -669,7 +669,7 @@ export default function HomeScreen() {
                         )}
                       </View>
                       <Text style={styles.inboxSubject} numberOfLines={isExpanded ? undefined : 1}>{msg.subject ?? msg.content}</Text>
-                      {isExpanded && <Text style={styles.inboxContent}>{msg.content}</Text>}
+                      {isExpanded && msg.subject && <Text style={styles.inboxContent}>{msg.content}</Text>}
                     </View>
                   </TouchableOpacity>
                 )

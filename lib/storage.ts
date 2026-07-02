@@ -18,7 +18,8 @@ const WELCOME_MAIL: MailMessage = {
   id: 'welcome',
   type: 'notice',
   from: 'せんせいごっこ',
-  content: 'ようこそ、せんせいごっこへ！\n生徒を選んで、はじめての授業を始めてみましょう ✨',
+  subject: 'ようこそ、せんせいごっこへ！',
+  content: '生徒を選んで、はじめての授業を始めてみましょう ✨',
   timestamp: new Date(0).toISOString(),
   read: false,
 }
