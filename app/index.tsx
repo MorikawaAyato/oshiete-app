@@ -908,7 +908,7 @@ const styles = StyleSheet.create({
   lessonStudent: {
     width: 118, padding: 14,
     alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#f0d4d8',
+    gap: 8, backgroundColor: '#e8eaed',
   },
   lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32 },
   lessonStudentName: { fontSize: 12, fontWeight: '700', color: '#1e293b' },
