@@ -36,6 +36,8 @@ export default function HomeScreen() {
   } = useApp()
 
   const [analyzing, setAnalyzing] = useState(false)
+  const [inputMode, setInputMode] = useState<'photo' | 'text'>('photo')
+  const [textInput, setTextInput] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
@@ -62,12 +64,15 @@ export default function HomeScreen() {
 
   const materialScale = useRef(new Animated.Value(1)).current
   const prevHistoryId = useRef<string | null>(null)
+  const currentHistoryIdRef = useRef(currentHistoryId)
+  useEffect(() => { currentHistoryIdRef.current = currentHistoryId }, [currentHistoryId])
 
   useFocusEffect(
     useCallback(() => {
       loadMail().then(setMailMessages)
-      if (currentHistoryId && currentHistoryId !== prevHistoryId.current) {
-        prevHistoryId.current = currentHistoryId
+      const id = currentHistoryIdRef.current
+      if (id && id !== prevHistoryId.current) {
+        prevHistoryId.current = id
         materialScale.setValue(0.92)
         Animated.spring(materialScale, {
           toValue: 1,
@@ -76,7 +81,7 @@ export default function HomeScreen() {
           speed: 13,
         }).start()
       }
-    }, [currentHistoryId])
+    }, [])
   )
 
   useEffect(() => {
@@ -162,6 +167,20 @@ export default function HomeScreen() {
     } finally {
       setPreviewLoading(false)
     }
+  }
+
+  const handleTextAnalyze = async () => {
+    const trimmed = textInput.trim()
+    if (trimmed.length < 10) return
+    resetChatSession()
+    setNotes('')
+    setImageDescription(trimmed)
+    setThumbnails([])
+    const titleOverride = trimmed.split('\n')[0].slice(0, 30) || 'テキスト教材'
+    const saved = await saveToHistory({ title: titleOverride, imageDescription: trimmed, notes: '', thumbnails: [] })
+    setCurrentHistoryId(saved.id)
+    setActiveHistoryId(saved.id)
+    setHistory(await loadHistory())
   }
 
   const analyzeFromPending = async () => {
@@ -357,13 +376,50 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* 状態1: 何もない */}
+          {/* 入力モード タブ */}
           {!hasPending && !hasContent && (
+            <View style={styles.inputModeTabs}>
+              <TouchableOpacity style={[styles.inputModeTab, inputMode === 'photo' && styles.inputModeTabActive]} onPress={() => setInputMode('photo')}>
+                <Text style={[styles.inputModeTabText, inputMode === 'photo' && styles.inputModeTabTextActive]}>📷 写真</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.inputModeTab, inputMode === 'text' && styles.inputModeTabActive]} onPress={() => setInputMode('text')}>
+                <Text style={[styles.inputModeTabText, inputMode === 'text' && styles.inputModeTabTextActive]}>📝 テキスト</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* 状態1a: 写真 */}
+          {!hasPending && !hasContent && inputMode === 'photo' && (
             <TouchableOpacity style={styles.uploadCard} onPress={() => openPicker('replace')}>
               <Text style={styles.uploadCardIcon}>📷</Text>
               <Text style={styles.uploadCardText}>教材の写真を選ぶ</Text>
               <Text style={styles.uploadCardSub}>PNG / JPG・最大{MAX_IMAGES}枚</Text>
             </TouchableOpacity>
+          )}
+
+          {/* 状態1b: テキスト入力 */}
+          {!hasPending && !hasContent && inputMode === 'text' && (
+            <View style={styles.textInputCard}>
+              <TextInput
+                style={styles.textInputArea}
+                value={textInput}
+                onChangeText={(t) => setTextInput(t.slice(0, 3000))}
+                placeholder="ノートや教材の内容を貼り付けてください..."
+                placeholderTextColor="#94a3b8"
+                multiline
+                textAlignVertical="top"
+              />
+              <View style={styles.textInputFooter}>
+                <Text style={styles.textInputCount}>{textInput.length} / 3000字</Text>
+                <TouchableOpacity
+                  style={[styles.analyzeBtn, textInput.trim().length < 10 && styles.analyzeBtnLoading]}
+                  onPress={handleTextAnalyze}
+                  disabled={textInput.trim().length < 10}
+                >
+                  <Text style={styles.analyzeBtnText}>📝 この内容で教材を作る</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
 
           {/* 状態2: 写真選択済み・未分析 */}
@@ -833,6 +889,15 @@ const styles = StyleSheet.create({
   sectionClear: { fontSize: 11, color: '#94a3b8', fontWeight: '500' },
 
   // 状態1：アップロード
+  inputModeTabs: { flexDirection: 'row', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 12 },
+  inputModeTab: { flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: 'white' },
+  inputModeTabActive: { backgroundColor: '#f472b6' },
+  inputModeTabText: { fontSize: 13, fontWeight: '600', color: '#64748b' },
+  inputModeTabTextActive: { color: 'white' },
+  textInputCard: { backgroundColor: 'white', borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#7dd3fc', padding: 16, gap: 10 },
+  textInputArea: { height: 140, fontSize: 14, color: '#334155', lineHeight: 22 },
+  textInputFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  textInputCount: { fontSize: 11, color: '#94a3b8' },
   uploadCard: {
     backgroundColor: 'white',
     borderRadius: 20,
@@ -908,7 +973,7 @@ const styles = StyleSheet.create({
   lessonStudent: {
     width: 118, padding: 14,
     alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#e8eaed',
+    gap: 8, backgroundColor: '#fce5eb',
   },
   lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32 },
   lessonStudentName: { fontSize: 12, fontWeight: '700', color: '#1e293b' },
