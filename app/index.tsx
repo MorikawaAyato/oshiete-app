@@ -180,6 +180,7 @@ export default function HomeScreen() {
     const saved = await saveToHistory({ title: titleOverride, imageDescription: trimmed, notes: '', thumbnails: [] })
     setCurrentHistoryId(saved.id)
     setActiveHistoryId(saved.id)
+    prevHistoryId.current = saved.id
     setHistory(await loadHistory())
   }
 
@@ -230,6 +231,7 @@ export default function HomeScreen() {
       })
       setCurrentHistoryId(saved.id)
       setActiveHistoryId(saved.id)
+      prevHistoryId.current = saved.id
       setHistory(await loadHistory())
       materialScale.setValue(0.92)
       Animated.spring(materialScale, { toValue: 1, useNativeDriver: true, bounciness: 10, speed: 13 }).start()
@@ -246,6 +248,7 @@ export default function HomeScreen() {
     setPendingImages([])
     setActiveHistoryId(null)
     setCurrentHistoryId(null)
+    prevHistoryId.current = null
     setImageDescription('')
     setNotes('')
     setPreviewContent(null)
@@ -259,6 +262,7 @@ export default function HomeScreen() {
     resetChatSession()
     setActiveHistoryId(item.id)
     setCurrentHistoryId(item.id)
+    prevHistoryId.current = item.id
     materialScale.setValue(0.92)
     Animated.spring(materialScale, { toValue: 1, useNativeDriver: true, bounciness: 10, speed: 13 }).start()
     setImageDescription(item.imageDescription)
@@ -973,7 +977,7 @@ const styles = StyleSheet.create({
   lessonStudent: {
     width: 118, padding: 14,
     alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#f9cecd',
+    gap: 8, backgroundColor: '#fcecf5',
   },
   lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32 },
   lessonStudentName: { fontSize: 12, fontWeight: '700', color: '#1e293b' },
