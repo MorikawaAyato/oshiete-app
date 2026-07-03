@@ -525,7 +525,7 @@ export default function HomeScreen() {
                 {previewLoading ? (
                   <ActivityIndicator color="#0369a1" size="small" />
                 ) : (
-                  <Text style={styles.lessonPreviewBtnText}>📖 教材を確認する</Text>
+                  <Text style={styles.lessonPreviewBtnText}>📖 教材を見る</Text>
                 )}
               </TouchableOpacity>
 
