@@ -113,6 +113,8 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(false)
   const [starting, setStarting] = useState(false)
   const [inputBlocked, setInputBlocked] = useState(false)
+  const [hints, setHints] = useState<string[] | null>(null)
+  const [showHints, setShowHints] = useState(false)
 
   const remainingMins = classEnded ? 0 : (MAX_TURNS - turnCount) * 5
   const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
@@ -140,17 +142,13 @@ export default function ChatScreen() {
       .finally(() => setStarting(false))
   }, [])
 
-  const send = async () => {
-    if (!input.trim() || loading || !student) return
-    if (containsNG(input)) {
-      setInputBlocked(true)
-      setTimeout(() => setInputBlocked(false), 3000)
-      return
-    }
-    const userMsg: ChatMessage = { role: 'user', text: input.trim() }
+  const doSend = async (text: string) => {
+    if (!student) return
+    setHints(null)
+    setShowHints(false)
+    const userMsg: ChatMessage = { role: 'user', text }
     const next = [...chatMessages, userMsg]
     setChatMessages(next)
-    setInput('')
     setLoading(true)
 
     try {
@@ -159,10 +157,13 @@ export default function ChatScreen() {
       if (res.text) {
         const newMessages: ChatMessage[] = [...next, { role: 'mana', text: res.text }]
         setChatMessages(newMessages)
+        setHints(res.hints ?? null)
+        setShowHints(false)
         const newTurnCount = turnCount + 1
         setTurnCount(newTurnCount)
         if (newTurnCount >= MAX_TURNS) {
           setClassEnded(true)
+          setHints(null)
           if (res.mailContent) {
             void addMail({
               id: Date.now().toString(),
@@ -182,14 +183,27 @@ export default function ChatScreen() {
         }
       }
     } catch {
-      const errorText = student?.id === 'siete'
+      const errorText = student.id === 'siete'
         ? 'あれっ、なんか繋がらなかったみたいです...😢 もう一回送ってみてもらえますか？'
         : 'えーっと...うまく繋がらなかったみたいで...🐾 もう一回お願いできますか...'
       setChatMessages([...next, { role: 'mana', text: errorText }])
+      setHints(null)
     } finally {
       setLoading(false)
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
     }
+  }
+
+  const send = async () => {
+    if (!input.trim() || loading || !student) return
+    if (containsNG(input)) {
+      setInputBlocked(true)
+      setTimeout(() => setInputBlocked(false), 3000)
+      return
+    }
+    const text = input.trim()
+    setInput('')
+    await doSend(text)
   }
 
   const endClass = () => {
@@ -331,6 +345,18 @@ export default function ChatScreen() {
         {/* 入力エリア */}
         {!classEnded && (
           <View style={styles.inputAreaWrap}>
+            {hints && (
+              <View style={styles.hintsWrap}>
+                <TouchableOpacity onPress={() => setShowHints((v) => !v)} style={styles.hintToggle}>
+                  <Text style={styles.hintToggleText}>💡 ヒントを見る {showHints ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
+                {showHints && hints.map((hint, i) => (
+                  <TouchableOpacity key={i} onPress={() => doSend(hint)} disabled={loading} style={styles.hintItem}>
+                    <Text style={styles.hintItemText}>{hint}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
             <View style={styles.inputArea}>
               <TextInput
                 style={styles.input}
@@ -429,6 +455,14 @@ const styles = StyleSheet.create({
   inputAreaWrap: {
     backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e2e8f0',
   },
+  hintsWrap: { paddingHorizontal: 12, paddingTop: 10, gap: 6 },
+  hintToggle: { paddingVertical: 2 },
+  hintToggleText: { fontSize: 12, fontWeight: '600', color: '#d97706' },
+  hintItem: {
+    borderWidth: 1, borderColor: '#fde68a', borderRadius: 12,
+    backgroundColor: '#fffbeb', paddingHorizontal: 14, paddingVertical: 10,
+  },
+  hintItemText: { fontSize: 13, color: '#374151', lineHeight: 19 },
   inputArea: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 8,
     paddingHorizontal: 16, paddingVertical: 12,
