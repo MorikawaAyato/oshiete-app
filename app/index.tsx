@@ -421,7 +421,7 @@ export default function HomeScreen() {
                   )}
                   <Text style={styles.lessonMaterialTitle} numberOfLines={3}>{shortTitle}</Text>
                   <TouchableOpacity style={styles.lessonChangeBtn} onPress={() => openPicker('replace')}>
-                    <Text style={styles.lessonChangeBtnText}>📷 写真を変える</Text>
+                    <Text style={styles.lessonChangeBtnText}>📷 写真を読み込む</Text>
                   </TouchableOpacity>
                 </View>
 

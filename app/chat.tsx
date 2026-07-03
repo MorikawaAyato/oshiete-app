@@ -182,7 +182,10 @@ export default function ChatScreen() {
         }
       }
     } catch {
-      setChatMessages([...next, { role: 'mana', text: 'すみません、うまく聞こえませんでした...もう一度お願いします🐾' }])
+      const errorText = student?.id === 'siete'
+        ? 'あれっ、なんか繋がらなかったみたいです...😢 もう一回送ってみてもらえますか？'
+        : 'えーっと...うまく繋がらなかったみたいで...🐾 もう一回お願いできますか...'
+      setChatMessages([...next, { role: 'mana', text: errorText }])
     } finally {
       setLoading(false)
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
