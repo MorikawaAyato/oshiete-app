@@ -136,6 +136,8 @@ export default function ChatScreen() {
       .then((res) => {
         if (res.manaResponse) {
           setChatMessages([{ role: 'mana', text: res.manaResponse }])
+          setHints(res.hints ?? null)
+          setShowHints(false)
         }
       })
       .catch(() => {})

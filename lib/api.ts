@@ -29,7 +29,7 @@ export async function startChat(
   notes: string,
   teacherName?: string,
   teacherCharacter?: string,
-): Promise<{ manaResponse?: string; error?: string }> {
+): Promise<{ manaResponse?: string; hints?: string[]; error?: string }> {
   const res = await fetch(`${API_BASE}/api/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
