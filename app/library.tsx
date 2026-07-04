@@ -10,12 +10,13 @@ import { useApp } from '@/lib/AppContext'
 import {
   loadHistory, deleteFromHistory, renameHistoryItem, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, moveItemToGroup,
-  renameGroupInStorage, deleteGroupFromStorage,
+  renameGroupInStorage, deleteGroupFromStorage, updateHistoryPreview,
 } from '@/lib/storage'
+import { fetchPreviewContent } from '@/lib/api'
 import type { HistoryItem } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
 
-type SheetMode = 'main' | 'detail' | 'rename' | 'group' | 'new-group' | 'delete'
+type SheetMode = 'select' | 'main' | 'detail' | 'rename' | 'group' | 'new-group' | 'delete'
 
 const TITLE_RE = /^この(教材|文書|画像|写真)は[、，]?\s*/u
 // 3カラム固定幅: (画面幅 - グリッドpadding12 - カードmargin合計18) / 3
@@ -26,7 +27,7 @@ export default function LibraryScreen() {
   const {
     setImageDescription, setNotes, setPreviewContent,
     setThumbnails, setCurrentHistoryId, setSelectedStudentId,
-    resetChatSession, currentHistoryId,
+    resetChatSession, currentHistoryId, setPendingMaterialAnimation,
   } = useApp()
 
   const [history, setHistory] = useState<HistoryItem[]>([])
@@ -73,13 +74,44 @@ export default function LibraryScreen() {
     setThumbnails(item.thumbnails)
     setCurrentHistoryId(item.id)
     setPreviewContent(item.previewContent ?? null)
+    setPendingMaterialAnimation(true)
     resetChatSession()
     requestAnimationFrame(() => router.back())
   }
 
-  const openSheet = (item: HistoryItem) => {
+  const openSheet = (item: HistoryItem, mode: SheetMode = 'main') => {
     setActionItem(item)
-    setSheetMode('main')
+    setSheetMode(mode)
+  }
+
+  const viewItem = (item: HistoryItem) => {
+    setImageDescription(item.imageDescription)
+    setNotes(item.notes)
+    setThumbnails(item.thumbnails)
+    setCurrentHistoryId(item.id)
+    setPreviewContent(item.previewContent ?? null)
+    resetChatSession()
+    closeSheet()
+    if (!item.previewContent) {
+      const attempt = async () => {
+        const content = await fetchPreviewContent(item.imageDescription)
+        if ((content as any).error) throw new Error(String((content as any).error))
+        return content as any
+      };
+      (async () => {
+        try {
+          let pc
+          try { pc = await attempt() } catch {
+            await new Promise(r => setTimeout(r, 2000))
+            pc = await attempt()
+          }
+          setPreviewContent(pc)
+          await updateHistoryPreview(item.id, pc)
+          await refresh()
+        } catch {}
+      })()
+    }
+    requestAnimationFrame(() => router.push('/preview'))
   }
 
   const closeSheet = () => setActionItem(null)
@@ -173,12 +205,12 @@ export default function LibraryScreen() {
     const title = item.title.replace(TITLE_RE, '')
     return (
       <View style={[styles.card, isActive && styles.cardActive]}>
-        <TouchableOpacity onPress={() => selectItem(item)} activeOpacity={0.85}>
+        <TouchableOpacity onPress={() => openSheet(item, 'select')} activeOpacity={0.85}>
           {item.thumbnails[0] ? (
             <Image source={{ uri: item.thumbnails[0] }} style={styles.cardThumb} />
           ) : (
-            <View style={[styles.cardThumb, styles.cardThumbEmpty]}>
-              <Text style={styles.cardThumbIcon}>📷</Text>
+            <View style={[styles.cardThumb, styles.cardThumbEmpty, styles.cardThumbText]}>
+              <Text style={styles.cardThumbIcon}>📝</Text>
             </View>
           )}
           <View style={[styles.cardInfo, isActive && styles.cardInfoActive]}>
@@ -355,6 +387,25 @@ export default function LibraryScreen() {
         >
           <View style={styles.sheet}>
             <View style={styles.sheetHandle} />
+
+            {sheetMode === 'select' && actionItem && (
+              <>
+                <Text style={styles.sheetItemTitle} numberOfLines={1}>
+                  {actionItem.title.replace(TITLE_RE, '')}
+                </Text>
+                <View style={styles.selectBtns}>
+                  <TouchableOpacity style={styles.selectBtnPrimary} onPress={() => selectItem(actionItem)}>
+                    <Text style={styles.selectBtnPrimaryText}>▶ 授業をはじめる</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.selectBtnSecondary} onPress={() => viewItem(actionItem)}>
+                    <Text style={styles.selectBtnSecondaryText}>📖 教材を見る</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.cancelBtn} onPress={closeSheet}>
+                  <Text style={styles.cancelBtnText}>キャンセル</Text>
+                </TouchableOpacity>
+              </>
+            )}
 
             {sheetMode === 'main' && actionItem && (
               <>
@@ -606,7 +657,8 @@ const styles = StyleSheet.create({
   cardActive: { borderColor: '#f472b6', shadowColor: '#f472b6', shadowOpacity: 0.2 },
   cardThumb: { width: '100%', aspectRatio: 1, backgroundColor: '#e2e8f0' },
   cardThumbEmpty: { alignItems: 'center', justifyContent: 'center' },
-  cardThumbIcon: { fontSize: 24, color: '#cbd5e1' },
+  cardThumbText: { backgroundColor: '#fce7f3' },
+  cardThumbIcon: { fontSize: 24 },
   cardInfo: { padding: 6, backgroundColor: 'white' },
   cardInfoActive: { backgroundColor: '#fff0f6' },
   cardTitle: { fontSize: 10, fontWeight: '600', color: '#1e293b', lineHeight: 14, minHeight: 28 },
@@ -712,6 +764,18 @@ const styles = StyleSheet.create({
     fontSize: 13, color: '#64748b', lineHeight: 20,
     paddingVertical: 12, marginBottom: 8,
   },
+
+  selectBtns: { gap: 10, marginTop: 12, marginBottom: 8 },
+  selectBtnPrimary: {
+    backgroundColor: '#ec4899', borderRadius: 16,
+    paddingVertical: 15, alignItems: 'center',
+  },
+  selectBtnPrimaryText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  selectBtnSecondary: {
+    backgroundColor: '#f0f9ff', borderRadius: 16, borderWidth: 1, borderColor: '#bae6fd',
+    paddingVertical: 15, alignItems: 'center',
+  },
+  selectBtnSecondaryText: { color: '#0369a1', fontWeight: '700', fontSize: 15 },
 
   primaryBtn: {
     backgroundColor: '#ec4899', borderRadius: 16,
