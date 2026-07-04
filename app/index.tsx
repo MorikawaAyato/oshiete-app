@@ -63,6 +63,9 @@ export default function HomeScreen() {
 
   const selectedStudent = STUDENTS.find(s => s.id === selectedStudentId) ?? null
 
+  // ライブラリ等で currentHistoryId が変わったら activeHistoryId も追従させる（①）
+  useEffect(() => { setActiveHistoryId(currentHistoryId) }, [currentHistoryId])
+
   const materialScale = useRef(new Animated.Value(1)).current
   const pendingAnimRef = useRef(pendingMaterialAnimation)
   useEffect(() => { pendingAnimRef.current = pendingMaterialAnimation }, [pendingMaterialAnimation])
@@ -419,12 +422,12 @@ export default function HomeScreen() {
           </View>
 
           {/* 入力モード タブ */}
-          {!hasPending && !hasContent && (
+          {!hasContent && (
             <View style={styles.inputModeTabs}>
-              <TouchableOpacity style={[styles.inputModeTab, inputMode === 'photo' && styles.inputModeTabActive]} onPress={() => setInputMode('photo')}>
+              <TouchableOpacity style={[styles.inputModeTab, inputMode === 'photo' && styles.inputModeTabActive]} onPress={() => { setInputMode('photo'); setTextInput('') }}>
                 <Text style={[styles.inputModeTabText, inputMode === 'photo' && styles.inputModeTabTextActive]}>📷 写真</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.inputModeTab, inputMode === 'text' && styles.inputModeTabActive]} onPress={() => setInputMode('text')}>
+              <TouchableOpacity style={[styles.inputModeTab, inputMode === 'text' && styles.inputModeTabActive]} onPress={() => { setInputMode('text'); setPendingImages([]); setThumbnails([]) }}>
                 <Text style={[styles.inputModeTabText, inputMode === 'text' && styles.inputModeTabTextActive]}>📝 テキスト</Text>
               </TouchableOpacity>
             </View>
@@ -451,16 +454,14 @@ export default function HomeScreen() {
                 multiline
                 textAlignVertical="top"
               />
-              <View style={styles.textInputFooter}>
-                <Text style={styles.textInputCount}>{textInput.length} / 3000字</Text>
-                <TouchableOpacity
-                  style={[styles.analyzeBtn, textInput.trim().length < 10 && styles.analyzeBtnLoading]}
-                  onPress={handleTextAnalyze}
-                  disabled={textInput.trim().length < 10}
-                >
-                  <Text style={styles.analyzeBtnText}>📝 この内容で教材を作る</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.textInputCount}>{textInput.length} / 3000字</Text>
+              <TouchableOpacity
+                style={[styles.analyzeBtn, textInput.trim().length < 10 && styles.analyzeBtnLoading]}
+                onPress={handleTextAnalyze}
+                disabled={textInput.trim().length < 10}
+              >
+                <Text style={styles.analyzeBtnText}>この内容で教材を作る</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -486,7 +487,7 @@ export default function HomeScreen() {
                     <Text style={[styles.analyzeBtnText, { marginLeft: 8 }]}>読み込み中...</Text>
                   </View>
                 ) : (
-                  <Text style={styles.analyzeBtnText}>🔍　この写真で教材を作る</Text>
+                  <Text style={styles.analyzeBtnText}>この写真で教材を作る</Text>
                 )}
               </TouchableOpacity>
               <View style={styles.photoActions}>
@@ -522,7 +523,7 @@ export default function HomeScreen() {
                     </View>
                   )}
                   <Text style={styles.lessonMaterialTitle} numberOfLines={3}>{shortTitle}</Text>
-                  <TouchableOpacity style={styles.lessonChangeBtn} onPress={() => openPicker('replace')}>
+                  <TouchableOpacity style={styles.lessonChangeBtn} onPress={clearSelection}>
                     <Text style={styles.lessonChangeBtnText}>新しい教材を作る</Text>
                   </TouchableOpacity>
                 </View>
@@ -571,7 +572,7 @@ export default function HomeScreen() {
                 {previewLoading ? (
                   <ActivityIndicator color="#0369a1" size="small" />
                 ) : (
-                  <Text style={styles.lessonPreviewBtnText}>📖 教材を見る</Text>
+                  <Text style={styles.lessonPreviewBtnText}>教材を見る</Text>
                 )}
               </TouchableOpacity>
 
@@ -581,7 +582,7 @@ export default function HomeScreen() {
                 onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
               >
                 <Text style={[styles.startBtnText, !selectedStudentId && styles.startBtnTextDisabled]}>
-                  {selectedStudentId ? '🎓　授業をする' : '生徒を選んでからスタート →'}
+                  {selectedStudentId ? '授業をする' : '生徒を選んでからスタート →'}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
@@ -945,17 +946,18 @@ const styles = StyleSheet.create({
   inputModeTabText: { fontSize: 13, fontWeight: '600', color: '#64748b' },
   inputModeTabTextActive: { color: 'white' },
   textInputCard: { backgroundColor: 'white', borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#7dd3fc', padding: 16, gap: 10 },
-  textInputArea: { height: 140, fontSize: 14, color: '#334155', lineHeight: 22 },
+  textInputArea: { height: 120, fontSize: 14, color: '#334155', lineHeight: 22 },
   textInputFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  textInputCount: { fontSize: 11, color: '#94a3b8' },
+  textInputCount: { fontSize: 11, color: '#94a3b8', textAlign: 'right' },
   uploadCard: {
     backgroundColor: 'white',
     borderRadius: 20,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderColor: '#7dd3fc',
-    paddingVertical: 36,
+    height: 226,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     shadowColor: '#7dd3fc',
     shadowOffset: { width: 0, height: 3 },
