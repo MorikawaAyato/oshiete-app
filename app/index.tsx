@@ -490,7 +490,7 @@ export default function HomeScreen() {
                 >
                   {selectedStudent ? (
                     <>
-                      <Image source={{ uri: selectedStudent.avatar }} style={styles.lessonStudentAvatar} />
+                      <Image source={{ uri: selectedStudent.avatar }} style={[styles.lessonStudentAvatar, { borderColor: selectedStudent.id === 'sowal' ? '#bfdbfe' : '#fcd5e0' }]} />
                       <View style={{ gap: 1 }}>
                         <Text style={styles.lessonStudentName}>{selectedStudent.name}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
@@ -971,9 +971,9 @@ const styles = StyleSheet.create({
   lessonStudent: {
     width: 118, padding: 14,
     alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#fcecf5',
+    gap: 8, backgroundColor: '#fef8fb',
   },
-  lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 1.5, borderColor: '#fcd5e0' },
+  lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 1.5 },
   lessonStudentName: { fontSize: 12, fontWeight: '700', color: '#1e293b' },
   lessonStudentAppeal: { fontSize: 11, color: '#be185d', textAlign: 'center', lineHeight: 16 },
   lessonStudentEmpty: {
