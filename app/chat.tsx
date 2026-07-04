@@ -352,11 +352,16 @@ export default function ChatScreen() {
                 <TouchableOpacity onPress={() => setShowHints((v) => !v)} style={styles.hintToggle}>
                   <Text style={styles.hintToggleText}>💡 ヒントを見る {showHints ? '▲' : '▼'}</Text>
                 </TouchableOpacity>
-                {showHints && hints.map((hint, i) => (
-                  <TouchableOpacity key={i} onPress={() => doSend(hint)} disabled={loading} style={styles.hintItem}>
-                    <Text style={styles.hintItemText}>{hint}</Text>
-                  </TouchableOpacity>
-                ))}
+                {showHints && (
+                  <>
+                    <Text style={styles.hintNote}>1つが正解、2つが誤りです</Text>
+                    {hints.map((hint, i) => (
+                      <TouchableOpacity key={i} onPress={() => doSend(hint)} disabled={loading} style={styles.hintItem}>
+                        <Text style={styles.hintItemText}>{hint}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
               </View>
             )}
             <View style={styles.inputArea}>
@@ -460,6 +465,7 @@ const styles = StyleSheet.create({
   hintsWrap: { paddingHorizontal: 12, paddingTop: 10, gap: 6 },
   hintToggle: { paddingVertical: 2 },
   hintToggleText: { fontSize: 12, fontWeight: '600', color: '#d97706' },
+  hintNote: { fontSize: 11, color: '#9ca3af', marginBottom: 2 },
   hintItem: {
     borderWidth: 1, borderColor: '#fde68a', borderRadius: 12,
     backgroundColor: '#fffbeb', paddingHorizontal: 14, paddingVertical: 10,

@@ -63,26 +63,27 @@ export default function HomeScreen() {
   const selectedStudent = STUDENTS.find(s => s.id === selectedStudentId) ?? null
 
   const materialScale = useRef(new Animated.Value(1)).current
-  const prevHistoryId = useRef<string | null>(null)
-  const currentHistoryIdRef = useRef(currentHistoryId)
-  useEffect(() => { currentHistoryIdRef.current = currentHistoryId }, [currentHistoryId])
+  const prevAnimatedHistoryId = useRef<string | null>(null)
 
   useFocusEffect(
     useCallback(() => {
       loadMail().then(setMailMessages)
-      const id = currentHistoryIdRef.current
-      if (id && id !== prevHistoryId.current) {
-        prevHistoryId.current = id
-        materialScale.setValue(0.92)
-        Animated.spring(materialScale, {
-          toValue: 1,
-          useNativeDriver: true,
-          bounciness: 10,
-          speed: 13,
-        }).start()
-      }
     }, [])
   )
+
+  useEffect(() => {
+    if (currentHistoryId && currentHistoryId !== prevAnimatedHistoryId.current) {
+      prevAnimatedHistoryId.current = currentHistoryId
+      materialScale.setValue(0.92)
+      Animated.spring(materialScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        bounciness: 10,
+        speed: 13,
+      }).start()
+    }
+    if (!currentHistoryId) prevAnimatedHistoryId.current = null
+  }, [currentHistoryId])
 
   useEffect(() => {
     loadHistory().then(setHistory)
@@ -231,10 +232,7 @@ export default function HomeScreen() {
       })
       setCurrentHistoryId(saved.id)
       setActiveHistoryId(saved.id)
-      prevHistoryId.current = saved.id
       setHistory(await loadHistory())
-      materialScale.setValue(0.92)
-      Animated.spring(materialScale, { toValue: 1, useNativeDriver: true, bounciness: 10, speed: 13 }).start()
       void backgroundFetchPreview(res.imageDescription, saved.id)
     } catch (e) {
       console.error('analyzeFromPending error:', e)
@@ -248,7 +246,6 @@ export default function HomeScreen() {
     setPendingImages([])
     setActiveHistoryId(null)
     setCurrentHistoryId(null)
-    prevHistoryId.current = null
     setImageDescription('')
     setNotes('')
     setPreviewContent(null)
@@ -262,9 +259,6 @@ export default function HomeScreen() {
     resetChatSession()
     setActiveHistoryId(item.id)
     setCurrentHistoryId(item.id)
-    prevHistoryId.current = item.id
-    materialScale.setValue(0.92)
-    Animated.spring(materialScale, { toValue: 1, useNativeDriver: true, bounciness: 10, speed: 13 }).start()
     setImageDescription(item.imageDescription)
     setNotes(item.notes)
     setThumbnails(item.thumbnails)
@@ -408,7 +402,7 @@ export default function HomeScreen() {
                 style={styles.textInputArea}
                 value={textInput}
                 onChangeText={(t) => setTextInput(t.slice(0, 3000))}
-                placeholder="ノートや教材の内容を貼り付けてください..."
+                placeholder="テキストで入力する"
                 placeholderTextColor="#94a3b8"
                 multiline
                 textAlignVertical="top"
@@ -481,7 +475,7 @@ export default function HomeScreen() {
                   )}
                   <Text style={styles.lessonMaterialTitle} numberOfLines={3}>{shortTitle}</Text>
                   <TouchableOpacity style={styles.lessonChangeBtn} onPress={() => openPicker('replace')}>
-                    <Text style={styles.lessonChangeBtnText}>📷 写真を読み込む</Text>
+                    <Text style={styles.lessonChangeBtnText}>新しい教材を作る</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -979,7 +973,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     gap: 8, backgroundColor: '#fcecf5',
   },
-  lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32 },
+  lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 1.5, borderColor: '#fcd5e0' },
   lessonStudentName: { fontSize: 12, fontWeight: '700', color: '#1e293b' },
   lessonStudentAppeal: { fontSize: 11, color: '#be185d', textAlign: 'center', lineHeight: 16 },
   lessonStudentEmpty: {
