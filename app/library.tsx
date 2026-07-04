@@ -209,8 +209,10 @@ export default function LibraryScreen() {
           {item.thumbnails[0] ? (
             <Image source={{ uri: item.thumbnails[0] }} style={styles.cardThumb} />
           ) : (
-            <View style={[styles.cardThumb, styles.cardThumbEmpty, styles.cardThumbText]}>
-              <Text style={styles.cardThumbIcon}>📝</Text>
+            <View style={[styles.cardThumb, { backgroundColor: '#fbcfe8', overflow: 'hidden' }]}>
+              <View style={{ position: 'absolute', top: -30, left: 0, right: 0, bottom: -70 }}>
+                <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
+              </View>
             </View>
           )}
           <View style={[styles.cardInfo, isActive && styles.cardInfoActive]}>
@@ -658,7 +660,7 @@ const styles = StyleSheet.create({
   cardThumb: { width: '100%', aspectRatio: 1, backgroundColor: '#e2e8f0' },
   cardThumbEmpty: { alignItems: 'center', justifyContent: 'center' },
   cardThumbText: { backgroundColor: '#fce7f3' },
-  cardThumbIcon: { fontSize: 24 },
+  cardThumbIcon: { position: 'absolute', top: 0, left: 0, bottom: 0, right: 0, opacity: 0.55 },
   cardInfo: { padding: 6, backgroundColor: 'white' },
   cardInfoActive: { backgroundColor: '#fff0f6' },
   cardTitle: { fontSize: 10, fontWeight: '600', color: '#1e293b', lineHeight: 14, minHeight: 28 },

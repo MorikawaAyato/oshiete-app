@@ -21,6 +21,8 @@ type AppState = {
   setCurrentHistoryId: (v: string | null) => void
   teacherProfile: TeacherProfile
   setTeacherProfile: (v: TeacherProfile) => void
+  pendingMaterialAnimation: boolean
+  setPendingMaterialAnimation: (v: boolean) => void
   // チャット状態（画面遷移をまたいで保持）
   chatMessages: ChatMessage[]
   setChatMessages: (v: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => void
@@ -76,6 +78,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [thumbnails, setThumbnails] = useState<string[]>([])
   const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null)
+  const [pendingMaterialAnimation, setPendingMaterialAnimation] = useState(false)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [turnCount, setTurnCount] = useState(0)
   const [classEnded, setClassEnded] = useState(false)
@@ -96,6 +99,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         teacherProfile, setTeacherProfile,
         thumbnails, setThumbnails,
         currentHistoryId, setCurrentHistoryId,
+        pendingMaterialAnimation, setPendingMaterialAnimation,
         chatMessages, setChatMessages,
         turnCount, setTurnCount,
         classEnded, setClassEnded,

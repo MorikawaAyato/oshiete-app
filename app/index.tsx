@@ -515,8 +515,10 @@ export default function HomeScreen() {
                   {thumbnails[0] ? (
                     <Image source={{ uri: thumbnails[0] }} style={styles.lessonThumb} />
                   ) : (
-                    <View style={[styles.lessonThumb, styles.lessonThumbText]}>
-                      <Text style={{ fontSize: 30 }}>📝</Text>
+                    <View style={[styles.lessonThumb, { backgroundColor: '#fbcfe8', overflow: 'hidden' }]}>
+                      <View style={{ position: 'absolute', top: -30, left: 0, right: 0, bottom: -70 }}>
+                        <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
+                      </View>
                     </View>
                   )}
                   <Text style={styles.lessonMaterialTitle} numberOfLines={3}>{shortTitle}</Text>
@@ -536,7 +538,7 @@ export default function HomeScreen() {
                 >
                   {selectedStudent ? (
                     <>
-                      <Image source={{ uri: selectedStudent.avatar }} style={[styles.lessonStudentAvatar, { borderColor: selectedStudent.id === 'sowal' ? '#c9e3fe' : '#fcd5e0' }]} />
+                      <Image source={{ uri: selectedStudent.avatar }} style={[styles.lessonStudentAvatar, { borderColor: '#e2e8f0' }]} />
                       <View style={{ gap: 1 }}>
                         <Text style={styles.lessonStudentName}>{selectedStudent.name}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
@@ -610,7 +612,11 @@ export default function HomeScreen() {
                       {item.thumbnails[0] ? (
                         <Image source={{ uri: item.thumbnails[0] }} style={styles.recentThumb} />
                       ) : (
-                        <View style={[styles.recentThumb, { backgroundColor: '#e2e8f0' }]} />
+                        <View style={[styles.recentThumb, { backgroundColor: '#fbcfe8', overflow: 'hidden' }]}>
+                          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -8 }}>
+                            <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
+                          </View>
+                        </View>
                       )}
                       <View style={styles.recentInfo}>
                         <Text numberOfLines={1} style={[styles.recentTitle, isActive && { color: '#ec4899' }]}>
@@ -1020,7 +1026,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     gap: 8, backgroundColor: '#fef8fb',
   },
-  lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 1.5 },
+  lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 1 },
   lessonStudentName: { fontSize: 12, fontWeight: '700', color: '#1e293b' },
   lessonStudentAppeal: { fontSize: 11, color: '#be185d', textAlign: 'center', lineHeight: 16 },
   lessonStudentEmpty: {
