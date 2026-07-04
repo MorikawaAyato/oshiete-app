@@ -1,5 +1,17 @@
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? ''
 
+export async function analyzeText(
+  text: string,
+  existingGroups: { groupName: string; titles: string[] }[] = [],
+): Promise<{ title: string; imageDescription: string; notes: string; suggestedGroupName?: string; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/analyze-text`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, existingGroups }),
+  })
+  return res.json()
+}
+
 export async function analyzeImages(
   images: { data: string; mimeType: string }[],
   existingGroups: { groupName: string; titles: string[] }[] = [],

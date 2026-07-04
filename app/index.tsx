@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage } from '@/lib/teacherProfile'
-import { analyzeImages, fetchPreviewContent } from '@/lib/api'
+import { analyzeImages, analyzeText, fetchPreviewContent } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead,
@@ -170,16 +170,61 @@ export default function HomeScreen() {
   const handleTextAnalyze = async () => {
     const trimmed = textInput.trim()
     if (trimmed.length < 10) return
+    setAnalyzing(true)
     resetChatSession()
     setNotes('')
     setImageDescription(trimmed)
     setThumbnails([])
-    const titleOverride = trimmed.split('\n')[0].slice(0, 30) || 'テキスト教材'
-    const saved = await saveToHistory({ title: titleOverride, imageDescription: trimmed, notes: '', thumbnails: [] })
-    setCurrentHistoryId(saved.id)
-    setActiveHistoryId(saved.id)
-    setHistory(await loadHistory())
-    triggerMaterialAnimation()
+    try {
+      const currentHistory = await loadHistory()
+      const groupMap: Record<string, string[]> = {}
+      for (const item of currentHistory) {
+        if (item.groupName) {
+          if (!groupMap[item.groupName]) groupMap[item.groupName] = []
+          groupMap[item.groupName].push(item.title)
+        }
+      }
+      const existingGroups = Object.entries(groupMap).map(([groupName, titles]) => ({ groupName, titles }))
+
+      const res = await analyzeText(trimmed, existingGroups)
+      if (res.error) throw new Error(res.error)
+
+      const finalTitle = res.title || trimmed.split('\n')[0].slice(0, 30) || 'テキスト教材'
+      const finalDesc = res.imageDescription || trimmed
+      const finalNotes = res.notes || ''
+
+      setImageDescription(finalDesc)
+      setNotes(finalNotes)
+
+      let suggestedGroupName: string | undefined = res.suggestedGroupName || undefined
+      if (suggestedGroupName) {
+        try {
+          const groups = await loadSavedGroups()
+          if (!groups.includes(suggestedGroupName)) {
+            await saveGroupsList([...groups, suggestedGroupName])
+          }
+        } catch {
+          suggestedGroupName = undefined
+        }
+      }
+
+      const saved = await saveToHistory({
+        title: finalTitle,
+        imageDescription: finalDesc,
+        notes: finalNotes,
+        thumbnails: [],
+        groupName: suggestedGroupName,
+      })
+      setCurrentHistoryId(saved.id)
+      setActiveHistoryId(saved.id)
+      setHistory(await loadHistory())
+      setTextInput('')
+      triggerMaterialAnimation()
+    } catch {
+      Alert.alert('エラー', '教材の読み込みに失敗しました。もう一度試してください。')
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   const analyzeFromPending = async () => {
@@ -470,7 +515,9 @@ export default function HomeScreen() {
                   {thumbnails[0] ? (
                     <Image source={{ uri: thumbnails[0] }} style={styles.lessonThumb} />
                   ) : (
-                    <View style={[styles.lessonThumb, { backgroundColor: '#e2e8f0' }]} />
+                    <View style={[styles.lessonThumb, styles.lessonThumbText]}>
+                      <Text style={{ fontSize: 30 }}>📝</Text>
+                    </View>
                   )}
                   <Text style={styles.lessonMaterialTitle} numberOfLines={3}>{shortTitle}</Text>
                   <TouchableOpacity style={styles.lessonChangeBtn} onPress={() => openPicker('replace')}>
@@ -539,10 +586,10 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* 最近の授業 */}
+        {/* 最近の教材 */}
         <View style={styles.recentSection}>
           <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
-            <Text style={styles.sectionTitle}>最近の授業</Text>
+            <Text style={styles.sectionTitle}>最近の教材</Text>
             <TouchableOpacity onPress={() => router.push('/library')}>
               <Text style={styles.sectionAction}>すべて見る →</Text>
             </TouchableOpacity>
@@ -949,6 +996,7 @@ const styles = StyleSheet.create({
   },
   lessonMaterial: { flex: 1, padding: 14, gap: 8 },
   lessonThumb: { width: '100%', aspectRatio: 1.4, borderRadius: 12 },
+  lessonThumbText: { backgroundColor: '#fce7f3', alignItems: 'center', justifyContent: 'center' },
   lessonMaterialTitle: { fontSize: 13, fontWeight: '700', color: '#1e293b', lineHeight: 18 },
   lessonPreviewBtn: {
     backgroundColor: '#f0f9ff',
