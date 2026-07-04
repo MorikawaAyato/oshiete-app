@@ -32,6 +32,7 @@ export default function HomeScreen() {
     teacherProfile, setTeacherProfile,
     thumbnails, setThumbnails,
     currentHistoryId, setCurrentHistoryId,
+    pendingMaterialAnimation, setPendingMaterialAnimation,
     resetChatSession,
   } = useApp()
 
@@ -63,27 +64,23 @@ export default function HomeScreen() {
   const selectedStudent = STUDENTS.find(s => s.id === selectedStudentId) ?? null
 
   const materialScale = useRef(new Animated.Value(1)).current
-  const prevAnimatedHistoryId = useRef<string | null>(null)
+  const pendingAnimRef = useRef(pendingMaterialAnimation)
+  useEffect(() => { pendingAnimRef.current = pendingMaterialAnimation }, [pendingMaterialAnimation])
+
+  const triggerMaterialAnimation = useCallback(() => {
+    materialScale.setValue(0.92)
+    Animated.spring(materialScale, { toValue: 1, useNativeDriver: true, bounciness: 10, speed: 13 }).start()
+  }, [])
 
   useFocusEffect(
     useCallback(() => {
       loadMail().then(setMailMessages)
+      if (pendingAnimRef.current) {
+        setPendingMaterialAnimation(false)
+        triggerMaterialAnimation()
+      }
     }, [])
   )
-
-  useEffect(() => {
-    if (currentHistoryId && currentHistoryId !== prevAnimatedHistoryId.current) {
-      prevAnimatedHistoryId.current = currentHistoryId
-      materialScale.setValue(0.92)
-      Animated.spring(materialScale, {
-        toValue: 1,
-        useNativeDriver: true,
-        bounciness: 10,
-        speed: 13,
-      }).start()
-    }
-    if (!currentHistoryId) prevAnimatedHistoryId.current = null
-  }, [currentHistoryId])
 
   useEffect(() => {
     loadHistory().then(setHistory)
@@ -181,8 +178,8 @@ export default function HomeScreen() {
     const saved = await saveToHistory({ title: titleOverride, imageDescription: trimmed, notes: '', thumbnails: [] })
     setCurrentHistoryId(saved.id)
     setActiveHistoryId(saved.id)
-    prevHistoryId.current = saved.id
     setHistory(await loadHistory())
+    triggerMaterialAnimation()
   }
 
   const analyzeFromPending = async () => {
@@ -233,6 +230,7 @@ export default function HomeScreen() {
       setCurrentHistoryId(saved.id)
       setActiveHistoryId(saved.id)
       setHistory(await loadHistory())
+      triggerMaterialAnimation()
       void backgroundFetchPreview(res.imageDescription, saved.id)
     } catch (e) {
       console.error('analyzeFromPending error:', e)
@@ -259,6 +257,7 @@ export default function HomeScreen() {
     resetChatSession()
     setActiveHistoryId(item.id)
     setCurrentHistoryId(item.id)
+    triggerMaterialAnimation()
     setImageDescription(item.imageDescription)
     setNotes(item.notes)
     setThumbnails(item.thumbnails)
@@ -490,7 +489,7 @@ export default function HomeScreen() {
                 >
                   {selectedStudent ? (
                     <>
-                      <Image source={{ uri: selectedStudent.avatar }} style={[styles.lessonStudentAvatar, { borderColor: selectedStudent.id === 'sowal' ? '#bfdbfe' : '#fcd5e0' }]} />
+                      <Image source={{ uri: selectedStudent.avatar }} style={[styles.lessonStudentAvatar, { borderColor: selectedStudent.id === 'sowal' ? '#c9e3fe' : '#fcd5e0' }]} />
                       <View style={{ gap: 1 }}>
                         <Text style={styles.lessonStudentName}>{selectedStudent.name}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
