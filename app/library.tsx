@@ -394,11 +394,11 @@ export default function LibraryScreen() {
                   {actionItem.title.replace(TITLE_RE, '')}
                 </Text>
                 <View style={styles.selectBtns}>
-                  <TouchableOpacity style={styles.selectBtnPrimary} onPress={() => selectItem(actionItem)}>
-                    <Text style={styles.selectBtnPrimaryText}>▶ 授業をはじめる</Text>
-                  </TouchableOpacity>
                   <TouchableOpacity style={styles.selectBtnSecondary} onPress={() => viewItem(actionItem)}>
                     <Text style={styles.selectBtnSecondaryText}>📖 教材を見る</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.selectBtnPrimary} onPress={() => selectItem(actionItem)}>
+                    <Text style={styles.selectBtnPrimaryText}>🎓　授業をする</Text>
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity style={styles.cancelBtn} onPress={closeSheet}>
@@ -767,15 +767,17 @@ const styles = StyleSheet.create({
 
   selectBtns: { gap: 10, marginTop: 12, marginBottom: 8 },
   selectBtnPrimary: {
-    backgroundColor: '#ec4899', borderRadius: 16,
-    paddingVertical: 15, alignItems: 'center',
+    backgroundColor: '#f472b6', borderRadius: 16,
+    paddingVertical: 18, alignItems: 'center',
+    shadowColor: '#ec4899', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
   },
-  selectBtnPrimaryText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  selectBtnPrimaryText: { color: 'white', fontWeight: '800', fontSize: 18 },
   selectBtnSecondary: {
-    backgroundColor: '#f0f9ff', borderRadius: 16, borderWidth: 1, borderColor: '#bae6fd',
-    paddingVertical: 15, alignItems: 'center',
+    backgroundColor: '#f0f9ff', borderRadius: 14, borderWidth: 1, borderColor: '#bae6fd',
+    paddingVertical: 14, alignItems: 'center',
   },
-  selectBtnSecondaryText: { color: '#0369a1', fontWeight: '700', fontSize: 15 },
+  selectBtnSecondaryText: { color: '#0369a1', fontWeight: '700', fontSize: 14 },
 
   primaryBtn: {
     backgroundColor: '#ec4899', borderRadius: 16,
