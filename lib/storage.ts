@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { HistoryItem, PreviewContent } from './types'
+import type { HistoryItem, PreviewContent, Recap } from './types'
 
 export type MailMessage = {
   id: string
@@ -93,6 +93,21 @@ export async function updateHistoryPreview(id: string, previewContent: PreviewCo
   const history = await loadHistory()
   const updated = history.map((h) => (h.id === id ? { ...h, previewContent } : h))
   await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+}
+
+// 授業終了時に生成されたRecap（生徒メモリ）を教材×生徒単位で保存（最新1件を上書き）
+export async function saveRecapToHistory(historyId: string, studentId: string, recap: Recap): Promise<void> {
+  const history = await loadHistory()
+  const updated = history.map((h) =>
+    h.id === historyId ? { ...h, recaps: { ...(h.recaps ?? {}), [studentId]: recap } } : h
+  )
+  await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+}
+
+export async function loadRecap(historyId: string | null, studentId: string): Promise<Recap | null> {
+  if (!historyId) return null
+  const history = await loadHistory()
+  return history.find((h) => h.id === historyId)?.recaps?.[studentId] ?? null
 }
 
 export async function loadSavedGroups(): Promise<string[]> {

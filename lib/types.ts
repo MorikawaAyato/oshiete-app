@@ -3,6 +3,25 @@ export type ChatMessage = {
   text: string
 }
 
+// 生徒メモリ（教材×生徒ごとに前回授業の記憶を保持、最新1件）
+export type Recap = {
+  savedAt: number
+  coveredTopics: { topic: string; understanding: 'high' | 'mid' | 'low' }[]
+  struggledPoints: string[]
+  uncoveredTopics: string[]
+}
+
+export type NotebookLine = {
+  text: string
+  status: 'correct' | 'wrong' | 'blank'
+  correction?: string
+}
+
+export type Notebook = {
+  title: string
+  lines: NotebookLine[]
+}
+
 export type HistoryItem = {
   id: string
   title: string
@@ -12,6 +31,7 @@ export type HistoryItem = {
   thumbnails: string[]
   previewContent?: PreviewContent | null
   groupName?: string
+  recaps?: Record<string, Recap>
 }
 
 export type Visual =

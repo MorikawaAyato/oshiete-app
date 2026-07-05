@@ -1,7 +1,7 @@
 import {
   View, Text, TouchableOpacity, ScrollView, TextInput,
   StyleSheet, Image, KeyboardAvoidingView, Platform,
-  Animated, Alert,
+  Animated, Alert, Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -10,10 +10,12 @@ import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
 import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
-import { addMail } from '@/lib/storage'
+import { addMail, loadRecap, saveRecapToHistory } from '@/lib/storage'
 import type { ChatMessage } from '@/lib/types'
 
 const MAX_TURNS = 9
+const HINT_MAX_USES = 3
+const HINT_LIMIT_ENABLED = false // 実験中: 虎の巻の回数制限を無効化（戻すときは true）
 
 const NG_PATTERNS = [
   /死[にねの]/, /死んで/, /氏ね/,
@@ -24,6 +26,23 @@ const NG_PATTERNS = [
 
 function containsNG(text: string): boolean {
   return NG_PATTERNS.some((p) => p.test(text))
+}
+
+// 添削アニメ: 花丸スタンプ／赤ペンをぽんっと表示する
+function GradeIn({ delay, animate, stamp, children }: { delay: number; animate: boolean; stamp?: boolean; children: React.ReactNode }) {
+  const scale = useRef(new Animated.Value(animate ? (stamp ? 2 : 0.9) : 1)).current
+  const opacity = useRef(new Animated.Value(animate ? 0 : 1)).current
+  useEffect(() => {
+    if (!animate) return
+    Animated.sequence([
+      Animated.delay(delay),
+      Animated.parallel([
+        Animated.spring(scale, { toValue: 1, useNativeDriver: true, bounciness: 14, speed: 14 }),
+        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]),
+    ]).start()
+  }, [])
+  return <Animated.View style={{ opacity, transform: [{ scale }] }}>{children}</Animated.View>
 }
 
 function TypingDots({ color }: { color: string }) {
@@ -98,10 +117,16 @@ function EnteringRoom({ student }: { student: { name: string; avatar: string; co
 export default function ChatScreen() {
   const router = useRouter()
   const {
-    imageDescription, notes, selectedStudentId, teacherProfile,
+    imageDescription, notes, selectedStudentId, teacherProfile, currentHistoryId,
     chatMessages, setChatMessages,
     turnCount, setTurnCount,
     classEnded, setClassEnded,
+    hints, setHints,
+    hintUsesLeft, setHintUsesLeft,
+    correctness, setCorrectness,
+    lessonRecap, setLessonRecap,
+    notebook, setNotebook,
+    notebookState, setNotebookState,
     resetChatSession,
   } = useApp()
   const teacherName = teacherProfile.name || undefined
@@ -112,9 +137,13 @@ export default function ChatScreen() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [startError, setStartError] = useState(false)
+  const [sendError, setSendError] = useState<ChatMessage[] | null>(null)
   const [inputBlocked, setInputBlocked] = useState(false)
-  const [hints, setHints] = useState<string[] | null>(null)
   const [showHints, setShowHints] = useState(false)
+  const [hintCharged, setHintCharged] = useState(false) // このターンのヒントを開封済みか（開閉で二重消費しない）
+  const [showNotebook, setShowNotebook] = useState(false)
+  const [notebookGrading, setNotebookGrading] = useState(false)
 
   const remainingMins = classEnded ? 0 : (MAX_TURNS - turnCount) * 5
   const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
@@ -128,44 +157,65 @@ export default function ChatScreen() {
     }
   }, [])
 
-  useEffect(() => {
-    // メッセージが既にある（教材画面から戻ってきた等）場合はstartChatしない
-    if (!student || chatMessages.length > 0) return
+  const initChat = () => {
+    if (!student) return
+    setStartError(false)
     setStarting(true)
-    startChat(student.id, imageDescription, notes, teacherName, teacherCharacter)
+    // この教材×この生徒の前回Recap（生徒メモリ）があれば授業に持ち込む
+    loadRecap(currentHistoryId, student.id)
+      .then((recap) => {
+        setLessonRecap(recap)
+        setCorrectness([])
+        setNotebook(null)
+        setNotebookState(null)
+        setNotebookGrading(false)
+        return startChat(student.id, imageDescription, notes, teacherName, teacherCharacter, recap ?? undefined)
+      })
       .then((res) => {
         if (res.manaResponse) {
           setChatMessages([{ role: 'mana', text: res.manaResponse }])
           setHints(res.hints ?? null)
           setShowHints(false)
+          setHintUsesLeft(HINT_MAX_USES)
+          setHintCharged(false)
+        } else {
+          setStartError(true)
         }
       })
-      .catch(() => {})
+      .catch(() => setStartError(true))
       .finally(() => setStarting(false))
+  }
+
+  useEffect(() => {
+    // メッセージが既にある（教材画面から戻ってきた等）場合はstartChatしない
+    if (!student || chatMessages.length > 0) return
+    initChat()
   }, [])
 
-  const doSend = async (text: string) => {
+  const performSend = async (next: ChatMessage[]) => {
     if (!student) return
-    setHints(null)
-    setShowHints(false)
-    const userMsg: ChatMessage = { role: 'user', text }
-    const next = [...chatMessages, userMsg]
-    setChatMessages(next)
+    setSendError(null)
     setLoading(true)
 
     try {
       const isFinalTurn = turnCount + 1 >= MAX_TURNS
-      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn)
+      const turnsLeft = MAX_TURNS - (turnCount + 1)
+      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, lessonRecap ?? undefined)
       if (res.text) {
         const newMessages: ChatMessage[] = [...next, { role: 'mana', text: res.text }]
         setChatMessages(newMessages)
         setHints(res.hints ?? null)
         setShowHints(false)
+        setHintCharged(false)
+        setCorrectness(prev => [...prev, res.correct ?? null])
         const newTurnCount = turnCount + 1
         setTurnCount(newTurnCount)
         if (newTurnCount >= MAX_TURNS) {
           setClassEnded(true)
           setHints(null)
+          if (res.recap && currentHistoryId) {
+            void saveRecapToHistory(currentHistoryId, student.id, res.recap)
+          }
           if (res.mailContent) {
             void addMail({
               id: Date.now().toString(),
@@ -178,22 +228,54 @@ export default function ChatScreen() {
               read: false,
             })
           }
+          const nb = res.notebook
           setTimeout(() => {
             setChatMessages(prev => [...prev, { role: 'mana', text: student.endMessage }])
             setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+            if (nb) {
+              // 終了の挨拶のあとにノート写真が届く
+              setTimeout(() => {
+                setChatMessages(prev => [...prev, { role: 'mana', text: student.notebookMessage }])
+                setNotebook(nb)
+                setNotebookState('received')
+                setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+              }, 1200)
+            }
           }, 500)
         }
+      } else {
+        // APIがエラーJSONを返した場合（メッセージには何も追加しない）
+        setSendError(next)
+        setHints(null)
       }
     } catch {
-      const errorText = student.id === 'siete'
-        ? 'あれっ、なんか繋がらなかったみたいです...😢 もう一回送ってみてもらえますか？'
-        : 'えーっと...うまく繋がらなかったみたいで...🐾 もう一回お願いできますか...'
-      setChatMessages([...next, { role: 'mana', text: errorText }])
+      setSendError(next)
       setHints(null)
     } finally {
       setLoading(false)
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
     }
+  }
+
+  const doSend = async (text: string) => {
+    if (!student) return
+    setHints(null)
+    setShowHints(false)
+    setHintCharged(false)
+    const userMsg: ChatMessage = { role: 'user', text }
+    const next = [...chatMessages, userMsg]
+    setChatMessages(next)
+    await performSend(next)
+  }
+
+  const openHints = () => {
+    if (showHints) { setShowHints(false); return }
+    if (HINT_LIMIT_ENABLED && !hintCharged) {
+      if (hintUsesLeft <= 0) return
+      setHintUsesLeft((v) => v - 1)
+      setHintCharged(true)
+    }
+    setShowHints(true)
   }
 
   const send = async () => {
@@ -214,6 +296,16 @@ export default function ChatScreen() {
     if (student) {
       setChatMessages((prev) => [...prev, { role: 'mana', text: student.endMessage }])
     }
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+  }
+
+  // 添削したノートを生徒に返す
+  const handleReturnNotebook = () => {
+    if (!student) return
+    setNotebookState('returned')
+    setShowNotebook(false)
+    setNotebookGrading(false)
+    setChatMessages((prev) => [...prev, { role: 'mana', text: student.notebookThanks }])
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
   }
 
@@ -253,7 +345,7 @@ export default function ChatScreen() {
     )
   }
 
-  if (starting) {
+  if (starting || (startError && chatMessages.length === 0)) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: student.color + '18' }]}>
         <View style={styles.header}>
@@ -262,7 +354,16 @@ export default function ChatScreen() {
           </TouchableOpacity>
           <View style={{ width: 60 }} />
         </View>
-        <EnteringRoom student={student} />
+        {starting ? (
+          <EnteringRoom student={student} />
+        ) : (
+          <View style={styles.center}>
+            <Text style={styles.errorText}>⚠️ {student.name}のトークルームに接続できませんでした</Text>
+            <TouchableOpacity onPress={initChat} style={styles.retryBtn}>
+              <Text style={styles.retryBtnText}>もう一度接続する</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </SafeAreaView>
     )
   }
@@ -328,10 +429,41 @@ export default function ChatScreen() {
               </View>
             </View>
           ))}
+          {sendError && !loading && (
+            <View style={styles.sendErrorWrap}>
+              <Text style={styles.sendErrorText}>⚠️ 通信エラーで届きませんでした</Text>
+              <TouchableOpacity onPress={() => performSend(sendError)} style={styles.retryBtn}>
+                <Text style={styles.retryBtnText}>もう一度送る</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           {loading && (
             <View style={[styles.bubble, styles.bubbleMana]}>
               <Image source={{ uri: student.avatar }} style={styles.bubbleAvatar} />
               <TypingDots color={student.color} />
+            </View>
+          )}
+          {/* ノート写真カード（授業終了後に生徒から届く） */}
+          {notebook && notebookState && (
+            <View style={[styles.bubble, styles.bubbleMana]}>
+              <Image source={{ uri: student.avatar }} style={styles.bubbleAvatar} />
+              <TouchableOpacity onPress={() => setShowNotebook(true)} style={styles.notebookCard}>
+                <View style={styles.notebookCardPaper}>
+                  <Text style={styles.notebookCardTitle} numberOfLines={1}>📓 {notebook.title}</Text>
+                  {notebook.lines.slice(0, 3).map((l, i) => (
+                    <Text key={i} style={styles.notebookCardLine} numberOfLines={1}>
+                      {l.status === 'blank' ? '　' : l.text}
+                    </Text>
+                  ))}
+                  <Text style={styles.notebookCardLine}>…</Text>
+                  {notebookState === 'returned' && (
+                    <Text style={styles.notebookCardStamp}>💮</Text>
+                  )}
+                </View>
+                <Text style={styles.notebookCardAction}>
+                  {notebookState === 'returned' ? '添削済みのノートを見る ✨' : 'タップして添削する 🖊️'}
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
           {classEnded && (
@@ -344,19 +476,93 @@ export default function ChatScreen() {
           )}
         </ScrollView>
 
+        {/* ノート添削モーダル */}
+        <Modal
+          visible={showNotebook && !!notebook}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowNotebook(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.notebookModal}>
+              <View style={styles.notebookModalHeader}>
+                <Text style={styles.notebookModalTitle}>📓 {student.name}のノート</Text>
+                <TouchableOpacity onPress={() => setShowNotebook(false)} hitSlop={8}>
+                  <Text style={styles.notebookModalClose}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.notebookScroll}>
+                <View style={styles.notebookPaper}>
+                  <Text style={styles.notebookTitle}>{notebook?.title}</Text>
+                  {notebook?.lines.map((line, i) => {
+                    const annotationsVisible = notebookGrading || notebookState === 'returned'
+                    const animate = notebookGrading && notebookState === 'received'
+                    return (
+                      <View key={i} style={styles.notebookLineRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.notebookLineText, line.status === 'blank' && styles.notebookLineBlank]}>
+                            {line.status === 'blank' ? '（ここ、書けませんでした…）' : line.text}
+                          </Text>
+                          {annotationsVisible && line.status !== 'correct' && line.correction && (
+                            <GradeIn delay={400 + i * 350} animate={animate}>
+                              <Text style={styles.notebookCorrection}>
+                                {line.status === 'wrong' ? '✗ ' : '＋ '}{line.correction}
+                              </Text>
+                            </GradeIn>
+                          )}
+                        </View>
+                        {annotationsVisible && line.status === 'correct' && (
+                          <GradeIn delay={400 + i * 350} animate={animate} stamp>
+                            <Text style={styles.notebookHanamaru}>💮</Text>
+                          </GradeIn>
+                        )}
+                      </View>
+                    )
+                  })}
+                </View>
+              </ScrollView>
+              <View style={styles.notebookModalFooter}>
+                {!notebookGrading && notebookState === 'received' ? (
+                  <TouchableOpacity onPress={() => setNotebookGrading(true)} style={styles.gradeBtn}>
+                    <Text style={styles.gradeBtnText}>🖊️ 赤ペンで添削する</Text>
+                  </TouchableOpacity>
+                ) : notebookState === 'received' ? (
+                  <GradeIn delay={600 + (notebook?.lines.length ?? 0) * 350} animate>
+                    <TouchableOpacity onPress={handleReturnNotebook} style={styles.returnBtn}>
+                      <Text style={styles.gradeBtnText}>📮 ノートを返す</Text>
+                    </TouchableOpacity>
+                  </GradeIn>
+                ) : (
+                  <TouchableOpacity onPress={() => setShowNotebook(false)} style={styles.closeNotebookBtn}>
+                    <Text style={styles.closeNotebookBtnText}>閉じる</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
+        </Modal>
+
         {/* 入力エリア */}
         {!classEnded && (
           <View style={styles.inputAreaWrap}>
             {hints && (
               <View style={styles.hintsWrap}>
-                <TouchableOpacity onPress={() => setShowHints((v) => !v)} style={styles.hintToggle}>
-                  <Text style={styles.hintToggleText}>💡 ヒントを見る {showHints ? '▲' : '▼'}</Text>
+                <TouchableOpacity
+                  onPress={openHints}
+                  disabled={HINT_LIMIT_ENABLED && !showHints && !hintCharged && hintUsesLeft <= 0}
+                  style={styles.hintToggle}
+                >
+                  <Text style={[styles.hintToggleText, HINT_LIMIT_ENABLED && hintUsesLeft <= 0 && !hintCharged && styles.hintToggleTextDisabled]}>
+                    {HINT_LIMIT_ENABLED && hintUsesLeft <= 0 && !hintCharged
+                      ? '📜 虎の巻は使い切りました'
+                      : `📜 虎の巻を開く${HINT_LIMIT_ENABLED ? `（残り${hintUsesLeft}回）` : ''} ${showHints ? '▲' : '▼'}`}
+                  </Text>
                 </TouchableOpacity>
                 {showHints && (
                   <>
-                    <Text style={styles.hintNote}>1つが正解、2つが誤りです</Text>
+                    <Text style={styles.hintNote}>1つが正解、2つが誤りです。タップすると入力欄に写せます</Text>
                     {hints.map((hint, i) => (
-                      <TouchableOpacity key={i} onPress={() => doSend(hint)} disabled={loading} style={styles.hintItem}>
+                      <TouchableOpacity key={i} onPress={() => setInput(hint)} disabled={loading} style={styles.hintItem}>
                         <Text style={styles.hintItemText}>{hint}</Text>
                       </TouchableOpacity>
                     ))}
@@ -396,7 +602,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 12 },
-  errorText: { fontSize: 15, color: '#64748b' },
+  errorText: { fontSize: 15, color: '#64748b', textAlign: 'center' },
   backLink: { fontSize: 14, color: '#0369a1', fontWeight: '600' },
 
   entering: {
@@ -449,6 +655,83 @@ const styles = StyleSheet.create({
 
   typingDots: { backgroundColor: 'white', borderRadius: 16, padding: 12 },
 
+  sendErrorWrap: { alignItems: 'center', gap: 8, paddingVertical: 4 },
+  sendErrorText: { fontSize: 12, color: '#f87171', fontWeight: '600' },
+  retryBtn: {
+    backgroundColor: 'white', borderRadius: 12,
+    borderWidth: 1, borderColor: '#cbd5e1',
+    paddingHorizontal: 16, paddingVertical: 9,
+  },
+  retryBtnText: { fontSize: 13, fontWeight: '700', color: '#475569' },
+
+  notebookCard: {
+    width: 210, backgroundColor: 'white', borderRadius: 16,
+    borderWidth: 2, borderColor: '#e2e8f0', padding: 10,
+  },
+  notebookCardPaper: {
+    backgroundColor: '#fffbeb', borderRadius: 10,
+    borderWidth: 1, borderColor: '#fef3c7',
+    paddingHorizontal: 10, paddingVertical: 8, overflow: 'hidden',
+  },
+  notebookCardTitle: { fontSize: 10, fontWeight: '700', color: '#94a3b8', marginBottom: 3 },
+  notebookCardLine: {
+    fontSize: 10, color: '#64748b', lineHeight: 18,
+    borderBottomWidth: 1, borderBottomColor: '#fde68a80',
+  },
+  notebookCardStamp: { position: 'absolute', top: 2, right: 4, fontSize: 24 },
+  notebookCardAction: { marginTop: 7, fontSize: 12, fontWeight: '700', color: '#ec4899', textAlign: 'center' },
+
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center', padding: 20,
+  },
+  notebookModal: {
+    backgroundColor: 'white', borderRadius: 20, maxHeight: '85%',
+    paddingBottom: 16,
+  },
+  notebookModalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 18, paddingTop: 16, paddingBottom: 8,
+  },
+  notebookModalTitle: { fontSize: 14, fontWeight: 'bold', color: '#1e293b' },
+  notebookModalClose: { fontSize: 16, color: '#94a3b8', paddingHorizontal: 4 },
+  notebookScroll: { paddingHorizontal: 18 },
+  notebookPaper: {
+    backgroundColor: '#fffbeb', borderRadius: 14,
+    borderWidth: 1, borderColor: '#fde68a',
+    paddingHorizontal: 14, paddingVertical: 14,
+  },
+  notebookTitle: {
+    fontSize: 14, fontWeight: 'bold', color: '#334155',
+    borderBottomWidth: 2, borderBottomColor: '#fcd34d',
+    paddingBottom: 4, marginBottom: 6,
+  },
+  notebookLineRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderBottomWidth: 1, borderBottomColor: '#fde68acc',
+    paddingVertical: 7,
+  },
+  notebookLineText: { fontSize: 13, color: '#334155', lineHeight: 20 },
+  notebookLineBlank: { color: '#cbd5e1' },
+  notebookCorrection: { fontSize: 12, fontWeight: '700', color: '#ef4444', lineHeight: 17, marginTop: 3 },
+  notebookHanamaru: { fontSize: 30 },
+  notebookModalFooter: { paddingHorizontal: 18, paddingTop: 12 },
+  gradeBtn: {
+    backgroundColor: '#f87171', borderRadius: 12,
+    paddingVertical: 13, alignItems: 'center',
+  },
+  returnBtn: {
+    backgroundColor: '#f472b6', borderRadius: 12,
+    paddingVertical: 13, alignItems: 'center',
+  },
+  gradeBtnText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
+  closeNotebookBtn: {
+    backgroundColor: 'white', borderRadius: 12,
+    borderWidth: 1, borderColor: '#cbd5e1',
+    paddingVertical: 13, alignItems: 'center',
+  },
+  closeNotebookBtnText: { fontSize: 14, fontWeight: '700', color: '#475569' },
+
   endedActions: { marginTop: 16, gap: 10 },
   endedLabel: { fontSize: 13, color: '#64748b', textAlign: 'center', fontWeight: '600' },
   finishBtn: {
@@ -465,6 +748,7 @@ const styles = StyleSheet.create({
   hintsWrap: { paddingHorizontal: 12, paddingTop: 10, gap: 6 },
   hintToggle: { paddingVertical: 2 },
   hintToggleText: { fontSize: 12, fontWeight: '600', color: '#d97706' },
+  hintToggleTextDisabled: { color: '#cbd5e1' },
   hintNote: { fontSize: 11, color: '#9ca3af', marginBottom: 2 },
   hintItem: {
     borderWidth: 1, borderColor: '#fde68a', borderRadius: 12,
