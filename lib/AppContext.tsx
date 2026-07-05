@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { PreviewContent, ChatMessage, Recap, Notebook } from './types'
-import { type TeacherProfile, DEFAULT_TEACHER } from './teacherProfile'
+import { type TeacherProfile, DEFAULT_TEACHER, normalizeAvatarId } from './teacherProfile'
 
 const STUDENT_KEY = 'oshiete_student'
 const TEACHER_KEY = 'oshiete_teacher'
@@ -93,7 +93,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(TEACHER_KEY).then(v => {
-      if (v) { try { setTeacherProfileRaw(JSON.parse(v)) } catch {} }
+      if (v) {
+        try {
+          const parsed = JSON.parse(v) as TeacherProfile
+          // 旧ID（taka/tora）で保存されたプロフィールを新IDへ移行
+          setTeacherProfileRaw({ ...parsed, avatarId: normalizeAvatarId(parsed.avatarId) })
+        } catch {}
+      }
       teacherLoaded.current = true
     }).catch(() => { teacherLoaded.current = true })
   }, [])

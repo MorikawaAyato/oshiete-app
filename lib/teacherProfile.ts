@@ -5,27 +5,35 @@ export type TeacherProfile = {
 }
 
 export const TEACHER_AVATAR_IMAGES: Record<string, ReturnType<typeof require>> = {
-  taka:    require('../assets/taka_sensei.png'),
-  tora:    require('../assets/tora_sensei.png'),
-  kitsune: require('../assets/kitsune_sensei.png'),
-  neko:    require('../assets/neko_sensei.png'),
+  usagi:   require('../assets/usagi_sensei.webp'),
+  ookami:  require('../assets/ookami_sensei.webp'),
+  kitsune: require('../assets/kitsune_sensei.webp'),
+  neko:    require('../assets/neko_sensei.webp'),
 }
 
 export const TEACHER_AVATARS = [
-  { id: 'taka',    label: 'タカ',   character: 'タカ（男性教師）' },
-  { id: 'tora',    label: 'トラ',   character: 'トラ（男性教師）' },
-  { id: 'kitsune', label: 'キツネ', character: 'キツネ（女性教師）' },
-  { id: 'neko',    label: 'ネコ',   character: 'ネコ（女性教師）' },
+  { id: 'usagi',   label: 'ウサギ',   character: 'ウサギ（男性教師）' },
+  { id: 'ookami',  label: 'オオカミ', character: 'オオカミ（男性教師）' },
+  { id: 'kitsune', label: 'キツネ',   character: 'キツネ（女性教師）' },
+  { id: 'neko',    label: 'ネコ',     character: 'ネコ（女性教師）' },
 ]
+
+// 旧キャラクターID（タカ→ウサギ、トラ→オオカミ）。保存済みプロフィールを新IDへ読み替える
+const LEGACY_AVATAR_IDS: Record<string, string> = { taka: 'usagi', tora: 'ookami' }
+
+export function normalizeAvatarId(avatarId: string): string {
+  return LEGACY_AVATAR_IDS[avatarId] ?? avatarId
+}
 
 export const TEACHER_TITLES = ['新人先生', '見習い先生', '一人前の先生', 'ベテラン先生', '名物先生']
 
-export const DEFAULT_TEACHER: TeacherProfile = { name: '', title: '新人先生', avatarId: 'taka' }
+export const DEFAULT_TEACHER: TeacherProfile = { name: '', title: '新人先生', avatarId: 'usagi' }
 
 export function getTeacherAvatarImage(avatarId: string): ReturnType<typeof require> {
-  return TEACHER_AVATAR_IMAGES[avatarId] ?? TEACHER_AVATAR_IMAGES['taka']
+  return TEACHER_AVATAR_IMAGES[normalizeAvatarId(avatarId)] ?? TEACHER_AVATAR_IMAGES['usagi']
 }
 
 export function getTeacherCharacter(avatarId: string): string {
-  return TEACHER_AVATARS.find(a => a.id === avatarId)?.character ?? 'タカ（男性教師）'
+  const id = normalizeAvatarId(avatarId)
+  return TEACHER_AVATARS.find(a => a.id === id)?.character ?? 'ウサギ（男性教師）'
 }
