@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import type { Section } from '@/lib/types'
+import { c } from '@/lib/theme'
 
 export default function PreviewScreen() {
   const router = useRouter()
@@ -21,7 +22,7 @@ export default function PreviewScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <ActivityIndicator color="#f472b6" />
+          <ActivityIndicator color={c.primarySoft} />
         </View>
       </SafeAreaView>
     )
@@ -253,126 +254,126 @@ export default function PreviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#e0f2fe' },
+  safe: { flex: 1, backgroundColor: c.skyBg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   container: { flex: 1 },
 
   navbar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12, backgroundColor: 'white',
-    borderBottomWidth: 1, borderBottomColor: '#e2e8f0',
+    borderBottomWidth: 1, borderBottomColor: c.border,
   },
   backBtn: { paddingVertical: 4, paddingRight: 8 },
-  backText: { fontSize: 13, color: '#0369a1' },
-  navTitle: { fontSize: 15, fontWeight: 'bold', color: '#1e293b' },
-  navStep: { fontSize: 12, color: '#f472b6', fontWeight: '700' },
+  backText: { fontSize: 13, color: c.link },
+  navTitle: { fontSize: 15, fontWeight: 'bold', color: c.textStrong },
+  navStep: { fontSize: 12, color: c.primarySoft, fontWeight: '700' },
 
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 24 },
 
   centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  stepLabel: { fontSize: 11, fontWeight: '700', color: '#f472b6', letterSpacing: 1, marginBottom: 16, textTransform: 'uppercase' },
-  themeText: { fontSize: 22, fontWeight: 'bold', color: '#1e293b', textAlign: 'center', lineHeight: 32 },
-  hint: { fontSize: 13, color: '#94a3b8', marginTop: 32 },
+  stepLabel: { fontSize: 11, fontWeight: '700', color: c.primarySoft, letterSpacing: 1, marginBottom: 16, textTransform: 'uppercase' },
+  themeText: { fontSize: 22, fontWeight: 'bold', color: c.textStrong, textAlign: 'center', lineHeight: 32 },
+  hint: { fontSize: 13, color: c.faint, marginTop: 32 },
 
   flowItem: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   flowNum: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#fce7f3', borderWidth: 1, borderColor: '#fbcfe8',
+    backgroundColor: c.pinkSoft, borderWidth: 1, borderColor: c.pinkBorder,
     justifyContent: 'center', alignItems: 'center', marginTop: 2,
   },
-  flowNumText: { fontSize: 12, fontWeight: 'bold', color: '#f472b6' },
+  flowNumText: { fontSize: 12, fontWeight: 'bold', color: c.primarySoft },
   flowInfo: { flex: 1 },
-  flowTitle: { fontSize: 15, fontWeight: 'bold', color: '#1e293b' },
-  flowSummary: { fontSize: 13, color: '#475569', marginTop: 3, lineHeight: 19 },
+  flowTitle: { fontSize: 15, fontWeight: 'bold', color: c.textStrong },
+  flowSummary: { fontSize: 13, color: c.textMid, marginTop: 3, lineHeight: 19 },
 
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   sectionNum: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#fce7f3', borderWidth: 1, borderColor: '#fbcfe8',
+    backgroundColor: c.pinkSoft, borderWidth: 1, borderColor: c.pinkBorder,
     justifyContent: 'center', alignItems: 'center',
   },
-  sectionNumText: { fontSize: 12, fontWeight: 'bold', color: '#f472b6' },
-  sectionTitle: { fontSize: 17, fontWeight: 'bold', color: '#1e293b', flex: 1 },
+  sectionNumText: { fontSize: 12, fontWeight: 'bold', color: c.primarySoft },
+  sectionTitle: { fontSize: 17, fontWeight: 'bold', color: c.textStrong, flex: 1 },
 
   summaryBox: {
-    borderLeftWidth: 3, borderLeftColor: '#f9a8d4',
-    backgroundColor: '#fdf2f8', borderRadius: 8,
+    borderLeftWidth: 3, borderLeftColor: c.pinkMuted,
+    backgroundColor: c.pinkTint, borderRadius: 8,
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: 14,
   },
-  summaryText: { fontSize: 13, color: '#475569', lineHeight: 20 },
+  summaryText: { fontSize: 13, color: c.textMid, lineHeight: 20 },
 
-  table: { borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 14 },
-  tableHeader: { flexDirection: 'row', backgroundColor: '#f1f5f9' },
-  tableHeaderCell: { flex: 1, fontSize: 12, fontWeight: '700', color: '#475569', padding: 8 },
-  tableRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f1f5f9' },
-  tableRowAlt: { backgroundColor: '#fafafa' },
-  tableCell: { flex: 1, fontSize: 12, color: '#475569', padding: 8 },
-  tableCellBold: { fontWeight: '600', color: '#334155' },
+  table: { borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: c.border, marginBottom: 14 },
+  tableHeader: { flexDirection: 'row', backgroundColor: c.bgSub },
+  tableHeaderCell: { flex: 1, fontSize: 12, fontWeight: '700', color: c.textMid, padding: 8 },
+  tableRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: c.bgSub },
+  tableRowAlt: { backgroundColor: c.bgSub },
+  tableCell: { flex: 1, fontSize: 12, color: c.textMid, padding: 8 },
+  tableCellBold: { fontWeight: '600', color: c.text },
 
   stepsBox: { marginBottom: 14, gap: 8 },
   stepItem: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   stepBullet: {
     width: 22, height: 22, borderRadius: 11,
-    backgroundColor: '#bae6fd', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: c.skyBorder, justifyContent: 'center', alignItems: 'center',
   },
-  stepBulletText: { fontSize: 11, fontWeight: 'bold', color: '#0369a1' },
-  stepItemText: { flex: 1, fontSize: 13, color: '#334155', lineHeight: 19 },
+  stepBulletText: { fontSize: 11, fontWeight: 'bold', color: c.link },
+  stepItemText: { flex: 1, fontSize: 13, color: c.text, lineHeight: 19 },
 
   compItem: {
-    backgroundColor: '#f8fafc', borderRadius: 8,
-    padding: 10, borderWidth: 1, borderColor: '#e2e8f0',
+    backgroundColor: c.bg, borderRadius: 8,
+    padding: 10, borderWidth: 1, borderColor: c.border,
   },
-  compLabel: { fontSize: 12, fontWeight: '700', color: '#0369a1', marginBottom: 2 },
-  compValue: { fontSize: 12, color: '#475569', lineHeight: 18 },
+  compLabel: { fontSize: 12, fontWeight: '700', color: c.link, marginBottom: 2 },
+  compValue: { fontSize: 12, color: c.textMid, lineHeight: 18 },
 
   detailsBox: { gap: 10, marginBottom: 14 },
   detailRow: { flexDirection: 'row', gap: 6 },
-  detailBullet: { fontSize: 13, color: '#94a3b8', marginTop: 1 },
-  detailText: { flex: 1, fontSize: 13, color: '#334155', lineHeight: 21 },
+  detailBullet: { fontSize: 13, color: c.faint, marginTop: 1 },
+  detailText: { flex: 1, fontSize: 13, color: c.text, lineHeight: 21 },
   keyword: { fontWeight: '600', borderRadius: 3, overflow: 'hidden' },
-  keywordRevealed: { backgroundColor: '#fce7f3', color: '#db2777' },
-  keywordHidden: { backgroundColor: '#e2e8f0', color: '#e2e8f0' },
+  keywordRevealed: { backgroundColor: c.pinkSoft, color: c.primaryStrong },
+  keywordHidden: { backgroundColor: c.border, color: c.border },
 
   keywordsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
-  kwBadge: { backgroundColor: '#ede9fe', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  kwBadgeHidden: { backgroundColor: '#e2e8f0' },
-  kwText: { fontSize: 11, fontWeight: '600', color: '#6d28d9' },
-  kwTextHidden: { color: '#e2e8f0' },
-  revealHint: { fontSize: 11, color: '#94a3b8', marginBottom: 4 },
+  kwBadge: { backgroundColor: c.purpleBg, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  kwBadgeHidden: { backgroundColor: c.border },
+  kwText: { fontSize: 11, fontWeight: '600', color: c.purpleText },
+  kwTextHidden: { color: c.border },
+  revealHint: { fontSize: 11, color: c.faint, marginBottom: 4 },
 
   hiddenPill: {
     paddingHorizontal: 12, paddingVertical: 12, borderRadius: 12,
-    borderWidth: 1.5, borderColor: '#e2e8f0', backgroundColor: '#f8fafc',
+    borderWidth: 1.5, borderColor: c.border, backgroundColor: c.bg,
     alignItems: 'center', justifyContent: 'center', minWidth: 56,
   },
-  hiddenPillOn: { borderColor: '#f472b6', backgroundColor: '#fdf2f8' },
-  hiddenPillText: { fontSize: 12, fontWeight: '700', color: '#94a3b8' },
-  hiddenPillTextOn: { color: '#db2777' },
+  hiddenPillOn: { borderColor: c.primarySoft, backgroundColor: c.pinkTint },
+  hiddenPillText: { fontSize: 12, fontWeight: '700', color: c.faint },
+  hiddenPillTextOn: { color: c.primaryStrong },
   hiddenPillSpace: { minWidth: 56 },
 
   startClassBtn: {
     marginHorizontal: 16, marginBottom: 8, paddingVertical: 13,
-    backgroundColor: '#f472b6', borderRadius: 14, alignItems: 'center',
+    backgroundColor: c.primarySoft, borderRadius: 14, alignItems: 'center',
   },
   startClassBtnText: { fontSize: 15, fontWeight: 'bold', color: 'white' },
   startClassBtnDisabled: {
     marginHorizontal: 16, marginBottom: 8, paddingVertical: 13,
-    backgroundColor: '#f1f5f9', borderRadius: 14, alignItems: 'center',
-    borderWidth: 1, borderColor: '#e2e8f0',
+    backgroundColor: c.bgSub, borderRadius: 14, alignItems: 'center',
+    borderWidth: 1, borderColor: c.border,
   },
-  startClassBtnDisabledText: { fontSize: 13, color: '#94a3b8' },
+  startClassBtnDisabledText: { fontSize: 13, color: c.faint },
 
   footer: {
     flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e2e8f0',
+    backgroundColor: 'white', borderTopWidth: 1, borderTopColor: c.border,
   },
   navBtn: {
     flex: 1, paddingVertical: 12, borderRadius: 12,
-    borderWidth: 1.5, borderColor: '#cbd5e1', alignItems: 'center',
+    borderWidth: 1.5, borderColor: c.borderStrong, alignItems: 'center',
   },
-  navBtnNext: { borderColor: '#0369a1', backgroundColor: '#e0f2fe' },
-  navBtnDisabled: { borderColor: '#e2e8f0', backgroundColor: '#f8fafc' },
-  navBtnText: { fontSize: 14, fontWeight: '700', color: '#0369a1' },
-  navBtnTextNext: { color: '#0369a1' },
-  navBtnTextDisabled: { color: '#cbd5e1' },
+  navBtnNext: { borderColor: c.link, backgroundColor: c.skyBg },
+  navBtnDisabled: { borderColor: c.border, backgroundColor: c.bg },
+  navBtnText: { fontSize: 14, fontWeight: '700', color: c.link },
+  navBtnTextNext: { color: c.link },
+  navBtnTextDisabled: { color: c.borderStrong },
 })

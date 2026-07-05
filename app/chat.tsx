@@ -12,6 +12,7 @@ import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
 import { addMail, loadRecap, loadFactsheet, saveRecapToHistory } from '@/lib/storage'
 import type { ChatMessage } from '@/lib/types'
+import { c } from '@/lib/theme'
 
 const MAX_TURNS = 9
 const HINT_MAX_USES = 3
@@ -148,8 +149,8 @@ export default function ChatScreen() {
   const remainingMins = classEnded ? 0 : (MAX_TURNS - turnCount) * 5
   const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
   const timerColor = classEnded
-    ? '#94a3b8'
-    : progressRatio > 0.55 ? '#34d399' : progressRatio > 0.3 ? '#fbbf24' : '#f87171'
+    ? c.faint
+    : progressRatio > 0.55 ? c.success : progressRatio > 0.3 ? c.warn : c.dangerSoft
 
   useEffect(() => {
     if (chatMessages.length > 0) {
@@ -577,7 +578,7 @@ export default function ChatScreen() {
                 value={input}
                 onChangeText={setInput}
                 placeholder="先生として説明してみよう..."
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={c.faint}
                 multiline
                 maxLength={500}
               />
@@ -603,8 +604,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 12 },
-  errorText: { fontSize: 15, color: '#64748b', textAlign: 'center' },
-  backLink: { fontSize: 14, color: '#0369a1', fontWeight: '600' },
+  errorText: { fontSize: 15, color: c.textSub, textAlign: 'center' },
+  backLink: { fontSize: 14, color: c.link, fontWeight: '600' },
 
   entering: {
     flex: 1, justifyContent: 'center', alignItems: 'center', gap: 28, paddingHorizontal: 32,
@@ -614,32 +615,32 @@ const styles = StyleSheet.create({
   enteringOnline: {
     position: 'absolute', bottom: 4, right: 4,
     width: 16, height: 16, borderRadius: 8,
-    backgroundColor: '#4ade80', borderWidth: 2, borderColor: 'white',
+    backgroundColor: c.success, borderWidth: 2, borderColor: 'white',
   },
-  enteringMsg: { fontSize: 16, fontWeight: '600', color: '#334155', textAlign: 'center' },
+  enteringMsg: { fontSize: 16, fontWeight: '600', color: c.text, textAlign: 'center' },
   dotsRow: { flexDirection: 'row', gap: 8 },
   dot: { width: 10, height: 10, borderRadius: 5 },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 10,
-    backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e2e8f0',
+    backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: c.border,
   },
   backBtn: { paddingVertical: 4 },
-  backText: { fontSize: 13, color: '#0369a1' },
+  backText: { fontSize: 13, color: c.link },
   headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerAvatar: { width: 32, height: 32, borderRadius: 16 },
-  headerName: { fontSize: 14, fontWeight: 'bold', color: '#1e293b' },
+  headerName: { fontSize: 14, fontWeight: 'bold', color: c.textStrong },
   timerText: { fontSize: 11, fontWeight: '700', marginTop: 1 },
-  timerSub: { fontSize: 9, color: '#94a3b8', marginTop: 1 },
-  endBtn: { backgroundColor: '#f1f5f9', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  endBtnText: { fontSize: 12, color: '#64748b', fontWeight: '600' },
+  timerSub: { fontSize: 9, color: c.faint, marginTop: 1 },
+  endBtn: { backgroundColor: c.bgSub, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  endBtnText: { fontSize: 12, color: c.textSub, fontWeight: '600' },
 
   previewBar: {
-    backgroundColor: '#fdf4ff', borderBottomWidth: 1, borderBottomColor: '#e9d5ff',
+    backgroundColor: c.purpleTint, borderBottomWidth: 1, borderBottomColor: c.purpleBorder,
     paddingVertical: 9, alignItems: 'center',
   },
-  previewBarText: { fontSize: 13, fontWeight: '700', color: '#7c3aed' },
+  previewBarText: { fontSize: 13, fontWeight: '700', color: c.purple },
 
   messages: { flex: 1, backgroundColor: 'transparent' },
   messagesContent: { paddingHorizontal: 16, paddingVertical: 16, gap: 12 },
@@ -649,38 +650,38 @@ const styles = StyleSheet.create({
   bubbleMana: { justifyContent: 'flex-start' },
   bubbleAvatar: { width: 32, height: 32, borderRadius: 16, marginBottom: 2 },
   bubbleText: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
-  bubbleTextUser: { backgroundColor: '#f472b6' },
+  bubbleTextUser: { backgroundColor: c.primarySoft },
   bubbleTextMana: { backgroundColor: 'white' },
-  msgText: { fontSize: 14, color: '#1e293b', lineHeight: 21 },
+  msgText: { fontSize: 14, color: c.textStrong, lineHeight: 21 },
   msgTextUser: { color: 'white' },
 
   typingDots: { backgroundColor: 'white', borderRadius: 16, padding: 12 },
 
   sendErrorWrap: { alignItems: 'center', gap: 8, paddingVertical: 4 },
-  sendErrorText: { fontSize: 12, color: '#f87171', fontWeight: '600' },
+  sendErrorText: { fontSize: 12, color: c.dangerSoft, fontWeight: '600' },
   retryBtn: {
     backgroundColor: 'white', borderRadius: 12,
-    borderWidth: 1, borderColor: '#cbd5e1',
+    borderWidth: 1, borderColor: c.borderStrong,
     paddingHorizontal: 16, paddingVertical: 9,
   },
-  retryBtnText: { fontSize: 13, fontWeight: '700', color: '#475569' },
+  retryBtnText: { fontSize: 13, fontWeight: '700', color: c.textMid },
 
   notebookCard: {
     width: 210, backgroundColor: 'white', borderRadius: 16,
-    borderWidth: 2, borderColor: '#e2e8f0', padding: 10,
+    borderWidth: 2, borderColor: c.border, padding: 10,
   },
   notebookCardPaper: {
-    backgroundColor: '#fffbeb', borderRadius: 10,
-    borderWidth: 1, borderColor: '#fef3c7',
+    backgroundColor: c.paper, borderRadius: 10,
+    borderWidth: 1, borderColor: c.paperBorder,
     paddingHorizontal: 10, paddingVertical: 8, overflow: 'hidden',
   },
-  notebookCardTitle: { fontSize: 10, fontWeight: '700', color: '#94a3b8', marginBottom: 3 },
+  notebookCardTitle: { fontSize: 10, fontWeight: '700', color: c.faint, marginBottom: 3 },
   notebookCardLine: {
-    fontSize: 10, color: '#64748b', lineHeight: 18,
-    borderBottomWidth: 1, borderBottomColor: '#fde68a80',
+    fontSize: 10, color: c.textSub, lineHeight: 18,
+    borderBottomWidth: 1, borderBottomColor: c.paperLine + '80',
   },
   notebookCardStamp: { position: 'absolute', top: 2, right: 4, fontSize: 24 },
-  notebookCardAction: { marginTop: 7, fontSize: 12, fontWeight: '700', color: '#ec4899', textAlign: 'center' },
+  notebookCardAction: { marginTop: 7, fontSize: 12, fontWeight: '700', color: c.primary, textAlign: 'center' },
 
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
@@ -694,81 +695,81 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 18, paddingTop: 16, paddingBottom: 8,
   },
-  notebookModalTitle: { fontSize: 14, fontWeight: 'bold', color: '#1e293b' },
-  notebookModalClose: { fontSize: 16, color: '#94a3b8', paddingHorizontal: 4 },
+  notebookModalTitle: { fontSize: 14, fontWeight: 'bold', color: c.textStrong },
+  notebookModalClose: { fontSize: 16, color: c.faint, paddingHorizontal: 4 },
   notebookScroll: { paddingHorizontal: 18 },
   notebookPaper: {
-    backgroundColor: '#fffbeb', borderRadius: 14,
-    borderWidth: 1, borderColor: '#fde68a',
+    backgroundColor: c.paper, borderRadius: 14,
+    borderWidth: 1, borderColor: c.paperLine,
     paddingHorizontal: 14, paddingVertical: 14,
   },
   notebookTitle: {
-    fontSize: 14, fontWeight: 'bold', color: '#334155',
-    borderBottomWidth: 2, borderBottomColor: '#fcd34d',
+    fontSize: 14, fontWeight: 'bold', color: c.text,
+    borderBottomWidth: 2, borderBottomColor: c.paperRule,
     paddingBottom: 4, marginBottom: 6,
   },
   notebookLineRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderBottomWidth: 1, borderBottomColor: '#fde68acc',
+    borderBottomWidth: 1, borderBottomColor: c.paperLine + 'cc',
     paddingVertical: 7,
   },
-  notebookLineText: { fontSize: 13, color: '#334155', lineHeight: 20 },
-  notebookLineBlank: { color: '#cbd5e1' },
-  notebookCorrection: { fontSize: 12, fontWeight: '700', color: '#ef4444', lineHeight: 17, marginTop: 3 },
+  notebookLineText: { fontSize: 13, color: c.text, lineHeight: 20 },
+  notebookLineBlank: { color: c.borderStrong },
+  notebookCorrection: { fontSize: 12, fontWeight: '700', color: c.danger, lineHeight: 17, marginTop: 3 },
   notebookHanamaru: { fontSize: 30 },
   notebookModalFooter: { paddingHorizontal: 18, paddingTop: 12 },
   gradeBtn: {
-    backgroundColor: '#f87171', borderRadius: 12,
+    backgroundColor: c.dangerSoft, borderRadius: 12,
     paddingVertical: 13, alignItems: 'center',
   },
   returnBtn: {
-    backgroundColor: '#f472b6', borderRadius: 12,
+    backgroundColor: c.primarySoft, borderRadius: 12,
     paddingVertical: 13, alignItems: 'center',
   },
   gradeBtnText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
   closeNotebookBtn: {
     backgroundColor: 'white', borderRadius: 12,
-    borderWidth: 1, borderColor: '#cbd5e1',
+    borderWidth: 1, borderColor: c.borderStrong,
     paddingVertical: 13, alignItems: 'center',
   },
-  closeNotebookBtnText: { fontSize: 14, fontWeight: '700', color: '#475569' },
+  closeNotebookBtnText: { fontSize: 14, fontWeight: '700', color: c.textMid },
 
   endedActions: { marginTop: 16, gap: 10 },
-  endedLabel: { fontSize: 13, color: '#64748b', textAlign: 'center', fontWeight: '600' },
+  endedLabel: { fontSize: 13, color: c.textSub, textAlign: 'center', fontWeight: '600' },
   finishBtn: {
     backgroundColor: 'white', borderRadius: 12,
     paddingVertical: 14, alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#cbd5e1',
+    borderWidth: 1.5, borderColor: c.borderStrong,
   },
-  finishBtnText: { fontSize: 14, fontWeight: '700', color: '#475569' },
-  finishBtnTextPreview: { fontSize: 14, fontWeight: '700', color: '#1d4ed8' },
+  finishBtnText: { fontSize: 14, fontWeight: '700', color: c.textMid },
+  finishBtnTextPreview: { fontSize: 14, fontWeight: '700', color: c.link },
 
   inputAreaWrap: {
-    backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e2e8f0',
+    backgroundColor: 'white', borderTopWidth: 1, borderTopColor: c.border,
   },
   hintsWrap: { paddingHorizontal: 12, paddingTop: 10, gap: 6 },
   hintToggle: { paddingVertical: 2 },
-  hintToggleText: { fontSize: 12, fontWeight: '600', color: '#d97706' },
-  hintToggleTextDisabled: { color: '#cbd5e1' },
-  hintNote: { fontSize: 11, color: '#9ca3af', marginBottom: 2 },
+  hintToggleText: { fontSize: 12, fontWeight: '600', color: c.paperText },
+  hintToggleTextDisabled: { color: c.borderStrong },
+  hintNote: { fontSize: 11, color: c.textSub, marginBottom: 2 },
   hintItem: {
-    borderWidth: 1, borderColor: '#fde68a', borderRadius: 12,
-    backgroundColor: '#fffbeb', paddingHorizontal: 14, paddingVertical: 10,
+    borderWidth: 1, borderColor: c.paperLine, borderRadius: 12,
+    backgroundColor: c.paper, paddingHorizontal: 14, paddingVertical: 10,
   },
-  hintItemText: { fontSize: 13, color: '#374151', lineHeight: 19 },
+  hintItemText: { fontSize: 13, color: c.text, lineHeight: 19 },
   inputArea: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 8,
     paddingHorizontal: 16, paddingVertical: 12,
   },
   ngWarning: {
-    fontSize: 12, color: '#ef4444', textAlign: 'center',
+    fontSize: 12, color: c.danger, textAlign: 'center',
     paddingBottom: 8,
   },
   input: {
-    flex: 1, backgroundColor: '#f8fafc', borderRadius: 12,
-    borderWidth: 1, borderColor: '#e2e8f0',
+    flex: 1, backgroundColor: c.bg, borderRadius: 12,
+    borderWidth: 1, borderColor: c.border,
     paddingHorizontal: 14, paddingVertical: 10,
-    fontSize: 14, color: '#1e293b', maxHeight: 100,
+    fontSize: 14, color: c.textStrong, maxHeight: 100,
   },
   sendBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
   sendBtnDisabled: { opacity: 0.4 },

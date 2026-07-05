@@ -17,6 +17,7 @@ import {
 } from '@/lib/storage'
 import type { MailMessage } from '@/lib/storage'
 import type { HistoryItem } from '@/lib/types'
+import { c } from '@/lib/theme'
 
 type ImageData = { data: string; mimeType: string; uri: string }
 
@@ -400,8 +401,8 @@ export default function HomeScreen() {
                   {teacherProfile.name ? `${teacherProfile.name}先生` : '先生'}
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981' }} />
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#059669' }}>オンライン</Text>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.success }} />
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: c.successText }}>オンライン</Text>
                 </View>
               </View>
             </View>
@@ -467,7 +468,7 @@ export default function HomeScreen() {
                 value={textInput}
                 onChangeText={(t) => setTextInput(t.slice(0, 3000))}
                 placeholder="テキストで入力する"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={c.faint}
                 multiline
                 textAlignVertical="top"
               />
@@ -533,7 +534,7 @@ export default function HomeScreen() {
                   {thumbnails[0] ? (
                     <Image source={{ uri: thumbnails[0] }} style={styles.lessonThumb} />
                   ) : (
-                    <View style={[styles.lessonThumb, { backgroundColor: '#fbcfe8', overflow: 'hidden' }]}>
+                    <View style={[styles.lessonThumb, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]}>
                       <View style={{ position: 'absolute', top: -30, left: 0, right: 0, bottom: -70 }}>
                         <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
                       </View>
@@ -556,12 +557,12 @@ export default function HomeScreen() {
                 >
                   {selectedStudent ? (
                     <>
-                      <Image source={{ uri: selectedStudent.avatar }} style={[styles.lessonStudentAvatar, { borderColor: '#e2e8f0' }]} />
+                      <Image source={{ uri: selectedStudent.avatar }} style={[styles.lessonStudentAvatar, { borderColor: c.border }]} />
                       <View style={{ gap: 1 }}>
                         <Text style={styles.lessonStudentName}>{selectedStudent.name}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981' }} />
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#059669' }}>オンライン</Text>
+                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.success }} />
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: c.successText }}>オンライン</Text>
                         </View>
                       </View>
                       <Text style={styles.lessonStudentAppeal} numberOfLines={4}>
@@ -587,7 +588,7 @@ export default function HomeScreen() {
                 disabled={previewLoading}
               >
                 {previewLoading ? (
-                  <ActivityIndicator color="#0369a1" size="small" />
+                  <ActivityIndicator color={c.link} size="small" />
                 ) : (
                   <Text style={styles.lessonPreviewBtnText}>教材を見る</Text>
                 )}
@@ -630,14 +631,14 @@ export default function HomeScreen() {
                       {item.thumbnails[0] ? (
                         <Image source={{ uri: item.thumbnails[0] }} style={styles.recentThumb} />
                       ) : (
-                        <View style={[styles.recentThumb, { backgroundColor: '#fbcfe8', overflow: 'hidden' }]}>
+                        <View style={[styles.recentThumb, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]}>
                           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -8 }}>
                             <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
                           </View>
                         </View>
                       )}
                       <View style={styles.recentInfo}>
-                        <Text numberOfLines={1} style={[styles.recentTitle, isActive && { color: '#ec4899' }]}>
+                        <Text numberOfLines={1} style={[styles.recentTitle, isActive && { color: c.primary }]}>
                           {itemTitle}
                         </Text>
                         <Text style={styles.recentDate}>
@@ -859,7 +860,7 @@ export default function HomeScreen() {
                         value={teacherProfile.name}
                         onChangeText={(t) => setTeacherProfile({ ...teacherProfile, name: t })}
                         placeholder="例：田中"
-                        placeholderTextColor="#cbd5e1"
+                        placeholderTextColor={c.borderStrong}
                         maxLength={20}
                       />
                     </View>
@@ -917,25 +918,25 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#e0f2fe' },
+  safe: { flex: 1, backgroundColor: c.skyBg },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 20, paddingVertical: 24, gap: 16 },
 
   // ヘッダー
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  appTitle: { fontSize: 18, fontWeight: '900', color: '#0c4a6e', letterSpacing: -0.3 },
-  appSubtitle: { fontSize: 10, color: '#7dd3fc', fontWeight: '700', letterSpacing: 0.3 },
+  appTitle: { fontSize: 18, fontWeight: '900', color: c.skyStrong, letterSpacing: -0.3 },
+  appSubtitle: { fontSize: 10, color: c.skySoft, fontWeight: '700', letterSpacing: 0.3 },
   headerIcons: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
   mailIconBtn: { alignItems: 'center', gap: 2, position: 'relative' },
   mailIconCircle: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd',
+    backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder,
     alignItems: 'center', justifyContent: 'center',
   },
   mailIconEmoji: { fontSize: 20 },
   mailBadge: {
     position: 'absolute', top: -4, right: -4,
-    backgroundColor: '#ef4444', borderRadius: 8,
+    backgroundColor: c.danger, borderRadius: 8,
     minWidth: 16, height: 16,
     alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 3,
@@ -944,68 +945,68 @@ const styles = StyleSheet.create({
   teacherIconBtn: { alignItems: 'center', gap: 2 },
   teacherIconCircle: {
     width: 40, height: 40, borderRadius: 20, overflow: 'hidden',
-    backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd',
+    backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder,
   },
   teacherIconImage: { width: 40, height: 40 },
-  teacherIconLabel: { fontSize: 9, fontWeight: '700', color: '#0369a1', letterSpacing: 0.5 },
+  teacherIconLabel: { fontSize: 9, fontWeight: '700', color: c.link, letterSpacing: 0.5 },
 
   // セクション共通
   todaySection: { gap: 10 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: '#0c4a6e', letterSpacing: 0.8 },
-  sectionAction: { fontSize: 12, color: '#0ea5e9', fontWeight: '500' },
-  sectionClear: { fontSize: 11, color: '#94a3b8', fontWeight: '500' },
+  sectionTitle: { fontSize: 13, fontWeight: '800', color: c.skyStrong, letterSpacing: 0.8 },
+  sectionAction: { fontSize: 12, color: c.sky, fontWeight: '500' },
+  sectionClear: { fontSize: 11, color: c.faint, fontWeight: '500' },
 
   // 状態1：アップロード
-  inputModeTabs: { flexDirection: 'row', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 12 },
+  inputModeTabs: { flexDirection: 'row', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: c.border, marginBottom: 12 },
   inputModeTab: { flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: 'white' },
-  inputModeTabActive: { backgroundColor: '#f472b6' },
-  inputModeTabText: { fontSize: 13, fontWeight: '600', color: '#64748b' },
+  inputModeTabActive: { backgroundColor: c.primarySoft },
+  inputModeTabText: { fontSize: 13, fontWeight: '600', color: c.textSub },
   inputModeTabTextActive: { color: 'white' },
-  textInputCard: { backgroundColor: 'white', borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#7dd3fc', padding: 16, gap: 10 },
-  textInputArea: { height: 120, fontSize: 14, color: '#334155', lineHeight: 22 },
+  textInputCard: { backgroundColor: 'white', borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: c.skySoft, padding: 16, gap: 10 },
+  textInputArea: { height: 120, fontSize: 14, color: c.text, lineHeight: 22 },
   textInputFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  textInputCount: { fontSize: 11, color: '#94a3b8', textAlign: 'right' },
+  textInputCount: { fontSize: 11, color: c.faint, textAlign: 'right' },
   uploadCard: {
     backgroundColor: 'white',
     borderRadius: 20,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#7dd3fc',
+    borderColor: c.skySoft,
     height: 226,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    shadowColor: '#7dd3fc',
+    shadowColor: c.skySoft,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 3,
   },
   uploadCardIcon: { fontSize: 32 },
-  uploadCardText: { fontSize: 19, color: '#0369a1', fontWeight: '800' },
-  uploadCardSub: { fontSize: 12, color: '#94a3b8', fontWeight: '400' },
+  uploadCardText: { fontSize: 19, color: c.link, fontWeight: '800' },
+  uploadCardSub: { fontSize: 12, color: c.faint, fontWeight: '400' },
 
   // 状態2：ペンディング
   pendingCard: {
     backgroundColor: 'white', borderRadius: 20, padding: 16, gap: 12,
-    shadowColor: '#94a3b8', shadowOffset: { width: 0, height: 3 },
+    shadowColor: c.faint, shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
   },
   thumbRowWrap: { flexDirection: 'row', alignItems: 'center' },
   thumbRow: { flex: 1 },
   thumb: { width: 72, height: 72, borderRadius: 12, marginRight: 8 },
-  thumbCounter: { paddingLeft: 10, fontSize: 15, fontWeight: '700', color: '#94a3b8' },
-  analyzeBtn: { backgroundColor: '#f472b6', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  analyzeBtnLoading: { backgroundColor: '#f9a8d4' },
+  thumbCounter: { paddingLeft: 10, fontSize: 15, fontWeight: '700', color: c.faint },
+  analyzeBtn: { backgroundColor: c.primarySoft, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  analyzeBtnLoading: { backgroundColor: c.pinkMuted },
   analyzeBtnText: { fontSize: 16, color: 'white', fontWeight: '800' },
   photoActions: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderColor: '#fbcfe8', borderRadius: 14, overflow: 'hidden',
+    borderWidth: 1, borderColor: c.pinkBorder, borderRadius: 14, overflow: 'hidden',
   },
-  photoActionBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, backgroundColor: '#fdf2f8' },
-  photoActionText: { fontSize: 14, color: '#ec4899', fontWeight: '600' },
-  photoActionDivider: { width: 1, height: 28, backgroundColor: '#fbcfe8' },
+  photoActionBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, backgroundColor: c.pinkTint },
+  photoActionText: { fontSize: 14, color: c.primary, fontWeight: '600' },
+  photoActionDivider: { width: 1, height: 28, backgroundColor: c.pinkBorder },
 
   // 状態3：分割カード
   lessonCard: {
@@ -1013,7 +1014,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     flexDirection: 'row',
-    shadowColor: '#0369a1',
+    shadowColor: c.link,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.14,
     shadowRadius: 10,
@@ -1021,56 +1022,56 @@ const styles = StyleSheet.create({
   },
   lessonMaterial: { flex: 1, padding: 14, gap: 8 },
   lessonThumb: { width: '100%', aspectRatio: 1.4, borderRadius: 12 },
-  lessonThumbText: { backgroundColor: '#fce7f3', alignItems: 'center', justifyContent: 'center' },
-  lessonMaterialTitle: { fontSize: 13, fontWeight: '700', color: '#1e293b', lineHeight: 18 },
+  lessonThumbText: { backgroundColor: c.pinkSoft, alignItems: 'center', justifyContent: 'center' },
+  lessonMaterialTitle: { fontSize: 13, fontWeight: '700', color: c.textStrong, lineHeight: 18 },
   lessonPreviewBtn: {
-    backgroundColor: '#f0f9ff',
+    backgroundColor: c.skyTint,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: c.skyBorder,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 10,
   },
-  lessonPreviewBtnText: { fontSize: 14, fontWeight: '700', color: '#0369a1' },
+  lessonPreviewBtnText: { fontSize: 14, fontWeight: '700', color: c.link },
   lessonChangeBtn: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10, paddingVertical: 5,
-    backgroundColor: '#f8fafc', borderRadius: 20,
+    backgroundColor: c.bg, borderRadius: 20,
   },
-  lessonChangeBtnText: { fontSize: 11, fontWeight: '600', color: '#64748b' },
-  lessonDivider: { width: 1, backgroundColor: '#e2e8f0', marginVertical: 16 },
+  lessonChangeBtnText: { fontSize: 11, fontWeight: '600', color: c.textSub },
+  lessonDivider: { width: 1, backgroundColor: c.border, marginVertical: 16 },
   lessonStudent: {
     width: 118, padding: 14,
     alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#fef8fb',
+    gap: 8, backgroundColor: c.pinkTint,
   },
   lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 1 },
-  lessonStudentName: { fontSize: 12, fontWeight: '700', color: '#1e293b' },
-  lessonStudentAppeal: { fontSize: 11, color: '#be185d', textAlign: 'center', lineHeight: 16 },
+  lessonStudentName: { fontSize: 12, fontWeight: '700', color: c.textStrong },
+  lessonStudentAppeal: { fontSize: 11, color: c.primaryStrong, textAlign: 'center', lineHeight: 16 },
   lessonStudentEmpty: {
     width: 64, height: 64, borderRadius: 32,
-    backgroundColor: '#fce7f3', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: c.pinkSoft, alignItems: 'center', justifyContent: 'center',
   },
-  lessonStudentPickText: { fontSize: 13, fontWeight: '700', color: '#ec4899', textAlign: 'center' },
-  lessonStudentPickSub: { fontSize: 10, color: '#f9a8d4' },
+  lessonStudentPickText: { fontSize: 13, fontWeight: '700', color: c.primary, textAlign: 'center' },
+  lessonStudentPickSub: { fontSize: 10, color: c.pinkMuted },
 
   // 授業スタートボタン
   startBtn: {
-    backgroundColor: '#f472b6',
+    backgroundColor: c.primarySoft,
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#ec4899',
+    shadowColor: c.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
-  startBtnDisabled: { backgroundColor: '#fdf2f8', borderWidth: 1.5, borderColor: '#fbcfe8', shadowOpacity: 0, elevation: 0 },
+  startBtnDisabled: { backgroundColor: c.pinkTint, borderWidth: 1.5, borderColor: c.pinkBorder, shadowOpacity: 0, elevation: 0 },
   startBtnText: { fontSize: 18, fontWeight: '800', color: 'white' },
-  startBtnTextDisabled: { color: '#f9a8d4', fontSize: 15, fontWeight: '600' },
+  startBtnTextDisabled: { color: c.pinkMuted, fontSize: 15, fontWeight: '600' },
 
   row: { flexDirection: 'row', alignItems: 'center' },
 
@@ -1089,27 +1090,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 32,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bgSub,
     borderTopWidth: 1.5,
-    borderTopColor: '#bfdbfe',
+    borderTopColor: c.skyBorder,
   },
-  recentEmpty: { fontSize: 13, color: '#94a3b8', textAlign: 'center', paddingVertical: 16 },
+  recentEmpty: { fontSize: 13, color: c.faint, textAlign: 'center', paddingVertical: 16 },
   recentItem: {
     backgroundColor: 'white', borderRadius: 14, flexDirection: 'row', alignItems: 'center', overflow: 'hidden',
-    shadowColor: '#94a3b8', shadowOffset: { width: 0, height: 1 },
+    shadowColor: c.faint, shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
   },
-  recentItemActive: { backgroundColor: '#fff0f6', borderWidth: 1.5, borderColor: '#fbcfe8' },
+  recentItemActive: { backgroundColor: c.pinkTint, borderWidth: 1.5, borderColor: c.pinkBorder },
   recentMain: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 },
   recentThumb: { width: 52, height: 52, borderRadius: 10, flexShrink: 0 },
   recentInfo: { flex: 1, minWidth: 0 },
-  recentTitle: { fontSize: 13, fontWeight: '600', color: '#334155' },
-  recentDate: { fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: '300' },
-  checkMark: { fontSize: 14, color: '#f472b6', fontWeight: 'bold' },
+  recentTitle: { fontSize: 13, fontWeight: '600', color: c.text },
+  recentDate: { fontSize: 10, color: c.faint, marginTop: 2, fontWeight: '300' },
+  checkMark: { fontSize: 14, color: c.primarySoft, fontWeight: 'bold' },
   deleteBtn: { paddingHorizontal: 14, paddingVertical: 12 },
-  deleteBtnText: { fontSize: 13, color: '#94a3b8' },
+  deleteBtnText: { fontSize: 13, color: c.faint },
   seeAllBtn: { paddingVertical: 10, alignItems: 'center' },
-  seeAllText: { fontSize: 13, color: '#0ea5e9', fontWeight: '500' },
+  seeAllText: { fontSize: 13, color: c.sky, fontWeight: '500' },
 
   // 生徒シート
   studentSheetContainer: { flex: 1, justifyContent: 'flex-end' },
@@ -1119,79 +1120,79 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingBottom: 40, paddingTop: 8,
   },
   studentSheetHandle: {
-    width: 36, height: 4, backgroundColor: '#e2e8f0',
+    width: 36, height: 4, backgroundColor: c.border,
     borderRadius: 2, alignSelf: 'center', marginBottom: 16,
   },
   profileRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#f1f5f9', marginBottom: 12,
+    borderBottomColor: c.bgSub, marginBottom: 12,
   },
   profileAvatar: { width: 56, height: 56, borderRadius: 28 },
-  profileName: { fontSize: 16, fontWeight: '700', color: '#1e293b' },
-  profileTagline: { fontSize: 12, color: '#94a3b8', marginTop: 3 },
+  profileName: { fontSize: 16, fontWeight: '700', color: c.textStrong },
+  profileTagline: { fontSize: 12, color: c.faint, marginTop: 3 },
   sheetChangeBtn: {
-    backgroundColor: '#f1f5f9', borderRadius: 14,
+    backgroundColor: c.bgSub, borderRadius: 14,
     paddingVertical: 14, alignItems: 'center', marginBottom: 8,
   },
-  sheetChangeBtnText: { fontSize: 14, fontWeight: '700', color: '#475569' },
+  sheetChangeBtnText: { fontSize: 14, fontWeight: '700', color: c.textMid },
   sheetCloseBtn: {
-    backgroundColor: '#f8fafc', borderRadius: 14,
+    backgroundColor: c.bg, borderRadius: 14,
     paddingVertical: 14, alignItems: 'center',
   },
-  sheetCloseBtnText: { fontSize: 14, fontWeight: '500', color: '#94a3b8' },
+  sheetCloseBtnText: { fontSize: 14, fontWeight: '500', color: c.faint },
   pickerLabel: {
-    fontSize: 13, fontWeight: '600', color: '#64748b',
+    fontSize: 13, fontWeight: '600', color: c.textSub,
     paddingBottom: 8, borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#f1f5f9', marginBottom: 4,
+    borderBottomColor: c.bgSub, marginBottom: 4,
   },
   pickerItem: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 4, paddingVertical: 12, borderRadius: 14,
   },
-  pickerItemSel: { backgroundColor: '#fff0f6' },
+  pickerItemSel: { backgroundColor: c.pinkTint },
   pickerItemAvatar: { width: 48, height: 48, borderRadius: 24 },
   pickerItemInfo: { flex: 1, minWidth: 0 },
-  pickerItemName: { fontSize: 14, fontWeight: '600', color: '#1e293b' },
-  pickerItemNameSel: { color: '#ec4899', fontWeight: '700' },
-  pickerItemTagline: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
-  pickerItemCheck: { fontSize: 16, color: '#ec4899', fontWeight: '700' },
+  pickerItemName: { fontSize: 14, fontWeight: '600', color: c.textStrong },
+  pickerItemNameSel: { color: c.primary, fontWeight: '700' },
+  pickerItemTagline: { fontSize: 12, color: c.faint, marginTop: 2 },
+  pickerItemCheck: { fontSize: 16, color: c.primary, fontWeight: '700' },
 
   // 受信トレイ
   inboxHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+    borderBottomWidth: 1, borderBottomColor: c.bgSub,
   },
-  inboxTitle: { fontSize: 15, fontWeight: '900', color: '#1e293b' },
-  inboxClose: { fontSize: 18, color: '#94a3b8' },
+  inboxTitle: { fontSize: 15, fontWeight: '900', color: c.textStrong },
+  inboxClose: { fontSize: 18, color: c.faint },
   inboxItem: {
     flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#f8fafc',
+    borderBottomWidth: 1, borderBottomColor: c.bg,
   },
   inboxAvatar: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#e0f2fe', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    backgroundColor: c.skyBg, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
     flexShrink: 0, marginTop: 2,
   },
   inboxAvatarImg: { width: 40, height: 40 },
   inboxBody: { flex: 1 },
   inboxMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  inboxFrom: { fontSize: 12, fontWeight: '700', color: '#334155' },
-  inboxUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#ef4444' },
-  inboxDate: { fontSize: 10, color: '#94a3b8', marginLeft: 'auto' },
-  inboxSubject: { fontSize: 12, fontWeight: '600', color: '#334155', marginTop: 1 },
-  inboxContent: { fontSize: 13, color: '#475569', lineHeight: 19, marginTop: 6 },
+  inboxFrom: { fontSize: 12, fontWeight: '700', color: c.text },
+  inboxUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: c.danger },
+  inboxDate: { fontSize: 10, color: c.faint, marginLeft: 'auto' },
+  inboxSubject: { fontSize: 12, fontWeight: '600', color: c.text, marginTop: 1 },
+  inboxContent: { fontSize: 13, color: c.textMid, lineHeight: 19, marginTop: 6 },
 
   // 先生証シート
-  tcSheetBottom: { backgroundColor: '#0f172a', paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0 },
+  tcSheetBottom: { backgroundColor: c.ink, paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0 },
   tcCardContainer: {
     width: 240, height: 353, alignSelf: 'center', marginVertical: 24,
     overflow: 'hidden', borderRadius: 22,
   },
   tcCard: {
     flex: 1,
-    borderRadius: 22, backgroundColor: '#0c4a6e',
+    borderRadius: 22, backgroundColor: c.skyStrong,
     overflow: 'hidden', padding: 20, justifyContent: 'space-between',
     shadowColor: '#000', shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.5, shadowRadius: 28, elevation: 18,
@@ -1227,29 +1228,29 @@ const styles = StyleSheet.create({
   tcEditHintText: { fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 },
   tcBackHeader: {
     paddingHorizontal: 14, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+    borderBottomWidth: 1, borderBottomColor: c.bgSub,
   },
   tcBackBtn: { flexDirection: 'row', alignItems: 'center' },
-  tcBackBtnText: { fontSize: 12, fontWeight: '700', color: '#0369a1' },
-  teacherSectionLabel: { fontSize: 10, fontWeight: '700', color: '#94a3b8', letterSpacing: 1, marginBottom: 8 },
+  tcBackBtnText: { fontSize: 12, fontWeight: '700', color: c.link },
+  teacherSectionLabel: { fontSize: 10, fontWeight: '700', color: c.faint, letterSpacing: 1, marginBottom: 8 },
   teacherNameInput: {
     paddingHorizontal: 14, paddingVertical: 11,
-    borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0',
-    fontSize: 14, fontWeight: '500', color: '#1e293b', backgroundColor: '#fafafa',
+    borderRadius: 12, borderWidth: 1, borderColor: c.border,
+    fontSize: 14, fontWeight: '500', color: c.textStrong, backgroundColor: c.bgSub,
   },
   avatarGrid: { flexDirection: 'row', gap: 6 },
   avatarCell: {
     flex: 1, borderRadius: 12, paddingVertical: 6,
-    backgroundColor: '#f8fafc', borderWidth: 2, borderColor: 'transparent',
+    backgroundColor: c.bg, borderWidth: 2, borderColor: 'transparent',
     alignItems: 'center', gap: 4, overflow: 'hidden',
   },
-  avatarCellSel: { backgroundColor: '#e0f2fe', borderColor: '#38bdf8' },
+  avatarCellSel: { backgroundColor: c.skyBg, borderColor: c.sky },
   avatarCellImage: { width: 38, height: 38, borderRadius: 19 },
-  avatarCellLabel: { fontSize: 9, fontWeight: '700', color: '#64748b' },
+  avatarCellLabel: { fontSize: 9, fontWeight: '700', color: c.textSub },
   titleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  titleChip: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, backgroundColor: '#f1f5f9' },
-  titleChipSel: { backgroundColor: '#0369a1' },
-  titleChipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
+  titleChip: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, backgroundColor: c.bgSub },
+  titleChipSel: { backgroundColor: c.link },
+  titleChipText: { fontSize: 12, fontWeight: '600', color: c.textMid },
   titleChipTextSel: { color: 'white' },
   tcCloseBtn: { marginHorizontal: 16, marginTop: 0, marginBottom: 36, backgroundColor: 'rgba(255,255,255,0.08)' },
   tcCloseBtnText: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.45)', textAlign: 'center', paddingVertical: 14 },

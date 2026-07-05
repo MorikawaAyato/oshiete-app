@@ -2,6 +2,7 @@ import { useOAuth } from '@clerk/clerk-expo'
 import * as WebBrowser from 'expo-web-browser'
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native'
 import { SafeAreaView } from 'react-native'
+import { c } from '@/lib/theme'
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -40,7 +41,7 @@ export default function SignIn() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#e0f2fe' },
+  safe: { flex: 1, backgroundColor: c.skyBg },
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -50,11 +51,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#0c4a6e',
+    color: c.skyStrong,
     letterSpacing: 1,
     marginBottom: 8,
   },
-  subtitle: { fontSize: 14, color: '#0369a1', marginBottom: 48 },
+  subtitle: { fontSize: 14, color: c.link, marginBottom: 48 },
   card: {
     backgroundColor: 'white',
     borderRadius: 20,
@@ -70,18 +71,18 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: c.textStrong,
     marginBottom: 8,
   },
   cardDesc: {
     fontSize: 13,
-    color: '#64748b',
+    color: c.textSub,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
   },
   googleBtn: {
-    backgroundColor: '#f472b6',
+    backgroundColor: c.primarySoft,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,

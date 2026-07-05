@@ -15,6 +15,7 @@ import {
 import { fetchPreviewContent } from '@/lib/api'
 import type { HistoryItem } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
+import { c } from '@/lib/theme'
 
 type SheetMode = 'select' | 'main' | 'detail' | 'rename' | 'group' | 'new-group' | 'delete'
 
@@ -209,7 +210,7 @@ export default function LibraryScreen() {
           {item.thumbnails[0] ? (
             <Image source={{ uri: item.thumbnails[0] }} style={styles.cardThumb} />
           ) : (
-            <View style={[styles.cardThumb, { backgroundColor: '#fbcfe8', overflow: 'hidden' }]}>
+            <View style={[styles.cardThumb, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]}>
               <View style={{ position: 'absolute', top: -30, left: 0, right: 0, bottom: -70 }}>
                 <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
               </View>
@@ -589,16 +590,16 @@ export default function LibraryScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f1f5f9' },
+  safe: { flex: 1, backgroundColor: c.bgSub },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
     backgroundColor: 'white',
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#e2e8f0',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border,
   },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
-  headerCount: { fontSize: 12, color: '#94a3b8' },
+  headerTitle: { fontSize: 15, fontWeight: '700', color: c.textStrong },
+  headerCount: { fontSize: 12, color: c.faint },
 
   bodyScroll: { flex: 1 },
   bodyContent: { paddingBottom: 8 },
@@ -608,8 +609,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 16, paddingVertical: 10,
   },
-  groupTitle: { fontSize: 13, fontWeight: '700', color: '#475569' },
-  groupCount: { fontSize: 11, color: '#94a3b8' },
+  groupTitle: { fontSize: 13, fontWeight: '700', color: c.textMid },
+  groupCount: { fontSize: 11, color: c.faint },
   flex1: { flex: 1, minHeight: 0 },
   groupIconBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   groupIconBtnText: { fontSize: 14 },
@@ -619,30 +620,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 8,
   },
   groupEditInput: {
-    flex: 1, borderWidth: 1, borderColor: '#7dd3fc',
+    flex: 1, borderWidth: 1, borderColor: c.skySoft,
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6,
-    fontSize: 13, color: '#1e293b', backgroundColor: 'white',
+    fontSize: 13, color: c.textStrong, backgroundColor: 'white',
   },
   groupSaveBtn: {
-    backgroundColor: '#38bdf8', borderRadius: 10,
+    backgroundColor: c.sky, borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 6,
   },
-  groupSaveBtnDisabled: { backgroundColor: '#bae6fd' },
+  groupSaveBtnDisabled: { backgroundColor: c.skyBorder },
   groupSaveBtnText: { fontSize: 12, fontWeight: '700', color: 'white' },
-  groupDeleteConfirmText: { flex: 1, fontSize: 12, color: '#475569' },
+  groupDeleteConfirmText: { flex: 1, fontSize: 12, color: c.textMid },
   groupDeleteConfirmBtn: {
-    backgroundColor: '#ef4444', borderRadius: 10,
+    backgroundColor: c.danger, borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 6,
   },
   groupDeleteConfirmBtnText: { fontSize: 12, fontWeight: '700', color: 'white' },
   groupXBtn: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: c.border, alignItems: 'center', justifyContent: 'center',
   },
-  groupXBtnText: { fontSize: 14, color: '#64748b', fontWeight: '600' },
+  groupXBtnText: { fontSize: 14, color: c.textSub, fontWeight: '600' },
 
   ungroupedLabel: {
-    fontSize: 11, fontWeight: '700', color: '#94a3b8',
+    fontSize: 11, fontWeight: '700', color: c.faint,
     letterSpacing: 0.8, textTransform: 'uppercase',
     paddingHorizontal: 16, paddingVertical: 10,
   },
@@ -653,19 +654,19 @@ const styles = StyleSheet.create({
     width: CARD_W, margin: 3,
     backgroundColor: 'white', borderRadius: 12, overflow: 'hidden',
     borderWidth: 2, borderColor: 'transparent',
-    shadowColor: '#94a3b8', shadowOffset: { width: 0, height: 1 },
+    shadowColor: c.faint, shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1, shadowRadius: 3, elevation: 2,
   },
-  cardActive: { borderColor: '#f472b6', shadowColor: '#f472b6', shadowOpacity: 0.2 },
-  cardThumb: { width: '100%', aspectRatio: 1, backgroundColor: '#e2e8f0' },
+  cardActive: { borderColor: c.primarySoft, shadowColor: c.primarySoft, shadowOpacity: 0.2 },
+  cardThumb: { width: '100%', aspectRatio: 1, backgroundColor: c.border },
   cardThumbEmpty: { alignItems: 'center', justifyContent: 'center' },
-  cardThumbText: { backgroundColor: '#fce7f3' },
+  cardThumbText: { backgroundColor: c.pinkSoft },
   cardThumbIcon: { position: 'absolute', top: 0, left: 0, bottom: 0, right: 0, opacity: 0.55 },
   cardInfo: { padding: 6, backgroundColor: 'white' },
-  cardInfoActive: { backgroundColor: '#fff0f6' },
-  cardTitle: { fontSize: 10, fontWeight: '600', color: '#1e293b', lineHeight: 14, minHeight: 28 },
-  cardTitleActive: { color: '#ec4899' },
-  cardDate: { fontSize: 9, color: '#94a3b8', marginTop: 2 },
+  cardInfoActive: { backgroundColor: c.pinkTint },
+  cardTitle: { fontSize: 10, fontWeight: '600', color: c.textStrong, lineHeight: 14, minHeight: 28 },
+  cardTitleActive: { color: c.primary },
+  cardDate: { fontSize: 9, color: c.faint, marginTop: 2 },
   cardMenuBtn: {
     position: 'absolute', top: 4, right: 4,
     width: 22, height: 22, borderRadius: 11,
@@ -675,31 +676,31 @@ const styles = StyleSheet.create({
   cardMenuDot: { color: 'white', fontSize: 12, lineHeight: 18 },
   activeBadge: {
     position: 'absolute', top: 4, left: 4,
-    backgroundColor: '#ec4899', borderRadius: 8,
+    backgroundColor: c.primary, borderRadius: 8,
     paddingHorizontal: 5, paddingVertical: 1,
   },
   activeBadgeText: { color: 'white', fontSize: 8, fontWeight: '700' },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   emptyIcon: { fontSize: 48 },
-  emptyText: { fontSize: 14, color: '#94a3b8' },
-  emptyLink: { fontSize: 14, color: '#ec4899', fontWeight: '600' },
+  emptyText: { fontSize: 14, color: c.faint },
+  emptyLink: { fontSize: 14, color: c.primary, fontWeight: '600' },
 
   footer: {
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e2e8f0',
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border,
     backgroundColor: 'white', paddingHorizontal: 12, paddingVertical: 8,
   },
   footerInputRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   footerInput: {
-    flex: 1, borderWidth: 1.5, borderColor: '#f9a8d4',
+    flex: 1, borderWidth: 1.5, borderColor: c.pinkMuted,
     borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
-    fontSize: 13, color: '#1e293b', backgroundColor: 'white',
+    fontSize: 13, color: c.textStrong, backgroundColor: 'white',
   },
   footerCreateBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 4, paddingVertical: 8,
   },
-  footerCreateBtnText: { fontSize: 14, color: '#64748b', fontWeight: '500' },
+  footerCreateBtnText: { fontSize: 14, color: c.textSub, fontWeight: '500' },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheetWrap: { justifyContent: 'flex-end' },
@@ -709,94 +710,94 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
   },
   sheetHandle: {
-    width: 36, height: 4, backgroundColor: '#e2e8f0',
+    width: 36, height: 4, backgroundColor: c.border,
     borderRadius: 2, alignSelf: 'center', marginBottom: 12,
   },
   sheetItemTitle: {
-    fontSize: 14, fontWeight: '600', color: '#1e293b',
+    fontSize: 14, fontWeight: '600', color: c.textStrong,
     paddingHorizontal: 4, paddingBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#f1f5f9',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.bgSub,
     marginBottom: 4,
   },
   sheetSubLabel: {
-    fontSize: 11, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.8,
+    fontSize: 11, fontWeight: '700', color: c.faint, letterSpacing: 0.8,
     paddingHorizontal: 4, paddingBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#f1f5f9',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.bgSub,
     marginBottom: 4,
   },
   sheetRows: { marginBottom: 8 },
   sheetRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 4, paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#f8fafc',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.bg,
   },
   sheetRowIcon: { fontSize: 18, width: 24, textAlign: 'center' },
   sheetRowIconSm: { fontSize: 12 },
-  sheetRowText: { fontSize: 14, color: '#334155', fontWeight: '500', flex: 1 },
-  sheetRowTextRed: { color: '#ef4444' },
-  sheetRowTextPink: { color: '#ec4899', fontWeight: '600' },
-  sheetRowTextMuted: { color: '#94a3b8' },
-  sheetRowSub: { fontSize: 12, color: '#94a3b8', maxWidth: 100 },
-  sheetRowCheck: { fontSize: 14, color: '#ec4899', fontWeight: '700' },
+  sheetRowText: { fontSize: 14, color: c.text, fontWeight: '500', flex: 1 },
+  sheetRowTextRed: { color: c.danger },
+  sheetRowTextPink: { color: c.primary, fontWeight: '600' },
+  sheetRowTextMuted: { color: c.faint },
+  sheetRowSub: { fontSize: 12, color: c.faint, maxWidth: 100 },
+  sheetRowCheck: { fontSize: 14, color: c.primary, fontWeight: '700' },
 
   groupPickerScroll: { maxHeight: 220 },
-  groupPickerEmpty: { fontSize: 13, color: '#94a3b8', paddingHorizontal: 4, paddingVertical: 12 },
+  groupPickerEmpty: { fontSize: 13, color: c.faint, paddingHorizontal: 4, paddingVertical: 12 },
   newGroupRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 4, paddingVertical: 14,
-    borderWidth: 1, borderColor: '#fbcfe8', borderRadius: 14,
+    borderWidth: 1, borderColor: c.pinkBorder, borderRadius: 14,
     marginTop: 8, marginBottom: 8,
   },
-  newGroupRowIcon: { fontSize: 18, color: '#ec4899', width: 24, textAlign: 'center', fontWeight: '700' },
-  newGroupRowText: { fontSize: 14, color: '#ec4899', fontWeight: '500' },
+  newGroupRowIcon: { fontSize: 18, color: c.primary, width: 24, textAlign: 'center', fontWeight: '700' },
+  newGroupRowText: { fontSize: 14, color: c.primary, fontWeight: '500' },
 
   detailBody: { paddingVertical: 12, gap: 8, marginBottom: 12 },
-  detailTitle: { fontSize: 14, fontWeight: '700', color: '#1e293b' },
-  detailDesc: { fontSize: 13, color: '#64748b', lineHeight: 20 },
-  detailGroup: { fontSize: 12, color: '#38bdf8' },
-  detailDate: { fontSize: 11, color: '#94a3b8' },
+  detailTitle: { fontSize: 14, fontWeight: '700', color: c.textStrong },
+  detailDesc: { fontSize: 13, color: c.textSub, lineHeight: 20 },
+  detailGroup: { fontSize: 12, color: c.sky },
+  detailDate: { fontSize: 11, color: c.faint },
 
   renameInput: {
-    borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 12,
+    borderWidth: 1.5, borderColor: c.border, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: '#1e293b',
+    fontSize: 14, color: c.textStrong,
     marginVertical: 12,
   },
   deleteDesc: {
-    fontSize: 13, color: '#64748b', lineHeight: 20,
+    fontSize: 13, color: c.textSub, lineHeight: 20,
     paddingVertical: 12, marginBottom: 8,
   },
 
   selectBtns: { gap: 10, marginTop: 12, marginBottom: 8 },
   selectBtnPrimary: {
-    backgroundColor: '#f472b6', borderRadius: 16,
+    backgroundColor: c.primarySoft, borderRadius: 16,
     paddingVertical: 18, alignItems: 'center',
-    shadowColor: '#ec4899', shadowOffset: { width: 0, height: 3 },
+    shadowColor: c.primary, shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
   },
   selectBtnPrimaryText: { color: 'white', fontWeight: '800', fontSize: 18 },
   selectBtnSecondary: {
-    backgroundColor: '#f0f9ff', borderRadius: 14, borderWidth: 1, borderColor: '#bae6fd',
+    backgroundColor: c.skyTint, borderRadius: 14, borderWidth: 1, borderColor: c.skyBorder,
     paddingVertical: 14, alignItems: 'center',
   },
-  selectBtnSecondaryText: { color: '#0369a1', fontWeight: '700', fontSize: 14 },
+  selectBtnSecondaryText: { color: c.link, fontWeight: '700', fontSize: 14 },
 
   primaryBtn: {
-    backgroundColor: '#ec4899', borderRadius: 16,
+    backgroundColor: c.primary, borderRadius: 16,
     paddingVertical: 14, alignItems: 'center', marginBottom: 8,
   },
-  primaryBtnDisabled: { backgroundColor: '#f9a8d4' },
+  primaryBtnDisabled: { backgroundColor: c.pinkMuted },
   primaryBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
 
   deleteBtn: {
-    backgroundColor: '#ef4444', borderRadius: 16,
+    backgroundColor: c.danger, borderRadius: 16,
     paddingVertical: 14, alignItems: 'center', marginBottom: 8,
   },
   deleteBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
 
   cancelBtn: {
-    backgroundColor: '#f1f5f9', borderRadius: 16,
+    backgroundColor: c.bgSub, borderRadius: 16,
     paddingVertical: 14, alignItems: 'center',
   },
-  cancelBtnText: { color: '#64748b', fontWeight: '600', fontSize: 14 },
+  cancelBtnText: { color: c.textSub, fontWeight: '600', fontSize: 14 },
 })

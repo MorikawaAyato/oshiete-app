@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import { c } from '@/lib/theme'
 
 type Tab = 'home' | 'library'
 
@@ -19,7 +20,7 @@ export function BottomTabBar({ active }: { active: Tab }) {
         <Ionicons
           name={active === 'home' ? 'home' : 'home-outline'}
           size={24}
-          color={active === 'home' ? '#ec4899' : '#94a3b8'}
+          color={active === 'home' ? c.primary : c.faint}
         />
         <Text style={[styles.label, active === 'home' && styles.labelActive]}>ホーム</Text>
       </TouchableOpacity>
@@ -31,7 +32,7 @@ export function BottomTabBar({ active }: { active: Tab }) {
         <Ionicons
           name={active === 'library' ? 'book' : 'book-outline'}
           size={24}
-          color={active === 'library' ? '#ec4899' : '#94a3b8'}
+          color={active === 'library' ? c.primary : c.faint}
         />
         <Text style={[styles.label, active === 'library' && styles.labelActive]}>教材</Text>
       </TouchableOpacity>
@@ -43,7 +44,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: c.border,
     backgroundColor: 'white',
   },
   tab: {
@@ -56,9 +57,9 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: c.faint,
   },
   labelActive: {
-    color: '#ec4899',
+    color: c.primary,
   },
 })
