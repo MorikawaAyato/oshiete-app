@@ -10,7 +10,7 @@ import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
 import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
-import { addMail, loadRecap, saveRecapToHistory } from '@/lib/storage'
+import { addMail, loadRecap, loadFactsheet, saveRecapToHistory } from '@/lib/storage'
 import type { ChatMessage } from '@/lib/types'
 
 const MAX_TURNS = 9
@@ -161,15 +161,15 @@ export default function ChatScreen() {
     if (!student) return
     setStartError(false)
     setStarting(true)
-    // この教材×この生徒の前回Recap（生徒メモリ）があれば授業に持ち込む
-    loadRecap(currentHistoryId, student.id)
-      .then((recap) => {
+    // この教材×この生徒の前回Recap（生徒メモリ）とファクトシートがあれば授業に持ち込む
+    Promise.all([loadRecap(currentHistoryId, student.id), loadFactsheet(currentHistoryId)])
+      .then(([recap, factsheet]) => {
         setLessonRecap(recap)
         setCorrectness([])
         setNotebook(null)
         setNotebookState(null)
         setNotebookGrading(false)
-        return startChat(student.id, imageDescription, notes, teacherName, teacherCharacter, recap ?? undefined)
+        return startChat(student.id, imageDescription, notes, teacherName, teacherCharacter, recap ?? undefined, factsheet)
       })
       .then((res) => {
         if (res.manaResponse) {
@@ -200,7 +200,8 @@ export default function ChatScreen() {
     try {
       const isFinalTurn = turnCount + 1 >= MAX_TURNS
       const turnsLeft = MAX_TURNS - (turnCount + 1)
-      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, lessonRecap ?? undefined)
+      const factsheet = await loadFactsheet(currentHistoryId)
+      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, lessonRecap ?? undefined, factsheet)
       if (res.text) {
         const newMessages: ChatMessage[] = [...next, { role: 'mana', text: res.text }]
         setChatMessages(newMessages)

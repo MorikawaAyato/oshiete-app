@@ -10,9 +10,9 @@ import * as ImagePicker from 'expo-image-picker'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage } from '@/lib/teacherProfile'
-import { analyzeImages, analyzeText, fetchPreviewContent } from '@/lib/api'
+import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet } from '@/lib/api'
 import {
-  loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, HISTORY_MAX,
+  loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead,
 } from '@/lib/storage'
 import type { MailMessage } from '@/lib/storage'
@@ -145,6 +145,17 @@ export default function HomeScreen() {
     }
   }
 
+  // ファクトシートをバックグラウンド生成して履歴に保存（失敗しても授業は劣化動作で成立する）
+  const backgroundFetchFactsheet = async (desc: string, notesText: string, histId: string) => {
+    try {
+      const res = await fetchFactsheet(desc, notesText)
+      if (res.factsheet) {
+        await updateHistoryFactsheet(histId, res.factsheet)
+        setHistory(await loadHistory())
+      }
+    } catch { /* ファクトシートは任意。失敗は無視 */ }
+  }
+
   const backgroundFetchPreview = async (desc: string, histId: string) => {
     setPreviewLoading(true)
     const attempt = async () => {
@@ -223,6 +234,7 @@ export default function HomeScreen() {
       setHistory(await loadHistory())
       setTextInput('')
       triggerMaterialAnimation()
+      void backgroundFetchFactsheet(finalDesc, finalNotes, saved.id)
     } catch {
       Alert.alert('エラー', '教材の読み込みに失敗しました。もう一度試してください。')
     } finally {
@@ -280,6 +292,7 @@ export default function HomeScreen() {
       setHistory(await loadHistory())
       triggerMaterialAnimation()
       void backgroundFetchPreview(res.imageDescription, saved.id)
+      void backgroundFetchFactsheet(res.imageDescription, res.notes, saved.id)
     } catch (e) {
       console.error('analyzeFromPending error:', e)
       Alert.alert('エラー', '教材の読み込みに失敗しました。もう一度試してください。')
@@ -312,6 +325,10 @@ export default function HomeScreen() {
     setPreviewContent(item.previewContent ?? null)
     if (!item.previewContent) {
       void backgroundFetchPreview(item.imageDescription, item.id)
+    }
+    // ファクトシート未生成の古い教材はここでバックフィル
+    if (!item.factsheet) {
+      void backgroundFetchFactsheet(item.imageDescription, item.notes, item.id)
     }
   }
 

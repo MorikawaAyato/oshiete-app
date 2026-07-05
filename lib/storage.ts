@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { HistoryItem, PreviewContent, Recap } from './types'
+import type { Factsheet, HistoryItem, PreviewContent, Recap } from './types'
 
 export type MailMessage = {
   id: string
@@ -93,6 +93,19 @@ export async function updateHistoryPreview(id: string, previewContent: PreviewCo
   const history = await loadHistory()
   const updated = history.map((h) => (h.id === id ? { ...h, previewContent } : h))
   await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+}
+
+// 教材ファクトシート（バックグラウンド生成）を履歴に保存
+export async function updateHistoryFactsheet(id: string, factsheet: Factsheet): Promise<void> {
+  const history = await loadHistory()
+  const updated = history.map((h) => (h.id === id ? { ...h, factsheet } : h))
+  await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+}
+
+export async function loadFactsheet(historyId: string | null): Promise<Factsheet | undefined> {
+  if (!historyId) return undefined
+  const history = await loadHistory()
+  return history.find((h) => h.id === historyId)?.factsheet
 }
 
 // 授業終了時に生成されたRecap（生徒メモリ）を教材×生徒単位で保存（最新1件を上書き）

@@ -1,4 +1,4 @@
-import type { Notebook, Recap } from './types'
+import type { Factsheet, Notebook, Recap } from './types'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? ''
 
@@ -37,6 +37,19 @@ export async function fetchPreviewContent(
   return res.json()
 }
 
+// 教材ファクトシートの生成（取り込み後にバックグラウンドで呼ぶ。失敗しても授業は成立する）
+export async function fetchFactsheet(
+  imageDescription: string,
+  notes: string,
+): Promise<{ factsheet?: Factsheet; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/factsheet`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageDescription, notes }),
+  })
+  return res.json()
+}
+
 export async function startChat(
   studentId: string,
   imageDescription: string,
@@ -44,11 +57,12 @@ export async function startChat(
   teacherName?: string,
   teacherCharacter?: string,
   recap?: Recap,
+  factsheet?: Factsheet,
 ): Promise<{ manaResponse?: string; hints?: string[]; correctHintIndex?: number; error?: string }> {
   const res = await fetch(`${API_BASE}/api/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, imageDescription, notes, teacherName, teacherCharacter, recap }),
+    body: JSON.stringify({ studentId, imageDescription, notes, teacherName, teacherCharacter, recap, factsheet }),
   })
   return res.json()
 }
@@ -64,11 +78,12 @@ export async function sendChat(
   turnsLeft?: number,
   correctness?: (boolean | null)[],
   recap?: Recap,
+  factsheet?: Factsheet,
 ): Promise<{ text?: string; mailSubject?: string; mailContent?: string; hints?: string[]; correctHintIndex?: number; correct?: boolean; notebook?: Notebook; recap?: Recap; error?: string }> {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, recap }),
+    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, recap, factsheet }),
   })
   return res.json()
 }
