@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import type { Section } from '@/lib/types'
-import { c } from '@/lib/theme'
+import { c, font } from '@/lib/theme'
 
 export default function PreviewScreen() {
   const router = useRouter()
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { paddingVertical: 4, paddingRight: 8 },
   backText: { fontSize: 13, color: c.link },
-  navTitle: { fontSize: 15, fontWeight: 'bold', color: c.textStrong },
+  navTitle: { fontSize: 15, fontFamily: font.round, color: c.textStrong },
   navStep: { fontSize: 12, color: c.primary, fontWeight: '700' },
 
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 24 },
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   },
   flowNumText: { fontSize: 12, fontWeight: 'bold', color: c.primary },
   flowInfo: { flex: 1 },
-  flowTitle: { fontSize: 15, fontWeight: 'bold', color: c.textStrong },
+  flowTitle: { fontSize: 15, fontFamily: font.round, color: c.textStrong },
   flowSummary: { fontSize: 13, color: c.textMid, marginTop: 3, lineHeight: 19 },
 
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   sectionNumText: { fontSize: 12, fontWeight: 'bold', color: c.primary },
-  sectionTitle: { fontSize: 17, fontWeight: 'bold', color: c.textStrong, flex: 1 },
+  sectionTitle: { fontSize: 17, fontFamily: font.round, color: c.textStrong, flex: 1 },
 
   summaryBox: {
     borderLeftWidth: 3, borderLeftColor: c.pinkMuted,
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16, marginBottom: 8, paddingVertical: 13,
     backgroundColor: c.primaryStrong, borderRadius: 14, alignItems: 'center',
   },
-  startClassBtnText: { fontSize: 15, fontWeight: 'bold', color: 'white' },
+  startClassBtnText: { fontSize: 15, fontFamily: font.round, color: 'white' },
   startClassBtnDisabled: {
     marginHorizontal: 16, marginBottom: 8, paddingVertical: 13,
     backgroundColor: c.bgSub, borderRadius: 14, alignItems: 'center',
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
   },
   navBtnNext: { borderColor: c.link, backgroundColor: c.skyBg },
   navBtnDisabled: { borderColor: c.border, backgroundColor: c.bg },
-  navBtnText: { fontSize: 14, fontWeight: '700', color: c.link },
+  navBtnText: { fontSize: 14, fontFamily: font.round, color: c.link },
   navBtnTextNext: { color: c.link },
   navBtnTextDisabled: { color: c.borderStrong },
 })

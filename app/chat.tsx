@@ -12,7 +12,7 @@ import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
 import { addMail, loadRecap, loadFactsheet, saveRecapToHistory } from '@/lib/storage'
 import type { ChatMessage } from '@/lib/types'
-import { btn, c } from '@/lib/theme'
+import { btn, c, font } from '@/lib/theme'
 
 const MAX_TURNS = 9
 const HINT_MAX_USES = 3
@@ -630,11 +630,11 @@ const styles = StyleSheet.create({
   backText: { fontSize: 13, color: c.link },
   headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerAvatar: { width: 32, height: 32, borderRadius: 16 },
-  headerName: { fontSize: 14, fontWeight: 'bold', color: c.textStrong },
+  headerName: { fontSize: 14, fontFamily: font.round, color: c.textStrong },
   timerText: { fontSize: 11, fontWeight: '700', marginTop: 1 },
   timerSub: { fontSize: 9, color: c.textSub, marginTop: 1 },
   endBtn: { backgroundColor: c.bgSub, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  endBtnText: { fontSize: 12, color: c.textSub, fontWeight: '600' },
+  endBtnText: { fontSize: 12, color: c.textSub, fontFamily: font.round },
 
   previewBar: {
     backgroundColor: c.skyTint, borderBottomWidth: 1, borderBottomColor: c.skyBorder,
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 18, paddingTop: 16, paddingBottom: 8,
   },
-  notebookModalTitle: { fontSize: 14, fontWeight: 'bold', color: c.textStrong },
+  notebookModalTitle: { fontSize: 14, fontFamily: font.round, color: c.textStrong },
   notebookModalClose: { fontSize: 16, color: c.faint, paddingHorizontal: 4 },
   notebookScroll: { paddingHorizontal: 18 },
   notebookPaper: {
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     backgroundColor: c.primaryStrong, borderRadius: 12,
     paddingVertical: 13, alignItems: 'center',
   },
-  gradeBtnText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
+  gradeBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
   closeNotebookBtn: { ...btn.secondary, borderRadius: 12 },
   closeNotebookBtnText: { ...btn.secondaryText },
 
@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
   endedLabel: { fontSize: 13, color: c.textSub, textAlign: 'center', fontWeight: '600' },
   finishBtn: { ...btn.secondary, borderRadius: 12, paddingVertical: 14 },
   finishBtnText: { ...btn.secondaryText },
-  finishBtnTextPreview: { fontSize: 14, fontWeight: '700', color: c.link },
+  finishBtnTextPreview: { fontSize: 14, fontFamily: font.round, color: c.link },
 
   inputAreaWrap: {
     backgroundColor: 'white', borderTopWidth: 1, borderTopColor: c.border,
@@ -761,5 +761,5 @@ const styles = StyleSheet.create({
   },
   sendBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
   sendBtnDisabled: { opacity: 0.4 },
-  sendBtnText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
+  sendBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
 })

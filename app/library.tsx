@@ -15,7 +15,7 @@ import {
 import { fetchPreviewContent } from '@/lib/api'
 import type { HistoryItem } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
-import { btn, c } from '@/lib/theme'
+import { btn, c, font } from '@/lib/theme'
 
 type SheetMode = 'select' | 'main' | 'detail' | 'rename' | 'group' | 'new-group' | 'delete'
 
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border,
   },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: c.textStrong },
+  headerTitle: { fontSize: 15, fontFamily: font.round, color: c.textStrong },
   headerCount: { fontSize: 12, color: c.textSub },
 
   bodyScroll: { flex: 1 },
@@ -629,13 +629,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6,
   },
   groupSaveBtnDisabled: { backgroundColor: c.skyBorder },
-  groupSaveBtnText: { fontSize: 12, fontWeight: '700', color: 'white' },
+  groupSaveBtnText: { fontSize: 12, fontFamily: font.round, color: 'white' },
   groupDeleteConfirmText: { flex: 1, fontSize: 12, color: c.textMid },
   groupDeleteConfirmBtn: {
     backgroundColor: c.danger, borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 6,
   },
-  groupDeleteConfirmBtnText: { fontSize: 12, fontWeight: '700', color: 'white' },
+  groupDeleteConfirmBtnText: { fontSize: 12, fontFamily: font.round, color: 'white' },
   groupXBtn: {
     width: 28, height: 28, borderRadius: 14,
     backgroundColor: c.border, alignItems: 'center', justifyContent: 'center',
@@ -775,26 +775,26 @@ const styles = StyleSheet.create({
     shadowColor: c.primary, shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
   },
-  selectBtnPrimaryText: { color: 'white', fontWeight: '800', fontSize: 18 },
+  selectBtnPrimaryText: { color: 'white', fontFamily: font.roundHeavy, fontSize: 18 },
   selectBtnSecondary: {
     backgroundColor: c.skyTint, borderRadius: 14, borderWidth: 1, borderColor: c.skyBorder,
     paddingVertical: 14, alignItems: 'center',
   },
-  selectBtnSecondaryText: { color: c.link, fontWeight: '700', fontSize: 14 },
+  selectBtnSecondaryText: { color: c.link, fontFamily: font.round, fontSize: 14 },
 
   primaryBtn: { ...btn.primary, borderRadius: 16, marginBottom: 8 },
   primaryBtnDisabled: { backgroundColor: c.pinkMuted },
-  primaryBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  primaryBtnText: { color: 'white', fontFamily: font.round, fontSize: 15 },
 
   deleteBtn: {
     backgroundColor: c.danger, borderRadius: 16,
     paddingVertical: 14, alignItems: 'center', marginBottom: 8,
   },
-  deleteBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  deleteBtnText: { color: 'white', fontFamily: font.round, fontSize: 15 },
 
   cancelBtn: {
     backgroundColor: c.bgSub, borderRadius: 16,
     paddingVertical: 14, alignItems: 'center',
   },
-  cancelBtnText: { color: c.textSub, fontWeight: '600', fontSize: 14 },
+  cancelBtnText: { color: c.textSub, fontFamily: font.round, fontSize: 14 },
 })

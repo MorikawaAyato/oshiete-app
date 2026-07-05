@@ -17,7 +17,7 @@ import {
 } from '@/lib/storage'
 import type { MailMessage } from '@/lib/storage'
 import type { HistoryItem } from '@/lib/types'
-import { btn, c } from '@/lib/theme'
+import { btn, c, font } from '@/lib/theme'
 
 type ImageData = { data: string; mimeType: string; uri: string }
 
@@ -924,7 +924,7 @@ const styles = StyleSheet.create({
 
   // ヘッダー
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  appTitle: { fontSize: 18, fontWeight: '900', color: c.skyStrong, letterSpacing: -0.3 },
+  appTitle: { fontSize: 18, fontFamily: font.roundHeavy, color: c.skyStrong, letterSpacing: -0.3 },
   appSubtitle: { fontSize: 10, color: c.link, fontWeight: '700', letterSpacing: 0.3 },
   headerIcons: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
   mailIconBtn: { alignItems: 'center', gap: 2, position: 'relative' },
@@ -953,7 +953,7 @@ const styles = StyleSheet.create({
   // セクション共通
   todaySection: { gap: 10 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: c.skyStrong, letterSpacing: 0.8 },
+  sectionTitle: { fontSize: 13, fontFamily: font.round, color: c.skyStrong, letterSpacing: 0.8 },
   sectionAction: { fontSize: 12, color: c.link, fontWeight: '500' },
   sectionClear: { fontSize: 11, color: c.textSub, fontWeight: '500' },
 
@@ -1033,7 +1033,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
-  lessonPreviewBtnText: { fontSize: 14, fontWeight: '700', color: c.link },
+  lessonPreviewBtnText: { fontSize: 14, fontFamily: font.round, color: c.link },
   lessonChangeBtn: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10, paddingVertical: 5,
@@ -1047,7 +1047,7 @@ const styles = StyleSheet.create({
     gap: 8, backgroundColor: c.pinkTint,
   },
   lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 1 },
-  lessonStudentName: { fontSize: 12, fontWeight: '700', color: c.textStrong },
+  lessonStudentName: { fontSize: 12, fontFamily: font.round, color: c.textStrong },
   lessonStudentAppeal: { fontSize: 11, color: c.primaryStrong, textAlign: 'center', lineHeight: 16 },
   lessonStudentEmpty: {
     width: 64, height: 64, borderRadius: 32,
@@ -1070,8 +1070,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   startBtnDisabled: { backgroundColor: c.pinkTint, borderWidth: 1.5, borderColor: c.pinkBorder, shadowOpacity: 0, elevation: 0 },
-  startBtnText: { fontSize: 18, fontWeight: '800', color: 'white' },
-  startBtnTextDisabled: { color: c.primary, fontSize: 15, fontWeight: '600' },
+  startBtnText: { fontSize: 18, fontFamily: font.roundHeavy, color: 'white' },
+  startBtnTextDisabled: { color: c.primary, fontSize: 15, fontFamily: font.round },
 
   row: { flexDirection: 'row', alignItems: 'center' },
 
@@ -1129,13 +1129,13 @@ const styles = StyleSheet.create({
     borderBottomColor: c.bgSub, marginBottom: 12,
   },
   profileAvatar: { width: 56, height: 56, borderRadius: 28 },
-  profileName: { fontSize: 16, fontWeight: '700', color: c.textStrong },
+  profileName: { fontSize: 16, fontFamily: font.round, color: c.textStrong },
   profileTagline: { fontSize: 12, color: c.textSub, marginTop: 3 },
   sheetChangeBtn: {
     backgroundColor: c.bgSub, borderRadius: 14,
     paddingVertical: 14, alignItems: 'center', marginBottom: 8,
   },
-  sheetChangeBtnText: { fontSize: 14, fontWeight: '700', color: c.textMid },
+  sheetChangeBtnText: { fontSize: 14, fontFamily: font.round, color: c.textMid },
   sheetCloseBtn: {
     backgroundColor: c.bg, borderRadius: 14,
     paddingVertical: 14, alignItems: 'center',
@@ -1153,8 +1153,8 @@ const styles = StyleSheet.create({
   pickerItemSel: { backgroundColor: c.pinkTint },
   pickerItemAvatar: { width: 48, height: 48, borderRadius: 24 },
   pickerItemInfo: { flex: 1, minWidth: 0 },
-  pickerItemName: { fontSize: 14, fontWeight: '600', color: c.textStrong },
-  pickerItemNameSel: { color: c.primary, fontWeight: '700' },
+  pickerItemName: { fontSize: 14, fontFamily: font.round, color: c.textStrong },
+  pickerItemNameSel: { color: c.primary },
   pickerItemTagline: { fontSize: 12, color: c.textSub, marginTop: 2 },
   pickerItemCheck: { fontSize: 16, color: c.primary, fontWeight: '700' },
 
@@ -1164,7 +1164,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 16,
     borderBottomWidth: 1, borderBottomColor: c.bgSub,
   },
-  inboxTitle: { fontSize: 15, fontWeight: '900', color: c.textStrong },
+  inboxTitle: { fontSize: 15, fontFamily: font.roundHeavy, color: c.textStrong },
   inboxClose: { fontSize: 18, color: c.faint },
   inboxItem: {
     flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingVertical: 14,
@@ -1212,7 +1212,7 @@ const styles = StyleSheet.create({
   },
   tcAvatarImage: { width: 82, height: 82, borderRadius: 41 },
   tcNameArea: { alignItems: 'center', gap: 8 },
-  tcName: { fontSize: 22, fontWeight: '900', color: 'white', letterSpacing: 0.5 },
+  tcName: { fontSize: 22, fontFamily: font.roundHeavy, color: 'white', letterSpacing: 0.5 },
   tcNameSuffix: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.7)' },
   tcNameEmpty: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.35)' },
   tcTitleBadge: {
@@ -1231,7 +1231,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: c.bgSub,
   },
   tcBackBtn: { flexDirection: 'row', alignItems: 'center' },
-  tcBackBtnText: { fontSize: 12, fontWeight: '700', color: c.link },
+  tcBackBtnText: { fontSize: 12, fontFamily: font.round, color: c.link },
   teacherSectionLabel: { fontSize: 10, fontWeight: '700', color: c.textSub, letterSpacing: 1, marginBottom: 8 },
   teacherNameInput: {
     paddingHorizontal: 14, paddingVertical: 11,

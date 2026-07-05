@@ -47,6 +47,13 @@ export const c = {
   dangerText: '#dc2626',
 } as const
 
+// 丸ゴシック（Zen Maru Gothic）。見出し・生徒名・ボタン文字だけに使い、本文はシステムフォントのまま。
+// fontFamily を指定した Text には fontWeight を併用しない（Android で標準フォントに落ちる）
+export const font = {
+  round: 'ZenMaruGothic_700Bold',
+  roundHeavy: 'ZenMaruGothic_900Black',
+} as const
+
 // ボタン3階層。1画面に primary（塗り）はひとつだけ置く。
 export const btn = {
   // ① 塗り＝その画面の最重要操作
@@ -54,15 +61,15 @@ export const btn = {
     backgroundColor: c.primaryStrong,
     borderRadius: 14, paddingVertical: 14, alignItems: 'center',
   } satisfies ViewStyle,
-  primaryText: { color: 'white', fontSize: 15, fontWeight: '700' } satisfies TextStyle,
+  primaryText: { color: 'white', fontSize: 15, fontFamily: font.round } satisfies TextStyle,
 
   // ② 白＋枠＝並列の操作・戻る系
   secondary: {
     backgroundColor: 'white', borderWidth: 1, borderColor: c.borderStrong,
     borderRadius: 14, paddingVertical: 13, alignItems: 'center',
   } satisfies ViewStyle,
-  secondaryText: { color: c.textMid, fontSize: 14, fontWeight: '700' } satisfies TextStyle,
+  secondaryText: { color: c.textMid, fontSize: 14, fontFamily: font.round } satisfies TextStyle,
 
   // ③ テキストのみ＝補助操作
-  tertiaryText: { color: c.link, fontSize: 13, fontWeight: '600' } satisfies TextStyle,
+  tertiaryText: { color: c.link, fontSize: 13, fontFamily: font.round } satisfies TextStyle,
 }

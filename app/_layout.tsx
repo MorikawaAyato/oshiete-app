@@ -2,6 +2,7 @@ import { ClerkProvider, useAuth } from '@clerk/clerk-expo'
 import * as SecureStore from 'expo-secure-store'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { useEffect } from 'react'
+import { useFonts, ZenMaruGothic_700Bold, ZenMaruGothic_900Black } from '@expo-google-fonts/zen-maru-gothic'
 import { AppProvider } from '@/lib/AppContext'
 
 const tokenCache = {
@@ -36,6 +37,9 @@ function AppStack() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({ ZenMaruGothic_700Bold, ZenMaruGothic_900Black })
+  if (!fontsLoaded) return null
+
   // Clerkキー未設定時（開発中）はAuth不要でそのままアプリを表示
   if (!hasValidClerkKey) {
     return (

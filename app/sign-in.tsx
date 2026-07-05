@@ -2,7 +2,7 @@ import { useOAuth } from '@clerk/clerk-expo'
 import * as WebBrowser from 'expo-web-browser'
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native'
 import { SafeAreaView } from 'react-native'
-import { c } from '@/lib/theme'
+import { c, font } from '@/lib/theme'
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 36,
-    fontWeight: 'bold',
+    fontFamily: font.roundHeavy,
     color: c.skyStrong,
     letterSpacing: 1,
     marginBottom: 8,
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: font.round,
     color: c.textStrong,
     marginBottom: 8,
   },
@@ -89,5 +89,5 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  googleBtnText: { color: 'white', fontWeight: 'bold', fontSize: 15 },
+  googleBtnText: { color: 'white', fontFamily: font.round, fontSize: 15 },
 })
