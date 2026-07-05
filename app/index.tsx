@@ -99,6 +99,11 @@ export default function HomeScreen() {
     }
   }, [teacherSheet])
 
+  // シートが閉じたら入れ子の拡大表示も必ず閉じる（提示状態のズレ防止）
+  useEffect(() => {
+    if (!studentSheet) setShowStudentAvatar(false)
+  }, [studentSheet])
+
   const hasPending = pendingImages.length > 0
   const hasContent = !!imageDescription
   const unreadCount = mailMessages.filter((m) => !m.read).length
@@ -733,6 +738,15 @@ export default function HomeScreen() {
               </>
             )}
           </View>
+
+          {/* 生徒アバター拡大表示（シートの上に重ねるため入れ子にする。兄弟 Modal の同時表示は iOS で提示に失敗し、以降タッチが効かなくなる） */}
+          <Modal visible={showStudentAvatar} transparent animationType="fade" onRequestClose={() => setShowStudentAvatar(false)}>
+            <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowStudentAvatar(false)}>
+              <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white' }}>
+                {selectedStudent && <Image source={{ uri: selectedStudent.avatar }} style={{ width: '100%', height: '100%' }} />}
+              </View>
+            </Pressable>
+          </Modal>
         </View>
       </Modal>
 
@@ -741,15 +755,6 @@ export default function HomeScreen() {
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowTeacherAvatar(false)}>
           <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white' }}>
             <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: '100%', height: '100%' }} />
-          </View>
-        </Pressable>
-      </Modal>
-
-      {/* 生徒アバター拡大表示 */}
-      <Modal visible={showStudentAvatar} transparent animationType="fade" onRequestClose={() => setShowStudentAvatar(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowStudentAvatar(false)}>
-          <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white' }}>
-            {selectedStudent && <Image source={{ uri: selectedStudent.avatar }} style={{ width: '100%', height: '100%' }} />}
           </View>
         </Pressable>
       </Modal>
