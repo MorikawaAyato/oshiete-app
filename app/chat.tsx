@@ -13,6 +13,7 @@ import { getTeacherCharacter } from '@/lib/teacherProfile'
 import { addMail, loadRecap, loadFactsheet, saveRecapToHistory } from '@/lib/storage'
 import type { ChatMessage } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
+import BouncyPressable from '@/components/BouncyPressable'
 
 const MAX_TURNS = 9
 const HINT_MAX_USES = 3
@@ -46,32 +47,40 @@ function GradeIn({ delay, animate, stamp, children }: { delay: number; animate: 
   return <Animated.View style={{ opacity, transform: [{ scale }] }}>{children}</Animated.View>
 }
 
-function TypingDots({ color }: { color: string }) {
-  const dot0 = useRef(new Animated.Value(0)).current
-  const dot1 = useRef(new Animated.Value(0)).current
-  const dot2 = useRef(new Animated.Value(0)).current
+// 🐾 タイピング演出: 足あとがとことこ現れて消える
+function TypingPaws() {
+  const paw0 = useRef(new Animated.Value(0)).current
+  const paw1 = useRef(new Animated.Value(0)).current
+  const paw2 = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    const bounce = (dot: Animated.Value, delay: number) =>
+    // 各足あとの周期は 1600ms で揃える（時差で現れて、いっしょに消える）
+    const step = (paw: Animated.Value, delay: number) =>
       Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
-          Animated.timing(dot, { toValue: -5, duration: 200, useNativeDriver: true }),
-          Animated.timing(dot, { toValue: 0, duration: 200, useNativeDriver: true }),
-          Animated.delay(600 - delay),
+          Animated.timing(paw, { toValue: 1, duration: 200, useNativeDriver: true }),
+          Animated.delay(1000 - delay),
+          Animated.timing(paw, { toValue: 0, duration: 200, useNativeDriver: true }),
+          Animated.delay(200),
         ])
       )
-    const a0 = bounce(dot0, 0)
-    const a1 = bounce(dot1, 150)
-    const a2 = bounce(dot2, 300)
+    const a0 = step(paw0, 0)
+    const a1 = step(paw1, 300)
+    const a2 = step(paw2, 600)
     a0.start(); a1.start(); a2.start()
     return () => { a0.stop(); a1.stop(); a2.stop() }
   }, [])
 
   return (
-    <View style={{ backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', gap: 5, alignItems: 'center' }}>
-      {[dot0, dot1, dot2].map((dot, i) => (
-        <Animated.View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color, opacity: 0.7, transform: [{ translateY: dot }] }} />
+    <View style={{ backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+      {[paw0, paw1, paw2].map((paw, i) => (
+        <Animated.Text
+          key={i}
+          style={{ fontSize: 12, opacity: paw, transform: [{ translateY: i % 2 === 0 ? 2 : -2 }, { rotate: '-20deg' }] }}
+        >
+          🐾
+        </Animated.Text>
       ))}
     </View>
   )
@@ -442,7 +451,7 @@ export default function ChatScreen() {
           {loading && (
             <View style={[styles.bubble, styles.bubbleMana]}>
               <Image source={{ uri: student.avatar }} style={styles.bubbleAvatar} />
-              <TypingDots color={student.color} />
+              <TypingPaws />
             </View>
           )}
           {/* ノート写真カード（授業終了後に生徒から届く） */}
@@ -525,14 +534,14 @@ export default function ChatScreen() {
               </ScrollView>
               <View style={styles.notebookModalFooter}>
                 {!notebookGrading && notebookState === 'received' ? (
-                  <TouchableOpacity onPress={() => setNotebookGrading(true)} style={styles.gradeBtn}>
+                  <BouncyPressable onPress={() => setNotebookGrading(true)} style={styles.gradeBtn} haptic="medium">
                     <Text style={styles.gradeBtnText}>🖊️ 赤ペンで添削する</Text>
-                  </TouchableOpacity>
+                  </BouncyPressable>
                 ) : notebookState === 'received' ? (
                   <GradeIn delay={600 + (notebook?.lines.length ?? 0) * 350} animate>
-                    <TouchableOpacity onPress={handleReturnNotebook} style={styles.returnBtn}>
+                    <BouncyPressable onPress={handleReturnNotebook} style={styles.returnBtn} haptic="success">
                       <Text style={styles.gradeBtnText}>📮 ノートを返す</Text>
-                    </TouchableOpacity>
+                    </BouncyPressable>
                   </GradeIn>
                 ) : (
                   <TouchableOpacity onPress={() => setShowNotebook(false)} style={styles.closeNotebookBtn}>
@@ -582,13 +591,14 @@ export default function ChatScreen() {
                 multiline
                 maxLength={500}
               />
-              <TouchableOpacity
+              <BouncyPressable
                 style={[styles.sendBtn, { backgroundColor: student.colorStrong }, (!input.trim() || loading) && styles.sendBtnDisabled]}
                 onPress={send}
                 disabled={!input.trim() || loading}
+                haptic="light"
               >
                 <Text style={styles.sendBtnText}>送信</Text>
-              </TouchableOpacity>
+              </BouncyPressable>
             </View>
             {inputBlocked && (
               <Text style={styles.ngWarning}>⚠️ その内容は送信できません</Text>

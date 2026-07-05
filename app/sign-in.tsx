@@ -3,6 +3,7 @@ import * as WebBrowser from 'expo-web-browser'
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native'
 import { SafeAreaView } from 'react-native'
 import { c, font } from '@/lib/theme'
+import BouncyPressable from '@/components/BouncyPressable'
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -31,9 +32,9 @@ export default function SignIn() {
           <Text style={styles.cardDesc}>
             授業の履歴や設定を保存するためにログインが必要です
           </Text>
-          <TouchableOpacity style={styles.googleBtn} onPress={handleGoogle}>
+          <BouncyPressable style={styles.googleBtn} onPress={handleGoogle} haptic="light">
             <Text style={styles.googleBtnText}>🔑　Googleでログイン</Text>
-          </TouchableOpacity>
+          </BouncyPressable>
         </View>
       </View>
     </SafeAreaView>

@@ -18,6 +18,7 @@ import {
 import type { MailMessage } from '@/lib/storage'
 import type { HistoryItem } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
+import BouncyPressable from '@/components/BouncyPressable'
 
 type ImageData = { data: string; mimeType: string; uri: string }
 
@@ -473,13 +474,14 @@ export default function HomeScreen() {
                 textAlignVertical="top"
               />
               <Text style={styles.textInputCount}>{textInput.length} / 3000字</Text>
-              <TouchableOpacity
+              <BouncyPressable
                 style={[styles.analyzeBtn, textInput.trim().length < 10 && styles.analyzeBtnLoading]}
                 onPress={handleTextAnalyze}
                 disabled={textInput.trim().length < 10}
+                haptic="light"
               >
                 <Text style={styles.analyzeBtnText}>この内容で教材を作る</Text>
-              </TouchableOpacity>
+              </BouncyPressable>
             </View>
           )}
 
@@ -494,10 +496,11 @@ export default function HomeScreen() {
                 </ScrollView>
                 <Text style={styles.thumbCounter}>{pendingImages.length}/{MAX_IMAGES}</Text>
               </View>
-              <TouchableOpacity
+              <BouncyPressable
                 style={[styles.analyzeBtn, analyzing && styles.analyzeBtnLoading]}
                 onPress={analyzeFromPending}
                 disabled={analyzing}
+                haptic="light"
               >
                 {analyzing ? (
                   <View style={styles.row}>
@@ -507,7 +510,7 @@ export default function HomeScreen() {
                 ) : (
                   <Text style={styles.analyzeBtnText}>この写真で教材を作る</Text>
                 )}
-              </TouchableOpacity>
+              </BouncyPressable>
               <View style={styles.photoActions}>
                 {pendingImages.length < MAX_IMAGES && (
                   <>
@@ -595,14 +598,15 @@ export default function HomeScreen() {
               </TouchableOpacity>
 
               {/* 授業をするボタン */}
-              <TouchableOpacity
+              <BouncyPressable
                 style={[styles.startBtn, !selectedStudentId && styles.startBtnDisabled]}
                 onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
+                haptic="medium"
               >
                 <Text style={[styles.startBtnText, !selectedStudentId && styles.startBtnTextDisabled]}>
                   {selectedStudentId ? '授業をする' : '生徒を選んでからスタート →'}
                 </Text>
-              </TouchableOpacity>
+              </BouncyPressable>
             </Animated.View>
           )}
         </View>

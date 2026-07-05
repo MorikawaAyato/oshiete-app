@@ -8,6 +8,7 @@ import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import type { Section } from '@/lib/types'
 import { c, font } from '@/lib/theme'
+import BouncyPressable from '@/components/BouncyPressable'
 
 export default function PreviewScreen() {
   const router = useRouter()
@@ -229,7 +230,7 @@ export default function PreviewScreen() {
 
         {/* 授業ボタン */}
         {student ? (
-          <TouchableOpacity
+          <BouncyPressable
             style={styles.startClassBtn}
             onPress={() => {
               if (hasActiveChat) {
@@ -238,11 +239,12 @@ export default function PreviewScreen() {
                 router.push('/chat')
               }
             }}
+            haptic="medium"
           >
             <Text style={styles.startClassBtnText}>
               {hasActiveChat ? `🎓　${student.name}との授業に戻る` : `🎓　${student.name}と授業を始める`}
             </Text>
-          </TouchableOpacity>
+          </BouncyPressable>
         ) : (
           <View style={styles.startClassBtnDisabled}>
             <Text style={styles.startClassBtnDisabledText}>生徒を選ぶと授業を始められます</Text>

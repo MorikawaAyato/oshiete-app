@@ -16,6 +16,7 @@ import { fetchPreviewContent } from '@/lib/api'
 import type { HistoryItem } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { btn, c, font } from '@/lib/theme'
+import BouncyPressable from '@/components/BouncyPressable'
 
 type SheetMode = 'select' | 'main' | 'detail' | 'rename' | 'group' | 'new-group' | 'delete'
 
@@ -400,9 +401,9 @@ export default function LibraryScreen() {
                   <TouchableOpacity style={styles.selectBtnSecondary} onPress={() => viewItem(actionItem)}>
                     <Text style={styles.selectBtnSecondaryText}>📖 教材を見る</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.selectBtnPrimary} onPress={() => selectItem(actionItem)}>
+                  <BouncyPressable style={styles.selectBtnPrimary} onPress={() => selectItem(actionItem)} haptic="medium">
                     <Text style={styles.selectBtnPrimaryText}>🎓　授業をする</Text>
-                  </TouchableOpacity>
+                  </BouncyPressable>
                 </View>
                 <TouchableOpacity style={styles.cancelBtn} onPress={closeSheet}>
                   <Text style={styles.cancelBtnText}>キャンセル</Text>
