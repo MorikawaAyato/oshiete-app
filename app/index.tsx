@@ -17,7 +17,7 @@ import {
 } from '@/lib/storage'
 import type { MailMessage } from '@/lib/storage'
 import type { HistoryItem } from '@/lib/types'
-import { c } from '@/lib/theme'
+import { btn, c } from '@/lib/theme'
 
 type ImageData = { data: string; mimeType: string; uri: string }
 
@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
   // ヘッダー
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   appTitle: { fontSize: 18, fontWeight: '900', color: c.skyStrong, letterSpacing: -0.3 },
-  appSubtitle: { fontSize: 10, color: c.skySoft, fontWeight: '700', letterSpacing: 0.3 },
+  appSubtitle: { fontSize: 10, color: c.link, fontWeight: '700', letterSpacing: 0.3 },
   headerIcons: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
   mailIconBtn: { alignItems: 'center', gap: 2, position: 'relative' },
   mailIconCircle: {
@@ -954,19 +954,19 @@ const styles = StyleSheet.create({
   todaySection: { gap: 10 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { fontSize: 13, fontWeight: '800', color: c.skyStrong, letterSpacing: 0.8 },
-  sectionAction: { fontSize: 12, color: c.sky, fontWeight: '500' },
-  sectionClear: { fontSize: 11, color: c.faint, fontWeight: '500' },
+  sectionAction: { fontSize: 12, color: c.link, fontWeight: '500' },
+  sectionClear: { fontSize: 11, color: c.textSub, fontWeight: '500' },
 
   // 状態1：アップロード
   inputModeTabs: { flexDirection: 'row', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: c.border, marginBottom: 12 },
   inputModeTab: { flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: 'white' },
-  inputModeTabActive: { backgroundColor: c.primarySoft },
+  inputModeTabActive: { backgroundColor: c.primaryStrong },
   inputModeTabText: { fontSize: 13, fontWeight: '600', color: c.textSub },
   inputModeTabTextActive: { color: 'white' },
   textInputCard: { backgroundColor: 'white', borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: c.skySoft, padding: 16, gap: 10 },
   textInputArea: { height: 120, fontSize: 14, color: c.text, lineHeight: 22 },
   textInputFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  textInputCount: { fontSize: 11, color: c.faint, textAlign: 'right' },
+  textInputCount: { fontSize: 11, color: c.textSub, textAlign: 'right' },
   uploadCard: {
     backgroundColor: 'white',
     borderRadius: 20,
@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
   },
   uploadCardIcon: { fontSize: 32 },
   uploadCardText: { fontSize: 19, color: c.link, fontWeight: '800' },
-  uploadCardSub: { fontSize: 12, color: c.faint, fontWeight: '400' },
+  uploadCardSub: { fontSize: 12, color: c.textSub, fontWeight: '400' },
 
   // 状態2：ペンディング
   pendingCard: {
@@ -996,10 +996,10 @@ const styles = StyleSheet.create({
   thumbRowWrap: { flexDirection: 'row', alignItems: 'center' },
   thumbRow: { flex: 1 },
   thumb: { width: 72, height: 72, borderRadius: 12, marginRight: 8 },
-  thumbCounter: { paddingLeft: 10, fontSize: 15, fontWeight: '700', color: c.faint },
-  analyzeBtn: { backgroundColor: c.primarySoft, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  thumbCounter: { paddingLeft: 10, fontSize: 15, fontWeight: '700', color: c.textSub },
+  analyzeBtn: { ...btn.primary, borderRadius: 14, paddingVertical: 16 },
   analyzeBtnLoading: { backgroundColor: c.pinkMuted },
-  analyzeBtnText: { fontSize: 16, color: 'white', fontWeight: '800' },
+  analyzeBtnText: { ...btn.primaryText, fontSize: 16 },
   photoActions: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1, borderColor: c.pinkBorder, borderRadius: 14, overflow: 'hidden',
@@ -1054,11 +1054,11 @@ const styles = StyleSheet.create({
     backgroundColor: c.pinkSoft, alignItems: 'center', justifyContent: 'center',
   },
   lessonStudentPickText: { fontSize: 13, fontWeight: '700', color: c.primary, textAlign: 'center' },
-  lessonStudentPickSub: { fontSize: 10, color: c.pinkMuted },
+  lessonStudentPickSub: { fontSize: 10, color: c.primary },
 
   // 授業スタートボタン
   startBtn: {
-    backgroundColor: c.primarySoft,
+    backgroundColor: c.primaryStrong,
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
@@ -1071,7 +1071,7 @@ const styles = StyleSheet.create({
   },
   startBtnDisabled: { backgroundColor: c.pinkTint, borderWidth: 1.5, borderColor: c.pinkBorder, shadowOpacity: 0, elevation: 0 },
   startBtnText: { fontSize: 18, fontWeight: '800', color: 'white' },
-  startBtnTextDisabled: { color: c.pinkMuted, fontSize: 15, fontWeight: '600' },
+  startBtnTextDisabled: { color: c.primary, fontSize: 15, fontWeight: '600' },
 
   row: { flexDirection: 'row', alignItems: 'center' },
 
@@ -1094,7 +1094,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1.5,
     borderTopColor: c.skyBorder,
   },
-  recentEmpty: { fontSize: 13, color: c.faint, textAlign: 'center', paddingVertical: 16 },
+  recentEmpty: { fontSize: 13, color: c.textSub, textAlign: 'center', paddingVertical: 16 },
   recentItem: {
     backgroundColor: 'white', borderRadius: 14, flexDirection: 'row', alignItems: 'center', overflow: 'hidden',
     shadowColor: c.faint, shadowOffset: { width: 0, height: 1 },
@@ -1105,12 +1105,12 @@ const styles = StyleSheet.create({
   recentThumb: { width: 52, height: 52, borderRadius: 10, flexShrink: 0 },
   recentInfo: { flex: 1, minWidth: 0 },
   recentTitle: { fontSize: 13, fontWeight: '600', color: c.text },
-  recentDate: { fontSize: 10, color: c.faint, marginTop: 2, fontWeight: '300' },
-  checkMark: { fontSize: 14, color: c.primarySoft, fontWeight: 'bold' },
+  recentDate: { fontSize: 10, color: c.textSub, marginTop: 2, fontWeight: '300' },
+  checkMark: { fontSize: 14, color: c.primary, fontWeight: 'bold' },
   deleteBtn: { paddingHorizontal: 14, paddingVertical: 12 },
   deleteBtnText: { fontSize: 13, color: c.faint },
   seeAllBtn: { paddingVertical: 10, alignItems: 'center' },
-  seeAllText: { fontSize: 13, color: c.sky, fontWeight: '500' },
+  seeAllText: { fontSize: 13, color: c.link, fontWeight: '500' },
 
   // 生徒シート
   studentSheetContainer: { flex: 1, justifyContent: 'flex-end' },
@@ -1130,7 +1130,7 @@ const styles = StyleSheet.create({
   },
   profileAvatar: { width: 56, height: 56, borderRadius: 28 },
   profileName: { fontSize: 16, fontWeight: '700', color: c.textStrong },
-  profileTagline: { fontSize: 12, color: c.faint, marginTop: 3 },
+  profileTagline: { fontSize: 12, color: c.textSub, marginTop: 3 },
   sheetChangeBtn: {
     backgroundColor: c.bgSub, borderRadius: 14,
     paddingVertical: 14, alignItems: 'center', marginBottom: 8,
@@ -1140,7 +1140,7 @@ const styles = StyleSheet.create({
     backgroundColor: c.bg, borderRadius: 14,
     paddingVertical: 14, alignItems: 'center',
   },
-  sheetCloseBtnText: { fontSize: 14, fontWeight: '500', color: c.faint },
+  sheetCloseBtnText: { fontSize: 14, fontWeight: '500', color: c.textSub },
   pickerLabel: {
     fontSize: 13, fontWeight: '600', color: c.textSub,
     paddingBottom: 8, borderBottomWidth: StyleSheet.hairlineWidth,
@@ -1155,7 +1155,7 @@ const styles = StyleSheet.create({
   pickerItemInfo: { flex: 1, minWidth: 0 },
   pickerItemName: { fontSize: 14, fontWeight: '600', color: c.textStrong },
   pickerItemNameSel: { color: c.primary, fontWeight: '700' },
-  pickerItemTagline: { fontSize: 12, color: c.faint, marginTop: 2 },
+  pickerItemTagline: { fontSize: 12, color: c.textSub, marginTop: 2 },
   pickerItemCheck: { fontSize: 16, color: c.primary, fontWeight: '700' },
 
   // 受信トレイ
@@ -1180,7 +1180,7 @@ const styles = StyleSheet.create({
   inboxMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   inboxFrom: { fontSize: 12, fontWeight: '700', color: c.text },
   inboxUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: c.danger },
-  inboxDate: { fontSize: 10, color: c.faint, marginLeft: 'auto' },
+  inboxDate: { fontSize: 10, color: c.textSub, marginLeft: 'auto' },
   inboxSubject: { fontSize: 12, fontWeight: '600', color: c.text, marginTop: 1 },
   inboxContent: { fontSize: 13, color: c.textMid, lineHeight: 19, marginTop: 6 },
 
@@ -1232,7 +1232,7 @@ const styles = StyleSheet.create({
   },
   tcBackBtn: { flexDirection: 'row', alignItems: 'center' },
   tcBackBtnText: { fontSize: 12, fontWeight: '700', color: c.link },
-  teacherSectionLabel: { fontSize: 10, fontWeight: '700', color: c.faint, letterSpacing: 1, marginBottom: 8 },
+  teacherSectionLabel: { fontSize: 10, fontWeight: '700', color: c.textSub, letterSpacing: 1, marginBottom: 8 },
   teacherNameInput: {
     paddingHorizontal: 14, paddingVertical: 11,
     borderRadius: 12, borderWidth: 1, borderColor: c.border,

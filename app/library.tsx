@@ -15,7 +15,7 @@ import {
 import { fetchPreviewContent } from '@/lib/api'
 import type { HistoryItem } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
-import { c } from '@/lib/theme'
+import { btn, c } from '@/lib/theme'
 
 type SheetMode = 'select' | 'main' | 'detail' | 'rename' | 'group' | 'new-group' | 'delete'
 
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border,
   },
   headerTitle: { fontSize: 15, fontWeight: '700', color: c.textStrong },
-  headerCount: { fontSize: 12, color: c.faint },
+  headerCount: { fontSize: 12, color: c.textSub },
 
   bodyScroll: { flex: 1 },
   bodyContent: { paddingBottom: 8 },
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10,
   },
   groupTitle: { fontSize: 13, fontWeight: '700', color: c.textMid },
-  groupCount: { fontSize: 11, color: c.faint },
+  groupCount: { fontSize: 11, color: c.textSub },
   flex1: { flex: 1, minHeight: 0 },
   groupIconBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   groupIconBtnText: { fontSize: 14 },
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
     fontSize: 13, color: c.textStrong, backgroundColor: 'white',
   },
   groupSaveBtn: {
-    backgroundColor: c.sky, borderRadius: 10,
+    backgroundColor: c.link, borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 6,
   },
   groupSaveBtnDisabled: { backgroundColor: c.skyBorder },
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
   groupXBtnText: { fontSize: 14, color: c.textSub, fontWeight: '600' },
 
   ungroupedLabel: {
-    fontSize: 11, fontWeight: '700', color: c.faint,
+    fontSize: 11, fontWeight: '700', color: c.textSub,
     letterSpacing: 0.8, textTransform: 'uppercase',
     paddingHorizontal: 16, paddingVertical: 10,
   },
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
     shadowColor: c.faint, shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1, shadowRadius: 3, elevation: 2,
   },
-  cardActive: { borderColor: c.primarySoft, shadowColor: c.primarySoft, shadowOpacity: 0.2 },
+  cardActive: { borderColor: c.primary, shadowColor: c.primary, shadowOpacity: 0.2 },
   cardThumb: { width: '100%', aspectRatio: 1, backgroundColor: c.border },
   cardThumbEmpty: { alignItems: 'center', justifyContent: 'center' },
   cardThumbText: { backgroundColor: c.pinkSoft },
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
   cardInfoActive: { backgroundColor: c.pinkTint },
   cardTitle: { fontSize: 10, fontWeight: '600', color: c.textStrong, lineHeight: 14, minHeight: 28 },
   cardTitleActive: { color: c.primary },
-  cardDate: { fontSize: 9, color: c.faint, marginTop: 2 },
+  cardDate: { fontSize: 9, color: c.textSub, marginTop: 2 },
   cardMenuBtn: {
     position: 'absolute', top: 4, right: 4,
     width: 22, height: 22, borderRadius: 11,
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   emptyIcon: { fontSize: 48 },
-  emptyText: { fontSize: 14, color: c.faint },
+  emptyText: { fontSize: 14, color: c.textSub },
   emptyLink: { fontSize: 14, color: c.primary, fontWeight: '600' },
 
   footer: {
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sheetSubLabel: {
-    fontSize: 11, fontWeight: '700', color: c.faint, letterSpacing: 0.8,
+    fontSize: 11, fontWeight: '700', color: c.textSub, letterSpacing: 0.8,
     paddingHorizontal: 4, paddingBottom: 8,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.bgSub,
     marginBottom: 4,
@@ -737,11 +737,11 @@ const styles = StyleSheet.create({
   sheetRowTextRed: { color: c.danger },
   sheetRowTextPink: { color: c.primary, fontWeight: '600' },
   sheetRowTextMuted: { color: c.faint },
-  sheetRowSub: { fontSize: 12, color: c.faint, maxWidth: 100 },
+  sheetRowSub: { fontSize: 12, color: c.textSub, maxWidth: 100 },
   sheetRowCheck: { fontSize: 14, color: c.primary, fontWeight: '700' },
 
   groupPickerScroll: { maxHeight: 220 },
-  groupPickerEmpty: { fontSize: 13, color: c.faint, paddingHorizontal: 4, paddingVertical: 12 },
+  groupPickerEmpty: { fontSize: 13, color: c.textSub, paddingHorizontal: 4, paddingVertical: 12 },
   newGroupRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 4, paddingVertical: 14,
@@ -754,8 +754,8 @@ const styles = StyleSheet.create({
   detailBody: { paddingVertical: 12, gap: 8, marginBottom: 12 },
   detailTitle: { fontSize: 14, fontWeight: '700', color: c.textStrong },
   detailDesc: { fontSize: 13, color: c.textSub, lineHeight: 20 },
-  detailGroup: { fontSize: 12, color: c.sky },
-  detailDate: { fontSize: 11, color: c.faint },
+  detailGroup: { fontSize: 12, color: c.link },
+  detailDate: { fontSize: 11, color: c.textSub },
 
   renameInput: {
     borderWidth: 1.5, borderColor: c.border, borderRadius: 12,
@@ -770,7 +770,7 @@ const styles = StyleSheet.create({
 
   selectBtns: { gap: 10, marginTop: 12, marginBottom: 8 },
   selectBtnPrimary: {
-    backgroundColor: c.primarySoft, borderRadius: 16,
+    backgroundColor: c.primaryStrong, borderRadius: 16,
     paddingVertical: 18, alignItems: 'center',
     shadowColor: c.primary, shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
@@ -782,10 +782,7 @@ const styles = StyleSheet.create({
   },
   selectBtnSecondaryText: { color: c.link, fontWeight: '700', fontSize: 14 },
 
-  primaryBtn: {
-    backgroundColor: c.primary, borderRadius: 16,
-    paddingVertical: 14, alignItems: 'center', marginBottom: 8,
-  },
+  primaryBtn: { ...btn.primary, borderRadius: 16, marginBottom: 8 },
   primaryBtnDisabled: { backgroundColor: c.pinkMuted },
   primaryBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
 

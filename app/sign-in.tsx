@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   googleBtn: {
-    backgroundColor: c.primarySoft,
+    backgroundColor: c.primaryStrong,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,

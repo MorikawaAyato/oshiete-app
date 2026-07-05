@@ -12,7 +12,7 @@ import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
 import { addMail, loadRecap, loadFactsheet, saveRecapToHistory } from '@/lib/storage'
 import type { ChatMessage } from '@/lib/types'
-import { c } from '@/lib/theme'
+import { btn, c } from '@/lib/theme'
 
 const MAX_TURNS = 9
 const HINT_MAX_USES = 3
@@ -150,7 +150,7 @@ export default function ChatScreen() {
   const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
   const timerColor = classEnded
     ? c.faint
-    : progressRatio > 0.55 ? c.success : progressRatio > 0.3 ? c.warn : c.dangerSoft
+    : progressRatio > 0.55 ? c.success : progressRatio > 0.3 ? c.warn : c.danger
 
   useEffect(() => {
     if (chatMessages.length > 0) {
@@ -583,7 +583,7 @@ export default function ChatScreen() {
                 maxLength={500}
               />
               <TouchableOpacity
-                style={[styles.sendBtn, { backgroundColor: student.color }, (!input.trim() || loading) && styles.sendBtnDisabled]}
+                style={[styles.sendBtn, { backgroundColor: student.colorStrong }, (!input.trim() || loading) && styles.sendBtnDisabled]}
                 onPress={send}
                 disabled={!input.trim() || loading}
               >
@@ -632,15 +632,15 @@ const styles = StyleSheet.create({
   headerAvatar: { width: 32, height: 32, borderRadius: 16 },
   headerName: { fontSize: 14, fontWeight: 'bold', color: c.textStrong },
   timerText: { fontSize: 11, fontWeight: '700', marginTop: 1 },
-  timerSub: { fontSize: 9, color: c.faint, marginTop: 1 },
+  timerSub: { fontSize: 9, color: c.textSub, marginTop: 1 },
   endBtn: { backgroundColor: c.bgSub, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   endBtnText: { fontSize: 12, color: c.textSub, fontWeight: '600' },
 
   previewBar: {
-    backgroundColor: c.purpleTint, borderBottomWidth: 1, borderBottomColor: c.purpleBorder,
+    backgroundColor: c.skyTint, borderBottomWidth: 1, borderBottomColor: c.skyBorder,
     paddingVertical: 9, alignItems: 'center',
   },
-  previewBarText: { fontSize: 13, fontWeight: '700', color: c.purple },
+  previewBarText: { fontSize: 13, fontWeight: '700', color: c.link },
 
   messages: { flex: 1, backgroundColor: 'transparent' },
   messagesContent: { paddingHorizontal: 16, paddingVertical: 16, gap: 12 },
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
   bubbleMana: { justifyContent: 'flex-start' },
   bubbleAvatar: { width: 32, height: 32, borderRadius: 16, marginBottom: 2 },
   bubbleText: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
-  bubbleTextUser: { backgroundColor: c.primarySoft },
+  bubbleTextUser: { backgroundColor: c.primaryStrong },
   bubbleTextMana: { backgroundColor: 'white' },
   msgText: { fontSize: 14, color: c.textStrong, lineHeight: 21 },
   msgTextUser: { color: 'white' },
@@ -658,13 +658,9 @@ const styles = StyleSheet.create({
   typingDots: { backgroundColor: 'white', borderRadius: 16, padding: 12 },
 
   sendErrorWrap: { alignItems: 'center', gap: 8, paddingVertical: 4 },
-  sendErrorText: { fontSize: 12, color: c.dangerSoft, fontWeight: '600' },
-  retryBtn: {
-    backgroundColor: 'white', borderRadius: 12,
-    borderWidth: 1, borderColor: c.borderStrong,
-    paddingHorizontal: 16, paddingVertical: 9,
-  },
-  retryBtnText: { fontSize: 13, fontWeight: '700', color: c.textMid },
+  sendErrorText: { fontSize: 12, color: c.dangerText, fontWeight: '600' },
+  retryBtn: { ...btn.secondary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 9 },
+  retryBtnText: { ...btn.secondaryText, fontSize: 13 },
 
   notebookCard: {
     width: 210, backgroundColor: 'white', borderRadius: 16,
@@ -675,7 +671,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: c.paperBorder,
     paddingHorizontal: 10, paddingVertical: 8, overflow: 'hidden',
   },
-  notebookCardTitle: { fontSize: 10, fontWeight: '700', color: c.faint, marginBottom: 3 },
+  notebookCardTitle: { fontSize: 10, fontWeight: '700', color: c.textSub, marginBottom: 3 },
   notebookCardLine: {
     fontSize: 10, color: c.textSub, lineHeight: 18,
     borderBottomWidth: 1, borderBottomColor: c.paperLine + '80',
@@ -719,29 +715,21 @@ const styles = StyleSheet.create({
   notebookHanamaru: { fontSize: 30 },
   notebookModalFooter: { paddingHorizontal: 18, paddingTop: 12 },
   gradeBtn: {
-    backgroundColor: c.dangerSoft, borderRadius: 12,
+    backgroundColor: c.danger, borderRadius: 12,
     paddingVertical: 13, alignItems: 'center',
   },
   returnBtn: {
-    backgroundColor: c.primarySoft, borderRadius: 12,
+    backgroundColor: c.primaryStrong, borderRadius: 12,
     paddingVertical: 13, alignItems: 'center',
   },
   gradeBtnText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
-  closeNotebookBtn: {
-    backgroundColor: 'white', borderRadius: 12,
-    borderWidth: 1, borderColor: c.borderStrong,
-    paddingVertical: 13, alignItems: 'center',
-  },
-  closeNotebookBtnText: { fontSize: 14, fontWeight: '700', color: c.textMid },
+  closeNotebookBtn: { ...btn.secondary, borderRadius: 12 },
+  closeNotebookBtnText: { ...btn.secondaryText },
 
   endedActions: { marginTop: 16, gap: 10 },
   endedLabel: { fontSize: 13, color: c.textSub, textAlign: 'center', fontWeight: '600' },
-  finishBtn: {
-    backgroundColor: 'white', borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center',
-    borderWidth: 1.5, borderColor: c.borderStrong,
-  },
-  finishBtnText: { fontSize: 14, fontWeight: '700', color: c.textMid },
+  finishBtn: { ...btn.secondary, borderRadius: 12, paddingVertical: 14 },
+  finishBtnText: { ...btn.secondaryText },
   finishBtnTextPreview: { fontSize: 14, fontWeight: '700', color: c.link },
 
   inputAreaWrap: {

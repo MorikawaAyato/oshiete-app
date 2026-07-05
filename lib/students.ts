@@ -6,6 +6,7 @@ export type Student = {
   tagline: string
   avatar: string
   color: string
+  colorStrong: string // 白文字を載せるボタン用の濃い色
   systemPrompt: string
   endMessage: string
   notebookMessage: string
@@ -52,6 +53,7 @@ export const STUDENTS: Student[] = [
     tagline: 'ふわふわ元気なサモエド女の子',
     avatar: `${API_BASE}/samoedo-girl.webp`,
     color: '#ec4899',
+    colorStrong: '#db2777',
     endMessage: '⏰ あっ、もう時間になっちゃいました！先生、今日もありがとうございました！とっても楽しかったです！✨ またいつでも教えてください！😊',
     notebookMessage: 'あっ、そうだ！今日書いたノート、写真に撮って送りますね！📷✨ 添削してもらえたらうれしいです！',
     notebookThanks: 'わあっ、添削ありがとうございます！✨ 直してもらったところ、次までにちゃんと覚え直しますね！😊',
@@ -72,6 +74,7 @@ ${TEACHING_ROLE}`,
     tagline: 'おっとりのんびりなサモエド男の子',
     avatar: `${API_BASE}/samoedo-boy.webp`,
     color: '#3b82f6',
+    colorStrong: '#2563eb',
     endMessage: '⏰ あ...もう時間なんですね。先生、今日もありがとうございました...。またゆっくり教えてください🐾',
     notebookMessage: 'あの...今日のノート、写真に撮ったので送りますね...📷 まちがってたら教えてほしいです🐾',
     notebookThanks: '添削ありがとうございます...！なおしてもらったところ、ゆっくり覚え直します🐾😊',

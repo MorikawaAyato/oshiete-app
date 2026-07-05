@@ -22,7 +22,7 @@ export default function PreviewScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <ActivityIndicator color={c.primarySoft} />
+          <ActivityIndicator color={c.primary} />
         </View>
       </SafeAreaView>
     )
@@ -266,14 +266,14 @@ const styles = StyleSheet.create({
   backBtn: { paddingVertical: 4, paddingRight: 8 },
   backText: { fontSize: 13, color: c.link },
   navTitle: { fontSize: 15, fontWeight: 'bold', color: c.textStrong },
-  navStep: { fontSize: 12, color: c.primarySoft, fontWeight: '700' },
+  navStep: { fontSize: 12, color: c.primary, fontWeight: '700' },
 
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 24 },
 
   centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  stepLabel: { fontSize: 11, fontWeight: '700', color: c.primarySoft, letterSpacing: 1, marginBottom: 16, textTransform: 'uppercase' },
+  stepLabel: { fontSize: 11, fontWeight: '700', color: c.primary, letterSpacing: 1, marginBottom: 16, textTransform: 'uppercase' },
   themeText: { fontSize: 22, fontWeight: 'bold', color: c.textStrong, textAlign: 'center', lineHeight: 32 },
-  hint: { fontSize: 13, color: c.faint, marginTop: 32 },
+  hint: { fontSize: 13, color: c.textSub, marginTop: 32 },
 
   flowItem: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   flowNum: {
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     backgroundColor: c.pinkSoft, borderWidth: 1, borderColor: c.pinkBorder,
     justifyContent: 'center', alignItems: 'center', marginTop: 2,
   },
-  flowNumText: { fontSize: 12, fontWeight: 'bold', color: c.primarySoft },
+  flowNumText: { fontSize: 12, fontWeight: 'bold', color: c.primary },
   flowInfo: { flex: 1 },
   flowTitle: { fontSize: 15, fontWeight: 'bold', color: c.textStrong },
   flowSummary: { fontSize: 13, color: c.textMid, marginTop: 3, lineHeight: 19 },
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     backgroundColor: c.pinkSoft, borderWidth: 1, borderColor: c.pinkBorder,
     justifyContent: 'center', alignItems: 'center',
   },
-  sectionNumText: { fontSize: 12, fontWeight: 'bold', color: c.primarySoft },
+  sectionNumText: { fontSize: 12, fontWeight: 'bold', color: c.primary },
   sectionTitle: { fontSize: 17, fontWeight: 'bold', color: c.textStrong, flex: 1 },
 
   summaryBox: {
@@ -335,25 +335,25 @@ const styles = StyleSheet.create({
   keywordHidden: { backgroundColor: c.border, color: c.border },
 
   keywordsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
-  kwBadge: { backgroundColor: c.purpleBg, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  kwBadge: { backgroundColor: c.skyTint, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   kwBadgeHidden: { backgroundColor: c.border },
-  kwText: { fontSize: 11, fontWeight: '600', color: c.purpleText },
+  kwText: { fontSize: 11, fontWeight: '600', color: c.link },
   kwTextHidden: { color: c.border },
-  revealHint: { fontSize: 11, color: c.faint, marginBottom: 4 },
+  revealHint: { fontSize: 11, color: c.textSub, marginBottom: 4 },
 
   hiddenPill: {
     paddingHorizontal: 12, paddingVertical: 12, borderRadius: 12,
     borderWidth: 1.5, borderColor: c.border, backgroundColor: c.bg,
     alignItems: 'center', justifyContent: 'center', minWidth: 56,
   },
-  hiddenPillOn: { borderColor: c.primarySoft, backgroundColor: c.pinkTint },
-  hiddenPillText: { fontSize: 12, fontWeight: '700', color: c.faint },
+  hiddenPillOn: { borderColor: c.primary, backgroundColor: c.pinkTint },
+  hiddenPillText: { fontSize: 12, fontWeight: '700', color: c.textSub },
   hiddenPillTextOn: { color: c.primaryStrong },
   hiddenPillSpace: { minWidth: 56 },
 
   startClassBtn: {
     marginHorizontal: 16, marginBottom: 8, paddingVertical: 13,
-    backgroundColor: c.primarySoft, borderRadius: 14, alignItems: 'center',
+    backgroundColor: c.primaryStrong, borderRadius: 14, alignItems: 'center',
   },
   startClassBtnText: { fontSize: 15, fontWeight: 'bold', color: 'white' },
   startClassBtnDisabled: {
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     backgroundColor: c.bgSub, borderRadius: 14, alignItems: 'center',
     borderWidth: 1, borderColor: c.border,
   },
-  startClassBtnDisabledText: { fontSize: 13, color: c.faint },
+  startClassBtnDisabledText: { fontSize: 13, color: c.textSub },
 
   footer: {
     flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingVertical: 12,
