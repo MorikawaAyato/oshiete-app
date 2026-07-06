@@ -11,6 +11,7 @@ export type MailMessage = {
   timestamp: string
   read: boolean
   historyId?: string // あとから質問メールの対象教材（メールから教材をひらくCTA用）
+  examInvite?: boolean // 校長先生からの昇進試験案内（メールから受験するCTA用）
 }
 
 const MAIL_KEY = 'senseigokko_mail'
@@ -68,15 +69,35 @@ export async function saveFollowupSent(keys: Set<string>): Promise<void> {
   try { await AsyncStorage.setItem(FOLLOWUP_SENT_KEY, JSON.stringify([...keys].slice(-100))) } catch {}
 }
 
-// 先生の名前（メール生成用。キーはAppContextのTEACHER_KEYと同じ）
-export async function loadTeacherName(): Promise<string | undefined> {
+// 昇進試験の案内メールを送った称号名
+const EXAM_INVITE_SENT_KEY = 'oshiete_exam_invite_sent'
+
+export async function loadExamInviteSent(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(EXAM_INVITE_SENT_KEY)
+    return raw ? (JSON.parse(raw) as string[]) : []
+  } catch {
+    return []
+  }
+}
+
+export async function saveExamInviteSent(titles: string[]): Promise<void> {
+  try { await AsyncStorage.setItem(EXAM_INVITE_SENT_KEY, JSON.stringify(titles)) } catch {}
+}
+
+// 保存済み先生プロフィール（キーはAppContextのTEACHER_KEYと同じ）
+export async function loadTeacherProfileStored(): Promise<{ name?: string; title?: string; unlockedTitleCount?: number } | null> {
   try {
     const raw = await AsyncStorage.getItem('oshiete_teacher')
-    if (!raw) return undefined
-    return (JSON.parse(raw) as { name?: string }).name || undefined
+    return raw ? (JSON.parse(raw) as { name?: string; title?: string; unlockedTitleCount?: number }) : null
   } catch {
-    return undefined
+    return null
   }
+}
+
+// 先生の名前（メール生成用）
+export async function loadTeacherName(): Promise<string | undefined> {
+  return (await loadTeacherProfileStored())?.name || undefined
 }
 
 const KEY = 'oshiete_history'

@@ -50,6 +50,18 @@ export async function fetchFactsheet(
   return res.json()
 }
 
+// 昇進試験の採点（一問一答バンクのカードが正解基準）
+export async function gradeExam(
+  items: { q: string; a: string; statement: string; userAnswer: string }[],
+): Promise<{ results?: { correct: boolean; comment: string }[]; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/exam`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  })
+  return res.json()
+}
+
 // あとから質問メール（授業の数日後、生徒がつまずきを思い出して質問してくる）の生成
 export async function fetchFollowupMail(
   studentId: string,

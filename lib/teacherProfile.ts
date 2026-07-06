@@ -2,6 +2,7 @@ export type TeacherProfile = {
   name: string
   title: string
   avatarId: string
+  unlockedTitleCount?: number // 解放済み称号数（昇進試験で増える。旧データは現称号から補完）
 }
 
 export const TEACHER_AVATAR_IMAGES: Record<string, ReturnType<typeof require>> = {
@@ -26,6 +27,12 @@ export function normalizeAvatarId(avatarId: string): string {
 }
 
 export const TEACHER_TITLES = ['新人先生', '見習い先生', '一人前の先生', 'ベテラン先生', '名物先生']
+
+// 解放済み称号数。昇進試験導入前のプロフィールは現在の称号までを解放済みとして扱う
+export function getUnlockedTitleCount(profile: TeacherProfile): number {
+  const fromTitle = TEACHER_TITLES.indexOf(profile.title) + 1
+  return Math.min(TEACHER_TITLES.length, Math.max(profile.unlockedTitleCount ?? 1, fromTitle, 1))
+}
 
 export const DEFAULT_TEACHER: TeacherProfile = { name: '', title: '新人先生', avatarId: 'usagi' }
 
