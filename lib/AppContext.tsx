@@ -16,6 +16,7 @@ type ChatSession = {
   turnCount: number
   classEnded: boolean
   hints: string[] | null
+  correctHintIndex: number | null
   hintUsesLeft: number
   correctness: (boolean | null)[]
   lessonRecap: Recap | null
@@ -49,6 +50,8 @@ type AppState = {
   setClassEnded: (v: boolean) => void
   hints: string[] | null
   setHints: (v: string[] | null) => void
+  correctHintIndex: number | null
+  setCorrectHintIndex: (v: number | null) => void
   hintUsesLeft: number
   setHintUsesLeft: (v: number | ((prev: number) => number)) => void
   correctness: (boolean | null)[]
@@ -118,6 +121,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [turnCount, setTurnCount] = useState(0)
   const [classEnded, setClassEnded] = useState(false)
   const [hints, setHints] = useState<string[] | null>(null)
+  const [correctHintIndex, setCorrectHintIndex] = useState<number | null>(null) // 虎の巻の正解位置（無編集送信の検出用）
   const [hintUsesLeft, setHintUsesLeft] = useState(3)
   const [correctness, setCorrectness] = useState<(boolean | null)[]>([])
   const [lessonRecap, setLessonRecap] = useState<Recap | null>(null)
@@ -139,6 +143,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setTurnCount(s.turnCount ?? 0)
             setClassEnded(!!s.classEnded)
             setHints(s.hints ?? null)
+            setCorrectHintIndex(s.correctHintIndex ?? null)
             setHintUsesLeft(typeof s.hintUsesLeft === 'number' ? s.hintUsesLeft : 3)
             setCorrectness(Array.isArray(s.correctness) ? s.correctness : [])
             setLessonRecap(s.lessonRecap ?? null)
@@ -160,16 +165,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const session: ChatSession = {
       imageDescription, notes, currentHistoryId,
       messages: chatMessages, turnCount, classEnded,
-      hints, hintUsesLeft, correctness, lessonRecap, notebook, notebookState,
+      hints, correctHintIndex, hintUsesLeft, correctness, lessonRecap, notebook, notebookState,
     }
     AsyncStorage.setItem(CHAT_SESSION_KEY, JSON.stringify(session)).catch(() => {})
-  }, [chatMessages, turnCount, classEnded, hints, hintUsesLeft, correctness, lessonRecap, notebook, notebookState, imageDescription, notes, currentHistoryId])
+  }, [chatMessages, turnCount, classEnded, hints, correctHintIndex, hintUsesLeft, correctness, lessonRecap, notebook, notebookState, imageDescription, notes, currentHistoryId])
 
   const resetChatSession = () => {
     setChatMessages([])
     setTurnCount(0)
     setClassEnded(false)
     setHints(null)
+    setCorrectHintIndex(null)
     setHintUsesLeft(3)
     setCorrectness([])
     setLessonRecap(null)
@@ -192,6 +198,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         turnCount, setTurnCount,
         classEnded, setClassEnded,
         hints, setHints,
+        correctHintIndex, setCorrectHintIndex,
         hintUsesLeft, setHintUsesLeft,
         correctness, setCorrectness,
         lessonRecap, setLessonRecap,

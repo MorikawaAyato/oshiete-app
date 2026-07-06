@@ -79,11 +79,12 @@ export async function sendChat(
   correctness?: (boolean | null)[],
   recap?: Recap,
   factsheet?: Factsheet,
+  hintCorrect?: boolean,
 ): Promise<{ text?: string; mailSubject?: string; mailContent?: string; hints?: string[]; correctHintIndex?: number; correct?: boolean; notebook?: Notebook; recap?: Recap; error?: string }> {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, recap, factsheet }),
+    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, recap, factsheet, hintCorrect }),
   })
   return res.json()
 }
