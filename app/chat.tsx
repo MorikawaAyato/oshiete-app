@@ -155,6 +155,7 @@ export default function ChatScreen() {
   const [hintCharged, setHintCharged] = useState(false) // このターンのヒントを開封済みか（開閉で二重消費しない）
   const [showNotebook, setShowNotebook] = useState(false)
   const [notebookGrading, setNotebookGrading] = useState(false)
+  const [studentTyping, setStudentTyping] = useState(false) // 授業終了の連投を時差配信する間の入力中演出
 
   const remainingMins = classEnded ? 0 : (MAX_TURNS - turnCount) * 5
   const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
@@ -246,20 +247,24 @@ export default function ChatScreen() {
               read: false,
             })
           }
+          // 授業終了の連投（最終返答→挨拶→ノート）は入力中演出を挟んで1通ずつ届ける
           const nb = res.notebook
+          setTimeout(() => setStudentTyping(true), 900)
           setTimeout(() => {
+            setStudentTyping(false)
             setChatMessages(prev => [...prev, { role: 'mana', text: student.endMessage }])
             setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
-            if (nb) {
-              // 終了の挨拶のあとにノート写真が届く
-              setTimeout(() => {
-                setChatMessages(prev => [...prev, { role: 'mana', text: student.notebookMessage }])
-                setNotebook(nb)
-                setNotebookState('received')
-                setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
-              }, 1200)
-            }
-          }, 500)
+          }, 2600)
+          if (nb) {
+            setTimeout(() => setStudentTyping(true), 3600)
+            setTimeout(() => {
+              setStudentTyping(false)
+              setChatMessages(prev => [...prev, { role: 'mana', text: student.notebookMessage }])
+              setNotebook(nb)
+              setNotebookState('received')
+              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+            }, 5400)
+          }
         }
       } else {
         // APIがエラーJSONを返した場合（メッセージには何も追加しない）
@@ -455,7 +460,7 @@ export default function ChatScreen() {
               </TouchableOpacity>
             </View>
           )}
-          {loading && (
+          {(loading || studentTyping) && (
             <View style={[styles.bubble, styles.bubbleMana]}>
               <Image source={{ uri: student.avatar }} style={styles.bubbleAvatar} />
               <TypingPaws />
