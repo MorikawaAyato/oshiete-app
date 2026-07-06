@@ -10,6 +10,7 @@ export type MailMessage = {
   content: string
   timestamp: string
   read: boolean
+  historyId?: string // あとから質問メールの対象教材（メールから教材をひらくCTA用）
 }
 
 const MAIL_KEY = 'senseigokko_mail'
@@ -49,6 +50,33 @@ export async function markMailRead(id: string): Promise<MailMessage[]> {
   const updated = current.map((m) => m.id === id ? { ...m, read: true } : m)
   await saveMail(updated)
   return updated
+}
+
+// あとから質問メール（間隔反復）の送信済みRecapキー
+const FOLLOWUP_SENT_KEY = 'oshiete_followup_sent'
+
+export async function loadFollowupSent(): Promise<Set<string>> {
+  try {
+    const raw = await AsyncStorage.getItem(FOLLOWUP_SENT_KEY)
+    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+  } catch {
+    return new Set()
+  }
+}
+
+export async function saveFollowupSent(keys: Set<string>): Promise<void> {
+  try { await AsyncStorage.setItem(FOLLOWUP_SENT_KEY, JSON.stringify([...keys].slice(-100))) } catch {}
+}
+
+// 先生の名前（メール生成用。キーはAppContextのTEACHER_KEYと同じ）
+export async function loadTeacherName(): Promise<string | undefined> {
+  try {
+    const raw = await AsyncStorage.getItem('oshiete_teacher')
+    if (!raw) return undefined
+    return (JSON.parse(raw) as { name?: string }).name || undefined
+  } catch {
+    return undefined
+  }
 }
 
 const KEY = 'oshiete_history'

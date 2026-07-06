@@ -10,19 +10,24 @@ import * as ImagePicker from 'expo-image-picker'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage } from '@/lib/teacherProfile'
-import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet } from '@/lib/api'
+import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
-  loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead,
+  loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
+  loadFollowupSent, saveFollowupSent, loadTeacherName,
 } from '@/lib/storage'
 import type { MailMessage } from '@/lib/storage'
-import type { HistoryItem } from '@/lib/types'
+import type { HistoryItem, Recap } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 
 type ImageData = { data: string; mimeType: string; uri: string }
 
 const MAX_IMAGES = 3
+
+// あとから質問メール（間隔反復）：授業の2日後〜2週間以内のRecapが対象
+const FOLLOWUP_MIN_AGE_MS = 2 * 24 * 60 * 60 * 1000
+const FOLLOWUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 
 export default function HomeScreen() {
   const router = useRouter()
@@ -90,6 +95,47 @@ export default function HomeScreen() {
   useEffect(() => {
     loadHistory().then(setHistory)
     loadMail().then(setMailMessages)
+  }, [])
+
+  // あとから質問メール：授業の数日後、生徒がつまずきを思い出して質問してくる（起動ごとに最大1通）
+  const followupChecked = useRef(false)
+  useEffect(() => {
+    if (followupChecked.current) return
+    followupChecked.current = true
+    void (async () => {
+      try {
+        const [items, sent, teacherName] = await Promise.all([loadHistory(), loadFollowupSent(), loadTeacherName()])
+        let best: { item: HistoryItem; studentId: string; recap: Recap; key: string } | null = null
+        for (const item of items) {
+          for (const [studentId, recap] of Object.entries(item.recaps ?? {})) {
+            const age = Date.now() - recap.savedAt
+            if (age < FOLLOWUP_MIN_AGE_MS || age > FOLLOWUP_MAX_AGE_MS) continue
+            const key = `${item.id}_${studentId}_${recap.savedAt}`
+            if (sent.has(key)) continue
+            if (!best || recap.savedAt > best.recap.savedAt) best = { item, studentId, recap, key }
+          }
+        }
+        if (!best) return
+        const student = STUDENTS.find((s) => s.id === best!.studentId)
+        if (!student) return
+        const res = await fetchFollowupMail(best.studentId, best.item.title, best.recap, teacherName)
+        if (!res.body) return
+        const updated = await addMail({
+          id: Date.now().toString(),
+          type: 'student',
+          from: student.name,
+          studentId: student.id,
+          subject: res.subject,
+          content: res.body,
+          timestamp: new Date().toISOString(),
+          read: false,
+          historyId: best.item.id,
+        })
+        setMailMessages(updated)
+        sent.add(best.key)
+        await saveFollowupSent(sent)
+      } catch { /* メールは任意機能。失敗時は次回起動時に再挑戦 */ }
+    })()
   }, [])
 
   useEffect(() => {
@@ -804,6 +850,20 @@ export default function HomeScreen() {
                       </View>
                       <Text style={styles.inboxSubject} numberOfLines={isExpanded ? undefined : 1}>{msg.subject ?? msg.content}</Text>
                       {isExpanded && msg.subject && <Text style={styles.inboxContent}>{msg.content}</Text>}
+                      {isExpanded && msg.historyId && history.some((h) => h.id === msg.historyId) && (
+                        <TouchableOpacity
+                          onPress={() => {
+                            const item = history.find((h) => h.id === msg.historyId)
+                            if (!item) return
+                            setShowInbox(false)
+                            setExpandedMailId(null)
+                            selectHistory(item)
+                          }}
+                          style={styles.inboxOpenBtn}
+                        >
+                          <Text style={styles.inboxOpenBtnText}>📖 この教材をひらいて教えてあげる</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </TouchableOpacity>
                 )
@@ -1192,6 +1252,8 @@ const styles = StyleSheet.create({
   inboxDate: { fontSize: 10, color: c.textSub, marginLeft: 'auto' },
   inboxSubject: { fontSize: 12, fontWeight: '600', color: c.text, marginTop: 1 },
   inboxContent: { fontSize: 13, color: c.textMid, lineHeight: 19, marginTop: 6 },
+  inboxOpenBtn: { alignSelf: 'flex-start', backgroundColor: c.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, marginTop: 10 },
+  inboxOpenBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
 
   // 先生証シート
   tcSheetBottom: { backgroundColor: c.ink, paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0 },

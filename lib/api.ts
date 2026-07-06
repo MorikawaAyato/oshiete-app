@@ -50,6 +50,21 @@ export async function fetchFactsheet(
   return res.json()
 }
 
+// あとから質問メール（授業の数日後、生徒がつまずきを思い出して質問してくる）の生成
+export async function fetchFollowupMail(
+  studentId: string,
+  materialTitle: string,
+  recap: Recap,
+  teacherName?: string,
+): Promise<{ subject?: string; body?: string; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/followup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ studentId, materialTitle, recap, teacherName }),
+  })
+  return res.json()
+}
+
 export async function startChat(
   studentId: string,
   imageDescription: string,
