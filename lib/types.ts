@@ -11,10 +11,19 @@ export type Recap = {
   uncoveredTopics: string[]
 }
 
+// 一問一答カード（教材を原子的な事実単位に分解したもの。判定・出題の統一基準）
+export type QACard = {
+  q: string // 一問
+  a: string // 一答
+  statement: string // 平叙文1文（facts互換）
+  source: string // 教材内の根拠記述の引用
+}
+
 // 教材ファクトシート（取り込み後にバックグラウンド生成。正誤判定の基準・虎の巻の誤答の素材）
 export type Factsheet = {
   facts: string[]
   misconceptions: string[]
+  cards?: QACard[] // 一問一答バンク（生成失敗時は欠落し従来動作）
 }
 
 export type NotebookLine = {

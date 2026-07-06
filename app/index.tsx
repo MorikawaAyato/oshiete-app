@@ -333,8 +333,8 @@ export default function HomeScreen() {
     if (!item.previewContent) {
       void backgroundFetchPreview(item.imageDescription, item.id)
     }
-    // ファクトシート未生成の古い教材はここでバックフィル
-    if (!item.factsheet) {
+    // ファクトシート（一問一答バンク）未生成の古い教材はここでバックフィル
+    if (!item.factsheet?.cards?.length) {
       void backgroundFetchFactsheet(item.imageDescription, item.notes, item.id)
     }
   }
