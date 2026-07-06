@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { Factsheet, HistoryItem, PreviewContent, Recap } from './types'
+import type { Factsheet, HistoryItem, PreviewContent, Recap, QACard } from './types'
 
 export type MailMessage = {
   id: string
@@ -12,6 +12,37 @@ export type MailMessage = {
   read: boolean
   historyId?: string // あとから質問メールの対象教材（メールから教材をひらくCTA用）
   examInvite?: boolean // 校長先生からの昇進試験案内（メールから受験するCTA用）
+  homework?: boolean // 宿題の答案が届いたメール（メールから添削するCTA用）
+}
+
+// 宿題：先生が3問選んで出すと、時間をおいて生徒の答案（1問だけ誤答入り）が届き、間違い探しの添削をする
+export type HomeworkAnswer = { text: string; wrong: boolean }
+export type Homework = {
+  historyId: string
+  materialTitle: string
+  studentId: string
+  cards: QACard[]
+  assignedAt: number
+  state: 'assigned' | 'arrived'
+  answers?: HomeworkAnswer[]
+}
+
+const HOMEWORK_KEY = 'oshiete_homework'
+
+export async function loadHomework(): Promise<Homework | null> {
+  try {
+    const raw = await AsyncStorage.getItem(HOMEWORK_KEY)
+    return raw ? (JSON.parse(raw) as Homework) : null
+  } catch {
+    return null
+  }
+}
+
+export async function saveHomework(hw: Homework | null): Promise<void> {
+  try {
+    if (hw) await AsyncStorage.setItem(HOMEWORK_KEY, JSON.stringify(hw))
+    else await AsyncStorage.removeItem(HOMEWORK_KEY)
+  } catch {}
 }
 
 const MAIL_KEY = 'senseigokko_mail'

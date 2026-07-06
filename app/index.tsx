@@ -11,13 +11,14 @@ import * as ImagePicker from 'expo-image-picker'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, getUnlockedTitleCount } from '@/lib/teacherProfile'
-import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail, gradeExam } from '@/lib/api'
+import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail, gradeExam, fetchHomeworkAnswers } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
   loadFollowupSent, saveFollowupSent, loadTeacherName, loadExamInviteSent, saveExamInviteSent, loadTeacherProfileStored,
+  loadHomework, saveHomework,
 } from '@/lib/storage'
-import type { MailMessage } from '@/lib/storage'
+import type { MailMessage, Homework, HomeworkAnswer } from '@/lib/storage'
 import type { HistoryItem, Recap, QACard } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -33,6 +34,11 @@ const FOLLOWUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 // 昇進試験：校長先生が一問一答バンクから出題する短答記述式テスト。合格で次の称号が解放される
 const EXAM_QUESTION_COUNT = 5
 const EXAM_PASS_COUNT = 4
+
+// 宿題：3問選んで出すと半日後以降の起動で答案（1問だけ誤答入り）が届く
+const HOMEWORK_PICK_COUNT = 3
+const HOMEWORK_CANDIDATE_COUNT = 6
+const HOMEWORK_ARRIVE_MS = 12 * 60 * 60 * 1000
 
 export default function HomeScreen() {
   const router = useRouter()
@@ -183,6 +189,99 @@ export default function HomeScreen() {
   const [examError, setExamError] = useState<string | null>(null)
 
   const examCardPool = () => history.flatMap((h) => h.factsheet?.cards ?? [])
+
+  // 宿題の進行状態
+  const [homework, setHomework] = useState<Homework | null>(null)
+  const [hwPickerOpen, setHwPickerOpen] = useState(false)
+  const [hwCandidates, setHwCandidates] = useState<QACard[]>([])
+  const [hwSelected, setHwSelected] = useState<Set<number>>(new Set())
+  const [hwGradeOpen, setHwGradeOpen] = useState(false)
+  const [hwMarks, setHwMarks] = useState<(boolean | null)[]>([]) // 先生がつけた⭕（true）❌（false）
+  const [hwGradeResult, setHwGradeResult] = useState(false)
+
+  // アクティブ教材のカード（factsheetはバックフィルで後から届くためhistoryから引く）
+  const activeCards = (): QACard[] =>
+    history.find((h) => h.id === activeHistoryId)?.factsheet?.cards ?? []
+
+  const openHomeworkPicker = () => {
+    if (!selectedStudentId) { showToast(); return }
+    const item = history.find((h) => h.id === activeHistoryId)
+    const cards = item?.factsheet?.cards ?? []
+    if (!item || cards.length < HOMEWORK_CANDIDATE_COUNT) return
+    const shuffled = [...cards]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    setHwCandidates(shuffled.slice(0, HOMEWORK_CANDIDATE_COUNT))
+    setHwSelected(new Set())
+    setHwPickerOpen(true)
+  }
+
+  const assignHomework = () => {
+    const item = history.find((h) => h.id === activeHistoryId)
+    if (!item || !selectedStudentId || hwSelected.size !== HOMEWORK_PICK_COUNT) return
+    const hw: Homework = {
+      historyId: item.id,
+      materialTitle: item.title,
+      studentId: selectedStudentId,
+      cards: [...hwSelected].map((i) => hwCandidates[i]),
+      assignedAt: Date.now(),
+      state: 'assigned',
+    }
+    void saveHomework(hw)
+    setHomework(hw)
+    setHwPickerOpen(false)
+  }
+
+  // 起動時：宿題の読み込みと、出題から半日たっていれば答案を生成して届ける
+  const homeworkChecked = useRef(false)
+  useEffect(() => {
+    if (homeworkChecked.current) return
+    homeworkChecked.current = true
+    void (async () => {
+      try {
+        const hw = await loadHomework()
+        if (!hw) return
+        setHomework(hw)
+        if (hw.state !== 'assigned' || Date.now() - hw.assignedAt < HOMEWORK_ARRIVE_MS) return
+        const student = STUDENTS.find((s) => s.id === hw.studentId)
+        if (!student) return
+        const res = await fetchHomeworkAnswers(hw.studentId, hw.cards)
+        if (!res.answers) return
+        const arrived: Homework = { ...hw, state: 'arrived', answers: res.answers }
+        await saveHomework(arrived)
+        setHomework(arrived)
+        const updated = await addMail({
+          id: `homework-${Date.now()}`,
+          type: 'student',
+          from: student.name,
+          studentId: student.id,
+          subject: '宿題やってきました！',
+          content: `「${hw.materialTitle}」の宿題、がんばって解いてきました！添削おねがいします📝`,
+          timestamp: new Date().toISOString(),
+          read: false,
+          homework: true,
+        })
+        setMailMessages(updated)
+      } catch { /* 失敗時は次回起動時に再挑戦（stateはassignedのまま） */ }
+    })()
+  }, [])
+
+  const openHomeworkGrading = () => {
+    if (!homework?.answers) return
+    setHwMarks(Array(homework.answers.length).fill(null))
+    setHwGradeResult(false)
+    setShowInbox(false)
+    setExpandedMailId(null)
+    setTimeout(() => setHwGradeOpen(true), 400)
+  }
+
+  const finishHomework = () => {
+    void saveHomework(null)
+    setHomework(null)
+    setHwGradeOpen(false)
+  }
 
   const startExam = () => {
     const pool = examCardPool()
@@ -743,6 +842,19 @@ export default function HomeScreen() {
                   {selectedStudentId ? '授業をする' : '生徒を選んでからスタート →'}
                 </Text>
               </BouncyPressable>
+
+              {/* 宿題を出すボタン */}
+              {activeCards().length >= HOMEWORK_CANDIDATE_COUNT && (
+                homework ? (
+                  <Text style={styles.hwStatusText}>
+                    📝 {homework.state === 'assigned' ? '宿題を出しています。次にアプリをひらいたころ、答案が届きます' : '答案が届いています。メールボックスから添削できます'}
+                  </Text>
+                ) : (
+                  <TouchableOpacity style={styles.hwBtn} onPress={openHomeworkPicker}>
+                    <Text style={styles.hwBtnText}>📝 宿題を出す</Text>
+                  </TouchableOpacity>
+                )
+              )}
             </Animated.View>
           )}
         </View>
@@ -952,6 +1064,11 @@ export default function HomeScreen() {
                       {isExpanded && msg.examInvite && examCardPool().length >= EXAM_QUESTION_COUNT && !!TEACHER_TITLES[getUnlockedTitleCount(teacherProfile)] && (
                         <TouchableOpacity onPress={startExam} style={[styles.inboxOpenBtn, { backgroundColor: '#d97706' }]}>
                           <Text style={styles.inboxOpenBtnText}>🎓 昇進試験を受ける</Text>
+                        </TouchableOpacity>
+                      )}
+                      {isExpanded && msg.homework && homework?.state === 'arrived' && (
+                        <TouchableOpacity onPress={openHomeworkGrading} style={[styles.inboxOpenBtn, { backgroundColor: '#d97706' }]}>
+                          <Text style={styles.inboxOpenBtnText}>📝 答案を添削する</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -1164,6 +1281,136 @@ export default function HomeScreen() {
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* 宿題の出題ピッカー */}
+      <Modal visible={hwPickerOpen} transparent animationType="slide" onRequestClose={() => setHwPickerOpen(false)}>
+        <View style={styles.studentSheetContainer}>
+          <Pressable style={styles.studentSheetOverlay} onPress={() => setHwPickerOpen(false)} />
+          <View style={[styles.studentSheetBottom, { maxHeight: '85%', paddingBottom: 28 }]}>
+            <View style={styles.inboxHeader}>
+              <Text style={styles.inboxTitle}>📝 宿題を出す</Text>
+              <TouchableOpacity onPress={() => setHwPickerOpen(false)}>
+                <Text style={styles.inboxClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+                <Text style={styles.hwHint}>{selectedStudent?.name ?? '生徒'}に出す問題を{HOMEWORK_PICK_COUNT}つ選んでください（{hwSelected.size} / {HOMEWORK_PICK_COUNT}）</Text>
+                {hwCandidates.map((card, i) => {
+                  const selected = hwSelected.has(i)
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[styles.hwCandidate, selected && styles.hwCandidateSel]}
+                      onPress={() => setHwSelected((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(i)) next.delete(i)
+                        else if (next.size < HOMEWORK_PICK_COUNT) next.add(i)
+                        return next
+                      })}
+                    >
+                      <Text style={[styles.hwCandidateText, selected && styles.hwCandidateTextSel]}>{selected ? '☑' : '☐'} {card.q}</Text>
+                    </TouchableOpacity>
+                  )
+                })}
+                <TouchableOpacity
+                  style={[styles.hwAssignBtn, hwSelected.size !== HOMEWORK_PICK_COUNT && styles.hwAssignBtnDisabled]}
+                  disabled={hwSelected.size !== HOMEWORK_PICK_COUNT}
+                  onPress={assignHomework}
+                >
+                  <Text style={styles.hwAssignBtnText}>この{HOMEWORK_PICK_COUNT}問を宿題に出す</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 宿題の添削 */}
+      <Modal visible={hwGradeOpen && !!homework?.answers} transparent animationType="slide" onRequestClose={() => setHwGradeOpen(false)}>
+        <View style={styles.studentSheetContainer}>
+          <Pressable style={styles.studentSheetOverlay} onPress={() => setHwGradeOpen(false)} />
+          <View style={[styles.studentSheetBottom, { maxHeight: '88%', paddingBottom: 28 }]}>
+            <View style={styles.inboxHeader}>
+              <Text style={styles.inboxTitle}>📝 答案の添削</Text>
+              <TouchableOpacity onPress={() => setHwGradeOpen(false)}>
+                <Text style={styles.inboxClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+                {homework?.answers && (!hwGradeResult ? (
+                  <>
+                    <Text style={styles.hwHint}>それぞれの答えに ⭕ か ❌ をつけてください。まちがいが混ざっているかも...？</Text>
+                    {homework.answers.map((ans, i) => (
+                      <View key={i} style={styles.hwAnswerCard}>
+                        <Text style={styles.hwAnswerQ}>問{i + 1}: {homework.cards[i]?.q}</Text>
+                        <Text style={styles.hwAnswerText}>{ans.text}</Text>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          <TouchableOpacity
+                            style={[styles.hwMarkBtn, hwMarks[i] === true && styles.hwMarkBtnCorrect]}
+                            onPress={() => setHwMarks((prev) => prev.map((m, j) => (j === i ? true : m)))}
+                          >
+                            <Text style={[styles.hwMarkBtnText, hwMarks[i] === true && styles.hwMarkBtnTextSel]}>⭕ 正解</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.hwMarkBtn, hwMarks[i] === false && styles.hwMarkBtnWrong]}
+                            onPress={() => setHwMarks((prev) => prev.map((m, j) => (j === i ? false : m)))}
+                          >
+                            <Text style={[styles.hwMarkBtnText, hwMarks[i] === false && styles.hwMarkBtnTextSel]}>❌ まちがい</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))}
+                    <TouchableOpacity
+                      style={[styles.hwAssignBtn, hwMarks.some((m) => m === null) && styles.hwAssignBtnDisabled]}
+                      disabled={hwMarks.some((m) => m === null)}
+                      onPress={() => setHwGradeResult(true)}
+                    >
+                      <Text style={styles.hwAssignBtnText}>添削を返す</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  (() => {
+                    const allRight = homework.answers!.every((ans, i) => (hwMarks[i] === true) === !ans.wrong)
+                    return (
+                      <>
+                        <Text style={styles.examVerdict}>{allRight ? '🎉 完璧な添削！' : 'おしい...！'}</Text>
+                        <Text style={styles.examScore}>
+                          {allRight ? 'まちがいをちゃんと見抜きました。さすが先生！' : '見落としがありました。もう一度教材を確認してみましょう。'}
+                        </Text>
+                        {homework.answers!.map((ans, i) => {
+                          const judgedRight = (hwMarks[i] === true) === !ans.wrong
+                          return (
+                            <View key={i} style={[styles.hwAnswerCard, { borderColor: judgedRight ? '#a7f3d0' : '#fecdd3' }]}>
+                              <Text style={styles.hwAnswerQ}>問{i + 1}: {homework.cards[i]?.q}</Text>
+                              <Text style={styles.hwAnswerText}>{ans.text}</Text>
+                              <Text style={styles.hwResultText}>
+                                実際: {ans.wrong ? '❌ まちがい' : '⭕ 正解'} ／ あなたの添削: {hwMarks[i] ? '⭕' : '❌'} {judgedRight ? '→ 見抜けた！' : '→ 見落とし'}
+                              </Text>
+                              {ans.wrong && <Text style={styles.examResultModel}>正しくは: {homework.cards[i]?.a}</Text>}
+                            </View>
+                          )
+                        })}
+                        <View style={styles.hwThanksRow}>
+                          {(() => {
+                            const st = STUDENTS.find((s) => s.id === homework.studentId)
+                            return st ? <Image source={{ uri: st.avatar }} style={styles.hwThanksAvatar} /> : null
+                          })()}
+                          <Text style={styles.hwThanksText}>添削ありがとうございました！なおしてもらったところ、ちゃんと覚え直します！📝✨</Text>
+                        </View>
+                        <TouchableOpacity style={styles.examCloseBtn} onPress={finishHomework}>
+                          <Text style={styles.examCloseBtnText}>宿題をおわる</Text>
+                        </TouchableOpacity>
+                      </>
+                    )
+                  })()
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
 
       {/* 画像プリロード：初回表示を高速化 */}
@@ -1473,6 +1720,31 @@ const styles = StyleSheet.create({
   examResultComment: { fontSize: 12, color: '#b45309', marginTop: 3, lineHeight: 18 },
   examCloseBtn: { backgroundColor: c.text, borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 12 },
   examCloseBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+
+  // 宿題
+  hwBtn: { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 10 },
+  hwBtnText: { fontSize: 13, fontWeight: '700', color: '#b45309' },
+  hwStatusText: { fontSize: 11, color: c.faint, textAlign: 'center', marginTop: 10, lineHeight: 16 },
+  hwHint: { fontSize: 12, color: c.textSub, marginBottom: 10, lineHeight: 18 },
+  hwCandidate: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 8, backgroundColor: '#fff' },
+  hwCandidateSel: { borderColor: '#fbbf24', backgroundColor: '#fffbeb' },
+  hwCandidateText: { fontSize: 13, color: c.textMid, lineHeight: 19 },
+  hwCandidateTextSel: { color: '#92400e', fontWeight: '600' },
+  hwAssignBtn: { backgroundColor: '#f59e0b', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 12 },
+  hwAssignBtnDisabled: { backgroundColor: c.bgSub },
+  hwAssignBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  hwAnswerCard: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 10 },
+  hwAnswerQ: { fontSize: 12, fontWeight: '700', color: c.textMid, marginBottom: 4, lineHeight: 18 },
+  hwAnswerText: { fontSize: 13, color: c.text, lineHeight: 19, marginBottom: 8 },
+  hwMarkBtn: { flex: 1, borderWidth: 1, borderColor: c.borderStrong, borderRadius: 10, paddingVertical: 7, alignItems: 'center', backgroundColor: '#fff' },
+  hwMarkBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
+  hwMarkBtnWrong: { backgroundColor: '#f43f5e', borderColor: '#f43f5e' },
+  hwMarkBtnText: { fontSize: 12, fontWeight: '700', color: c.textSub },
+  hwMarkBtnTextSel: { color: '#fff' },
+  hwResultText: { fontSize: 11, color: c.textSub, lineHeight: 17 },
+  hwThanksRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginTop: 6, marginBottom: 4 },
+  hwThanksAvatar: { width: 32, height: 32, borderRadius: 16 },
+  hwThanksText: { flex: 1, fontSize: 12, color: c.textMid, lineHeight: 18, backgroundColor: c.bgSub, borderRadius: 12, padding: 10 },
 
   // 先生証シート
   tcSheetBottom: { backgroundColor: c.ink, paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0 },
