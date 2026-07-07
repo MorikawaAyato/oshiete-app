@@ -35,9 +35,6 @@ const FOLLOWUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 const EXAM_QUESTION_COUNT = 5
 const EXAM_PASS_COUNT = 4
 
-// バンク生成ルールの版（ウェブ側 lib/factsheet.ts の FACTSHEET_VERSION と同期）。旧版バンクは開いたとき再生成する
-const FACTSHEET_VERSION = 2
-
 // 宿題：3問選んで出すと半日後以降の起動で答案（1問だけ誤答入り）が届く
 const HOMEWORK_PICK_COUNT = 3
 const HOMEWORK_CANDIDATE_COUNT = 6
@@ -568,8 +565,8 @@ export default function HomeScreen() {
     if (!item.previewContent) {
       void backgroundFetchPreview(item.imageDescription, item.id)
     }
-    // ファクトシート（一問一答バンク）が未生成か旧版の教材はここでバックフィル
-    if (!item.factsheet?.cards?.length || (item.factsheet.version ?? 0) < FACTSHEET_VERSION) {
+    // ファクトシート（一問一答バンク）未生成の教材はここでバックフィル
+    if (!item.factsheet?.cards?.length) {
       void backgroundFetchFactsheet(item.imageDescription, item.notes, item.id)
     }
   }
