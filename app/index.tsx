@@ -1,7 +1,6 @@
 import {
   View, Text, TouchableOpacity, ScrollView, Image,
   StyleSheet, ActivityIndicator, Alert, Animated, Modal, Pressable, TextInput,
-  KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useFocusEffect } from 'expo-router'
@@ -11,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, getUnlockedTitleCount } from '@/lib/teacherProfile'
-import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail, gradeExam, fetchHomeworkAnswers } from '@/lib/api'
+import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail, fetchHomeworkAnswers } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
@@ -179,18 +178,15 @@ export default function HomeScreen() {
     })()
   }, [])
 
-  // 昇進試験の進行状態
-  const [examOpen, setExamOpen] = useState(false)
-  const [examQuestions, setExamQuestions] = useState<(QACard & { facts: string[] })[]>([])
-  const [examStep, setExamStep] = useState(0)
-  const [examAnswers, setExamAnswers] = useState<string[]>([])
-  const [examGrading, setExamGrading] = useState(false)
-  const [examResults, setExamResults] = useState<{ correct: boolean; comment: string }[] | null>(null)
-  const [examError, setExamError] = useState<string | null>(null)
+  // 昇進試験は研修タブ（/training）に移設。ここは受験可否の表示と遷移だけ担う
+  const examCardPool = () => history.flatMap((h) => h.factsheet?.cards ?? [])
 
-  // 採点時に別解を判定できるよう、各カードに出典教材の事実リストを添える
-  const examCardPool = () =>
-    history.flatMap((h) => (h.factsheet?.cards ?? []).map((card) => ({ ...card, facts: h.factsheet?.facts ?? [] })))
+  const goToTraining = () => {
+    setShowInbox(false)
+    setExpandedMailId(null)
+    setTeacherSheet(false)
+    router.push('/training')
+  }
 
   // 宿題の進行状態
   const [homework, setHomework] = useState<Homework | null>(null)
@@ -283,45 +279,6 @@ export default function HomeScreen() {
     void saveHomework(null)
     setHomework(null)
     setHwGradeOpen(false)
-  }
-
-  const startExam = () => {
-    const pool = examCardPool()
-    if (pool.length < EXAM_QUESTION_COUNT) return
-    const shuffled = [...pool]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-    }
-    setExamQuestions(shuffled.slice(0, EXAM_QUESTION_COUNT))
-    setExamAnswers(Array(EXAM_QUESTION_COUNT).fill(''))
-    setExamStep(0)
-    setExamResults(null)
-    setExamError(null)
-    // 兄弟Modalの同時提示はiOSで失敗するため、開いているシートを閉じてから提示する
-    setShowInbox(false)
-    setExpandedMailId(null)
-    setTeacherSheet(false)
-    setTimeout(() => setExamOpen(true), 400)
-  }
-
-  const submitExam = async () => {
-    setExamGrading(true)
-    setExamError(null)
-    try {
-      const res = await gradeExam(examQuestions.map((c, i) => ({ q: c.q, a: c.a, statement: c.statement, facts: c.facts, userAnswer: (examAnswers[i] ?? '').trim() })))
-      if (!res.results) throw new Error(res.error)
-      setExamResults(res.results)
-      if (res.results.filter((r) => r.correct).length >= EXAM_PASS_COUNT) {
-        const unlockedCount = getUnlockedTitleCount(teacherProfile)
-        const nextTitle = TEACHER_TITLES[unlockedCount]
-        if (nextTitle) setTeacherProfile({ ...teacherProfile, title: nextTitle, unlockedTitleCount: unlockedCount + 1 })
-      }
-    } catch {
-      setExamError('採点に失敗しました。通信環境を確認してもう一度お試しください。')
-    } finally {
-      setExamGrading(false)
-    }
   }
 
   useEffect(() => {
@@ -1033,8 +990,10 @@ export default function HomeScreen() {
                     <View style={styles.inboxAvatar}>
                       {student ? (
                         <Image source={{ uri: student.avatar }} style={styles.inboxAvatarImg} />
+                      ) : msg.from === '校長先生' ? (
+                        <Image source={require('../assets/tora_koutyou.webp')} style={styles.inboxAvatarImg} />
                       ) : (
-                        <Text style={{ fontSize: 18 }}>{msg.from === '校長先生' ? '🎓' : '📢'}</Text>
+                        <Text style={{ fontSize: 18 }}>📢</Text>
                       )}
                     </View>
                     <View style={styles.inboxBody}>
@@ -1064,7 +1023,7 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                       )}
                       {isExpanded && msg.examInvite && examCardPool().length >= EXAM_QUESTION_COUNT && !!TEACHER_TITLES[getUnlockedTitleCount(teacherProfile)] && (
-                        <TouchableOpacity onPress={startExam} style={[styles.inboxOpenBtn, { backgroundColor: '#d97706' }]}>
+                        <TouchableOpacity onPress={goToTraining} style={[styles.inboxOpenBtn, { backgroundColor: '#d97706' }]}>
                           <Text style={styles.inboxOpenBtnText}>🎓 昇進試験を受ける</Text>
                         </TouchableOpacity>
                       )}
@@ -1176,7 +1135,7 @@ export default function HomeScreen() {
                       </View>
                       {!!TEACHER_TITLES[getUnlockedTitleCount(teacherProfile)] && (
                         examCardPool().length >= EXAM_QUESTION_COUNT ? (
-                          <TouchableOpacity style={styles.examBtn} onPress={startExam}>
+                          <TouchableOpacity style={styles.examBtn} onPress={goToTraining}>
                             <Text style={styles.examBtnText}>🎓 昇進試験を受ける（{TEACHER_TITLES[getUnlockedTitleCount(teacherProfile)]}）</Text>
                           </TouchableOpacity>
                         ) : (
@@ -1194,95 +1153,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
-
-      {/* 昇進試験（校長室） */}
-      <Modal visible={examOpen} transparent animationType="slide" onRequestClose={() => setExamOpen(false)}>
-        <KeyboardAvoidingView style={styles.studentSheetContainer} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <Pressable style={styles.studentSheetOverlay} onPress={() => { if (!examGrading) setExamOpen(false) }} />
-          <View style={[styles.studentSheetBottom, { maxHeight: '88%', paddingBottom: 28 }]}>
-            <View style={styles.inboxHeader}>
-              <Text style={styles.inboxTitle}>🎓 昇進試験</Text>
-              <TouchableOpacity onPress={() => setExamOpen(false)}>
-                <Text style={styles.inboxClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              {examGrading ? (
-                <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 36, marginBottom: 10 }}>🎓</Text>
-                  <Text style={styles.examMsgText}>校長先生が採点しています...</Text>
-                </View>
-              ) : examResults ? (
-                <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-                  {(() => {
-                    const correctCount = examResults.filter((r) => r.correct).length
-                    const passed = correctCount >= EXAM_PASS_COUNT
-                    return (
-                      <>
-                        <Text style={styles.examVerdict}>{passed ? '🎉 合格！' : 'もう一歩...！'}</Text>
-                        <Text style={styles.examScore}>
-                          {correctCount} / {examResults.length} 問正解
-                          {passed ? ` — 「${teacherProfile.title}」に昇進しました！` : `（合格は${EXAM_PASS_COUNT}問）。また挑戦してくださいね。`}
-                        </Text>
-                        {examResults.map((r, i) => (
-                          <View key={i} style={styles.examResultCard}>
-                            <Text style={styles.examResultQ}>{r.correct ? '⭕' : '❌'} 問{i + 1}: {examQuestions[i]?.q}</Text>
-                            <Text style={styles.examResultA}>あなたの答え: {(examAnswers[i] ?? '').trim() || '（空欄）'}</Text>
-                            {!r.correct && <Text style={styles.examResultModel}>模範解答: {examQuestions[i]?.a}</Text>}
-                            {!!r.comment && <Text style={styles.examResultComment}>🎓 {r.comment}</Text>}
-                          </View>
-                        ))}
-                        <TouchableOpacity style={styles.examCloseBtn} onPress={() => setExamOpen(false)}>
-                          <Text style={styles.examCloseBtnText}>校長室を出る</Text>
-                        </TouchableOpacity>
-                      </>
-                    )
-                  })()}
-                </View>
-              ) : examQuestions.length > 0 ? (
-                <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-                  <View style={styles.examSpeech}>
-                    <Text style={{ fontSize: 22 }}>🎓</Text>
-                    <Text style={styles.examSpeechText}>
-                      {examStep === 0
-                        ? `それでは始めましょう。全${examQuestions.length}問、${EXAM_PASS_COUNT}問正解で「${TEACHER_TITLES[getUnlockedTitleCount(teacherProfile)] ?? ''}」に昇進です。自分の言葉で答えてくださいね。`
-                        : 'つぎの問題です。'}
-                    </Text>
-                  </View>
-                  <Text style={styles.examProgress}>問 {examStep + 1} / {examQuestions.length}</Text>
-                  <Text style={styles.examQuestion}>{examQuestions[examStep]?.q}</Text>
-                  <TextInput
-                    style={styles.examInput}
-                    value={examAnswers[examStep] ?? ''}
-                    onChangeText={(t) => setExamAnswers((prev) => prev.map((a, i) => (i === examStep ? t : a)))}
-                    placeholder="自分の言葉で答えてみよう"
-                    placeholderTextColor={c.faint}
-                    multiline
-                    maxLength={300}
-                  />
-                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                    {examStep > 0 && (
-                      <TouchableOpacity style={styles.examNavBtn} onPress={() => setExamStep((s) => s - 1)}>
-                        <Text style={styles.examNavBtnText}>← 前の問題</Text>
-                      </TouchableOpacity>
-                    )}
-                    {examStep < examQuestions.length - 1 ? (
-                      <TouchableOpacity style={styles.examNextBtn} onPress={() => setExamStep((s) => s + 1)}>
-                        <Text style={styles.examNextBtnText}>次の問題 →</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity style={styles.examNextBtn} onPress={() => void submitExam()}>
-                        <Text style={styles.examNextBtnText}>📝 答案を提出する</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  {!!examError && <Text style={styles.examErrorText}>{examError}</Text>}
-                </View>
-              ) : null}
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
       </Modal>
 
       {/* 宿題の出題ピッカー */}

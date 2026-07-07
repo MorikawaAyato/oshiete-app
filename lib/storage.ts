@@ -116,6 +116,22 @@ export async function saveExamInviteSent(titles: string[]): Promise<void> {
   try { await AsyncStorage.setItem(EXAM_INVITE_SENT_KEY, JSON.stringify(titles)) } catch {}
 }
 
+// 研修（一問一答フラッシュカード）で「まだ」にしたカードのキー（次回優先で再出題する）
+const DRILL_PENDING_KEY = 'oshiete_drill_pending'
+
+export async function loadDrillPending(): Promise<Set<string>> {
+  try {
+    const raw = await AsyncStorage.getItem(DRILL_PENDING_KEY)
+    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+  } catch {
+    return new Set()
+  }
+}
+
+export async function saveDrillPending(keys: Set<string>): Promise<void> {
+  try { await AsyncStorage.setItem(DRILL_PENDING_KEY, JSON.stringify([...keys].slice(-500))) } catch {}
+}
+
 // 保存済み先生プロフィール（キーはAppContextのTEACHER_KEYと同じ）
 export async function loadTeacherProfileStored(): Promise<{ name?: string; title?: string; unlockedTitleCount?: number } | null> {
   try {
