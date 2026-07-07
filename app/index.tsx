@@ -15,9 +15,9 @@ import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
   loadFollowupSent, saveFollowupSent, loadTeacherName, loadExamInviteSent, saveExamInviteSent, loadTeacherProfileStored,
-  loadHomework, saveHomework,
+  loadHomework, saveHomework, loadHomeworkWindow, saveHomeworkWindow,
 } from '@/lib/storage'
-import type { MailMessage, Homework, HomeworkAnswer } from '@/lib/storage'
+import type { MailMessage, Homework, HomeworkAnswer, HomeworkWindow } from '@/lib/storage'
 import type { HistoryItem, Recap, QACard } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -38,6 +38,7 @@ const EXAM_PASS_COUNT = 4
 const HOMEWORK_PICK_COUNT = 3
 const HOMEWORK_CANDIDATE_COUNT = 6
 const HOMEWORK_ARRIVE_MS = 12 * 60 * 60 * 1000
+const HOMEWORK_WINDOW_MS = 24 * 60 * 60 * 1000 // 授業終了から宿題を出せる猶予
 
 export default function HomeScreen() {
   const router = useRouter()
@@ -50,6 +51,7 @@ export default function HomeScreen() {
     thumbnails, setThumbnails,
     currentHistoryId, setCurrentHistoryId,
     pendingMaterialAnimation, setPendingMaterialAnimation,
+    pendingHomeworkPicker, setPendingHomeworkPicker,
     resetChatSession,
   } = useApp()
 
@@ -95,6 +97,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadMail().then(setMailMessages)
+      loadHomeworkWindow().then(setHomeworkWindow) // 授業終了後に開くウィンドウを反映
       if (pendingAnimRef.current) {
         setPendingMaterialAnimation(false)
         triggerMaterialAnimation()
@@ -197,38 +200,49 @@ export default function HomeScreen() {
   const [hwMarks, setHwMarks] = useState<(boolean | null)[]>([]) // 先生がつけた⭕（true）❌（false）
   const [hwGradeResult, setHwGradeResult] = useState(false)
 
-  // アクティブ教材のカード（factsheetはバックフィルで後から届くためhistoryから引く）
-  const activeCards = (): QACard[] =>
-    history.find((h) => h.id === activeHistoryId)?.factsheet?.cards ?? []
+  const [homeworkWindow, setHomeworkWindow] = useState<HomeworkWindow | null>(null)
+  const [hwTarget, setHwTarget] = useState<{ historyId: string; studentId: string } | null>(null)
 
-  const openHomeworkPicker = () => {
-    if (!selectedStudentId) { showToast(); return }
-    const item = history.find((h) => h.id === activeHistoryId)
-    const cards = item?.factsheet?.cards ?? []
-    if (!item || cards.length < HOMEWORK_CANDIDATE_COUNT) return
+  // まだ出題できる有効なウィンドウか（未失効・宿題が進行中でない・カードが揃っている）
+  const activeHomeworkWindow = (): HomeworkWindow | null => {
+    if (homework) return null
+    if (!homeworkWindow) return null
+    if (Date.now() - homeworkWindow.endedAt > HOMEWORK_WINDOW_MS) return null
+    const cards = history.find((h) => h.id === homeworkWindow.historyId)?.factsheet?.cards ?? []
+    if (cards.length < HOMEWORK_CANDIDATE_COUNT) return null
+    return homeworkWindow
+  }
+
+  const openHomeworkPicker = (historyId: string, studentId: string) => {
+    const cards = history.find((h) => h.id === historyId)?.factsheet?.cards ?? []
+    if (cards.length < HOMEWORK_CANDIDATE_COUNT) return
     const shuffled = [...cards]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
+    setHwTarget({ historyId, studentId })
     setHwCandidates(shuffled.slice(0, HOMEWORK_CANDIDATE_COUNT))
     setHwSelected(new Set())
     setHwPickerOpen(true)
   }
 
   const assignHomework = () => {
-    const item = history.find((h) => h.id === activeHistoryId)
-    if (!item || !selectedStudentId || hwSelected.size !== HOMEWORK_PICK_COUNT) return
+    if (!hwTarget || hwSelected.size !== HOMEWORK_PICK_COUNT) return
+    const item = history.find((h) => h.id === hwTarget.historyId)
+    if (!item) return
     const hw: Homework = {
-      historyId: item.id,
+      historyId: hwTarget.historyId,
       materialTitle: item.title,
-      studentId: selectedStudentId,
+      studentId: hwTarget.studentId,
       cards: [...hwSelected].map((i) => hwCandidates[i]),
       assignedAt: Date.now(),
       state: 'assigned',
     }
     void saveHomework(hw)
     setHomework(hw)
+    void saveHomeworkWindow(null) // 出題したらウィンドウを閉じる
+    setHomeworkWindow(null)
     setHwPickerOpen(false)
   }
 
@@ -265,6 +279,15 @@ export default function HomeScreen() {
       } catch { /* 失敗時は次回起動時に再挑戦（stateはassignedのまま） */ }
     })()
   }, [])
+
+  // 授業終了画面で「帰りの宿題」を押してホームに戻ってきたら、ウィンドウ読み込み後にピッカーを開く
+  useEffect(() => {
+    if (!pendingHomeworkPicker) return
+    const w = activeHomeworkWindow()
+    if (!w) return
+    setPendingHomeworkPicker(false)
+    openHomeworkPicker(w.historyId, w.studentId)
+  }, [pendingHomeworkPicker, homeworkWindow, history])
 
   const openHomeworkGrading = () => {
     if (!homework?.answers) return
@@ -802,18 +825,16 @@ export default function HomeScreen() {
                 </Text>
               </BouncyPressable>
 
-              {/* 宿題を出すボタン */}
-              {activeCards().length >= HOMEWORK_CANDIDATE_COUNT && (
-                homework ? (
-                  <Text style={styles.hwStatusText}>
-                    📝 {homework.state === 'assigned' ? '宿題を出しています。次にアプリをひらいたころ、答案が届きます' : '答案が届いています。メールボックスから添削できます'}
-                  </Text>
-                ) : (
-                  <TouchableOpacity style={styles.hwBtn} onPress={openHomeworkPicker}>
-                    <Text style={styles.hwBtnText}>📝 宿題を出す</Text>
-                  </TouchableOpacity>
-                )
-              )}
+              {/* 宿題：進行状況の表示、または授業終了から24h以内の「帰りの宿題を出す」導線 */}
+              {homework ? (
+                <Text style={styles.hwStatusText}>
+                  📝 {homework.state === 'assigned' ? '宿題を出しています。次にアプリをひらいたころ、答案が届きます' : '答案が届いています。メールボックスから添削できます'}
+                </Text>
+              ) : activeHomeworkWindow() && activeHomeworkWindow()!.historyId === activeHistoryId ? (
+                <TouchableOpacity style={styles.hwBtn} onPress={() => { const w = activeHomeworkWindow()!; openHomeworkPicker(w.historyId, w.studentId) }}>
+                  <Text style={styles.hwBtnText}>📝 帰りの宿題を出す</Text>
+                </TouchableOpacity>
+              ) : null}
             </Animated.View>
           )}
         </View>
@@ -1168,7 +1189,7 @@ export default function HomeScreen() {
             </View>
             <ScrollView>
               <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-                <Text style={styles.hwHint}>{selectedStudent?.name ?? '生徒'}に出す問題を{HOMEWORK_PICK_COUNT}つ選んでください（{hwSelected.size} / {HOMEWORK_PICK_COUNT}）</Text>
+                <Text style={styles.hwHint}>{STUDENTS.find((s) => s.id === hwTarget?.studentId)?.name ?? '生徒'}に出す問題を{HOMEWORK_PICK_COUNT}つ選んでください（{hwSelected.size} / {HOMEWORK_PICK_COUNT}）</Text>
                 {hwCandidates.map((card, i) => {
                   const selected = hwSelected.has(i)
                   return (

@@ -45,6 +45,26 @@ export async function saveHomework(hw: Homework | null): Promise<void> {
   } catch {}
 }
 
+// 宿題は授業の締めに出すもの：授業終了から24時間だけ「その授業の教材×生徒」への出題導線が開く
+export type HomeworkWindow = { historyId: string; studentId: string; endedAt: number }
+const HOMEWORK_WINDOW_KEY = 'oshiete_homework_window'
+
+export async function loadHomeworkWindow(): Promise<HomeworkWindow | null> {
+  try {
+    const raw = await AsyncStorage.getItem(HOMEWORK_WINDOW_KEY)
+    return raw ? (JSON.parse(raw) as HomeworkWindow) : null
+  } catch {
+    return null
+  }
+}
+
+export async function saveHomeworkWindow(w: HomeworkWindow | null): Promise<void> {
+  try {
+    if (w) await AsyncStorage.setItem(HOMEWORK_WINDOW_KEY, JSON.stringify(w))
+    else await AsyncStorage.removeItem(HOMEWORK_WINDOW_KEY)
+  } catch {}
+}
+
 const MAIL_KEY = 'senseigokko_mail'
 
 const WELCOME_MAIL: MailMessage = {

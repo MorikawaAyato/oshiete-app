@@ -10,7 +10,7 @@ import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
 import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
-import { addMail, loadRecap, loadFactsheet, saveRecapToHistory } from '@/lib/storage'
+import { addMail, loadRecap, loadFactsheet, saveRecapToHistory, saveHomeworkWindow } from '@/lib/storage'
 import type { ChatMessage } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -138,6 +138,7 @@ export default function ChatScreen() {
     lessonRecap, setLessonRecap,
     notebook, setNotebook,
     notebookState, setNotebookState,
+    setPendingHomeworkPicker,
     resetChatSession,
   } = useApp()
   const teacherName = teacherProfile.name || undefined
@@ -156,6 +157,12 @@ export default function ChatScreen() {
   const [showNotebook, setShowNotebook] = useState(false)
   const [notebookGrading, setNotebookGrading] = useState(false)
   const [studentTyping, setStudentTyping] = useState(false) // 授業終了の連投を時差配信する間の入力中演出
+  const [canAssignHomework, setCanAssignHomework] = useState(false) // この教材に宿題出題に足るカードがあるか
+
+  // 宿題を出せるか（一問一答バンクが6枚以上）を確認
+  useEffect(() => {
+    void loadFactsheet(currentHistoryId).then((fs) => setCanAssignHomework((fs?.cards?.length ?? 0) >= 6))
+  }, [currentHistoryId])
 
   const remainingMins = classEnded ? 0 : (MAX_TURNS - turnCount) * 5
   const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
@@ -234,6 +241,10 @@ export default function ChatScreen() {
           setHints(null)
           if (res.recap && currentHistoryId) {
             void saveRecapToHistory(currentHistoryId, student.id, res.recap)
+          }
+          // 授業の締めから24時間、「この教材×この生徒」への宿題出題ウィンドウを開く
+          if (currentHistoryId) {
+            void saveHomeworkWindow({ historyId: currentHistoryId, studentId: student.id, endedAt: Date.now() })
           }
           if (res.mailContent) {
             void addMail({
@@ -492,6 +503,14 @@ export default function ChatScreen() {
           {classEnded && (
             <View style={styles.endedActions}>
               <Text style={styles.endedLabel}>授業が終わりました</Text>
+              {canAssignHomework && (
+                <TouchableOpacity
+                  style={styles.homeworkBtn}
+                  onPress={() => { setPendingHomeworkPicker(true); handleBack() }}
+                >
+                  <Text style={styles.homeworkBtnText}>📝 帰りの宿題を出す</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity style={styles.finishBtn} onPress={handleBack}>
                 <Text style={styles.finishBtnText}>ホームに戻る</Text>
               </TouchableOpacity>
@@ -752,6 +771,8 @@ const styles = StyleSheet.create({
   endedLabel: { fontSize: 13, color: c.textSub, textAlign: 'center', fontWeight: '600' },
   finishBtn: { ...btn.secondary, borderRadius: 12, paddingVertical: 14 },
   finishBtnText: { ...btn.secondaryText },
+  homeworkBtn: { backgroundColor: '#f59e0b', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  homeworkBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
   finishBtnTextPreview: { fontSize: 14, fontFamily: font.round, color: c.link },
 
   inputAreaWrap: {
