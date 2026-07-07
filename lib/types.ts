@@ -24,6 +24,7 @@ export type Factsheet = {
   facts: string[]
   misconceptions: string[]
   cards?: QACard[] // 一問一答バンク（生成失敗時は欠落し従来動作）
+  version?: number // バンク生成ルールの版。旧版はバックフィルで再生成される
 }
 
 export type NotebookLine = {

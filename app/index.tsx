@@ -35,6 +35,9 @@ const FOLLOWUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 const EXAM_QUESTION_COUNT = 5
 const EXAM_PASS_COUNT = 4
 
+// バンク生成ルールの版（ウェブ側 lib/factsheet.ts の FACTSHEET_VERSION と同期）。旧版バンクは開いたとき再生成する
+const FACTSHEET_VERSION = 2
+
 // 宿題：3問選んで出すと半日後以降の起動で答案（1問だけ誤答入り）が届く
 const HOMEWORK_PICK_COUNT = 3
 const HOMEWORK_CANDIDATE_COUNT = 6
@@ -181,14 +184,16 @@ export default function HomeScreen() {
 
   // 昇進試験の進行状態
   const [examOpen, setExamOpen] = useState(false)
-  const [examQuestions, setExamQuestions] = useState<QACard[]>([])
+  const [examQuestions, setExamQuestions] = useState<(QACard & { facts: string[] })[]>([])
   const [examStep, setExamStep] = useState(0)
   const [examAnswers, setExamAnswers] = useState<string[]>([])
   const [examGrading, setExamGrading] = useState(false)
   const [examResults, setExamResults] = useState<{ correct: boolean; comment: string }[] | null>(null)
   const [examError, setExamError] = useState<string | null>(null)
 
-  const examCardPool = () => history.flatMap((h) => h.factsheet?.cards ?? [])
+  // 採点時に別解を判定できるよう、各カードに出典教材の事実リストを添える
+  const examCardPool = () =>
+    history.flatMap((h) => (h.factsheet?.cards ?? []).map((card) => ({ ...card, facts: h.factsheet?.facts ?? [] })))
 
   // 宿題の進行状態
   const [homework, setHomework] = useState<Homework | null>(null)
@@ -307,7 +312,7 @@ export default function HomeScreen() {
     setExamGrading(true)
     setExamError(null)
     try {
-      const res = await gradeExam(examQuestions.map((c, i) => ({ q: c.q, a: c.a, statement: c.statement, userAnswer: (examAnswers[i] ?? '').trim() })))
+      const res = await gradeExam(examQuestions.map((c, i) => ({ q: c.q, a: c.a, statement: c.statement, facts: c.facts, userAnswer: (examAnswers[i] ?? '').trim() })))
       if (!res.results) throw new Error(res.error)
       setExamResults(res.results)
       if (res.results.filter((r) => r.correct).length >= EXAM_PASS_COUNT) {
@@ -563,8 +568,8 @@ export default function HomeScreen() {
     if (!item.previewContent) {
       void backgroundFetchPreview(item.imageDescription, item.id)
     }
-    // ファクトシート（一問一答バンク）未生成の古い教材はここでバックフィル
-    if (!item.factsheet?.cards?.length) {
+    // ファクトシート（一問一答バンク）が未生成か旧版の教材はここでバックフィル
+    if (!item.factsheet?.cards?.length || (item.factsheet.version ?? 0) < FACTSHEET_VERSION) {
       void backgroundFetchFactsheet(item.imageDescription, item.notes, item.id)
     }
   }

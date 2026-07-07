@@ -50,9 +50,9 @@ export async function fetchFactsheet(
   return res.json()
 }
 
-// 昇進試験の採点（一問一答バンクのカードが正解基準）
+// 昇進試験の採点（一問一答バンクのカードが正解基準。factsは別解判定用の参考事実）
 export async function gradeExam(
-  items: { q: string; a: string; statement: string; userAnswer: string }[],
+  items: { q: string; a: string; statement: string; userAnswer: string; facts?: string[] }[],
 ): Promise<{ results?: { correct: boolean; comment: string }[]; error?: string }> {
   const res = await fetch(`${API_BASE}/api/exam`, {
     method: 'POST',
