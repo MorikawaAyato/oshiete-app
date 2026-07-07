@@ -109,6 +109,7 @@ export default function TrainingScreen() {
   const [examGrading, setExamGrading] = useState(false)
   const [examResults, setExamResults] = useState<{ correct: boolean; comment: string }[] | null>(null)
   const [examError, setExamError] = useState<string | null>(null)
+  const [showPrincipalAvatar, setShowPrincipalAvatar] = useState(false)
 
   const startExam = () => {
     const pool = examCardPool()
@@ -171,7 +172,9 @@ export default function TrainingScreen() {
             {/* 校長ヒーロー */}
             <View style={styles.card}>
               <View style={styles.heroRow}>
-                <Image source={PRINCIPAL_IMAGE} style={styles.principalAvatar} />
+                <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.8}>
+                  <Image source={PRINCIPAL_IMAGE} style={styles.principalAvatar} />
+                </TouchableOpacity>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.principalName}>校長先生</Text>
                   <Text style={styles.principalLine}>{principalLine}</Text>
@@ -290,6 +293,15 @@ export default function TrainingScreen() {
       </ScrollView>
 
       <BottomTabBar active="training" />
+
+      {/* 校長先生の拡大表示（顔のアップ） */}
+      <Modal visible={showPrincipalAvatar} transparent animationType="fade" onRequestClose={() => setShowPrincipalAvatar(false)}>
+        <Pressable style={styles.zoomOverlay} onPress={() => setShowPrincipalAvatar(false)}>
+          <View style={styles.zoomCircle}>
+            <Image source={PRINCIPAL_IMAGE} style={styles.zoomImage} />
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* 昇進試験（校長室） */}
       <Modal visible={examOpen} transparent animationType="slide" onRequestClose={() => setExamOpen(false)}>
@@ -429,6 +441,10 @@ const styles = StyleSheet.create({
 
   doneTitle: { fontSize: 20, fontWeight: '900', color: c.text, marginBottom: 4 },
   doneScore: { fontSize: 13, color: c.textMid, marginBottom: 14 },
+
+  zoomOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
+  zoomCircle: { width: 220, height: 220, borderRadius: 110, overflow: 'hidden', borderWidth: 4, borderColor: '#fde68a', backgroundColor: '#fff' },
+  zoomImage: { position: 'absolute', top: 0, width: 220, height: 290 },
 
   sheetContainer: { flex: 1, justifyContent: 'flex-end' },
   sheetOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
