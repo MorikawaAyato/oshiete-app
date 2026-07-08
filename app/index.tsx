@@ -646,6 +646,26 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* 宿題の受付中バッジ：授業後の一定時間だけトップに常駐する（システムからの案内） */}
+        {(() => {
+          const w = activeHomeworkWindow()
+          if (!w) return null
+          const st = STUDENTS.find((s) => s.id === w.studentId)
+          return (
+            <TouchableOpacity style={styles.hwBadge} onPress={() => openHomeworkPicker(w.historyId, w.studentId)} activeOpacity={0.85}>
+              <View style={styles.hwBadgeIconWrap}>
+                <Text style={styles.hwBadgeClock}>⏰</Text>
+                <View style={styles.hwBadgeDot}><Text style={styles.hwBadgeDotText}>📝</Text></View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hwBadgeTitle}>今なら宿題を送れます</Text>
+                <Text style={styles.hwBadgeSub} numberOfLines={1}>{st?.name ?? '生徒'}に、いまの授業の宿題を送りましょう</Text>
+              </View>
+              <Text style={styles.hwBadgeChevron}>›</Text>
+            </TouchableOpacity>
+          )
+        })()}
+
         {/* 今日の授業 */}
         <View style={styles.todaySection}>
           {/* 教材が用意できてから「次の授業」を表示する（作成中は出さない） */}
@@ -826,16 +846,12 @@ export default function HomeScreen() {
                 </Text>
               </BouncyPressable>
 
-              {/* 宿題：進行状況の表示、または授業終了から24h以内の「帰りの宿題を出す」導線 */}
-              {homework ? (
+              {/* 宿題の進行状況（送信中／答案到着）。出題導線はトップの受付中バッジに集約 */}
+              {homework && (
                 <Text style={styles.hwStatusText}>
                   📝 {homework.state === 'assigned' ? '宿題を出しています。次にアプリをひらいたころ、答案が届きます' : '答案が届いています。メールボックスから添削できます'}
                 </Text>
-              ) : activeHomeworkWindow() && activeHomeworkWindow()!.historyId === activeHistoryId ? (
-                <TouchableOpacity style={styles.hwBtn} onPress={() => { const w = activeHomeworkWindow()!; openHomeworkPicker(w.historyId, w.studentId) }}>
-                  <Text style={styles.hwBtnText}>📝 宿題を送る</Text>
-                </TouchableOpacity>
-              ) : null}
+              )}
             </Animated.View>
           )}
         </View>
@@ -1616,9 +1632,15 @@ const styles = StyleSheet.create({
   examCloseBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   // 宿題
-  hwBtn: { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 10 },
-  hwBtnText: { fontSize: 13, fontWeight: '700', color: '#b45309' },
   hwStatusText: { fontSize: 11, color: c.faint, textAlign: 'center', marginTop: 10, lineHeight: 16 },
+  hwBadge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, marginHorizontal: 16, marginTop: 12 },
+  hwBadgeIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#fcd34d', alignItems: 'center', justifyContent: 'center' },
+  hwBadgeClock: { fontSize: 20 },
+  hwBadgeDot: { position: 'absolute', bottom: -3, right: -3, width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  hwBadgeDotText: { fontSize: 11 },
+  hwBadgeTitle: { fontSize: 12, fontWeight: '700', color: '#92400e' },
+  hwBadgeSub: { fontSize: 11, color: '#b45309', marginTop: 1 },
+  hwBadgeChevron: { fontSize: 20, color: '#d97706', fontWeight: '400' },
   hwHint: { fontSize: 12, color: c.textSub, marginBottom: 10, lineHeight: 18 },
   hwCandidate: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 8, backgroundColor: '#fff' },
   hwCandidateSel: { borderColor: '#fbbf24', backgroundColor: '#fffbeb' },
