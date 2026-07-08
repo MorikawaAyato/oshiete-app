@@ -655,7 +655,6 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.hwBadge} onPress={() => openHomeworkPicker(w.historyId, w.studentId)} activeOpacity={0.85}>
               <View style={styles.hwBadgeIconWrap}>
                 <Text style={styles.hwBadgeClock}>⏰</Text>
-                <View style={styles.hwBadgeDot}><Text style={styles.hwBadgeDotText}>📝</Text></View>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.hwBadgeTitle}>今なら宿題を送れます</Text>
@@ -1636,8 +1635,6 @@ const styles = StyleSheet.create({
   hwBadge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, marginHorizontal: 16, marginTop: 12 },
   hwBadgeIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#fcd34d', alignItems: 'center', justifyContent: 'center' },
   hwBadgeClock: { fontSize: 20 },
-  hwBadgeDot: { position: 'absolute', bottom: -3, right: -3, width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  hwBadgeDotText: { fontSize: 11 },
   hwBadgeTitle: { fontSize: 12, fontWeight: '700', color: '#92400e' },
   hwBadgeSub: { fontSize: 11, color: '#b45309', marginTop: 1 },
   hwBadgeChevron: { fontSize: 20, color: '#d97706', fontWeight: '400' },
