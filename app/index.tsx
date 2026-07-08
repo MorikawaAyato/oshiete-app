@@ -15,7 +15,7 @@ import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
   loadFollowupSent, saveFollowupSent, loadTeacherName, loadExamInviteSent, saveExamInviteSent, loadTeacherProfileStored,
-  loadHomework, saveHomework, loadHomeworkWindow, saveHomeworkWindow,
+  loadHomeworks, saveHomeworks, loadHomeworkWindow, saveHomeworkWindow,
 } from '@/lib/storage'
 import type { MailMessage, Homework, HomeworkAnswer, HomeworkWindow } from '@/lib/storage'
 import type { HistoryItem, Recap, QACard } from '@/lib/types'
@@ -98,6 +98,7 @@ export default function HomeScreen() {
     useCallback(() => {
       loadMail().then(setMailMessages)
       loadHomeworkWindow().then(setHomeworkWindow) // 授業終了後に開くウィンドウを反映
+      loadHomeworks().then(setHomeworks) // 宿題の進行状況を反映
       if (pendingAnimRef.current) {
         setPendingMaterialAnimation(false)
         triggerMaterialAnimation()
@@ -192,7 +193,8 @@ export default function HomeScreen() {
   }
 
   // 宿題の進行状態
-  const [homework, setHomework] = useState<Homework | null>(null)
+  const [homeworks, setHomeworks] = useState<Homework[]>([])
+  const [gradingHomework, setGradingHomework] = useState<Homework | null>(null) // 添削モーダルで開いている宿題
   const [hwPickerOpen, setHwPickerOpen] = useState(false)
   const [hwCandidates, setHwCandidates] = useState<QACard[]>([])
   const [hwSelected, setHwSelected] = useState<Set<number>>(new Set())
@@ -203,11 +205,11 @@ export default function HomeScreen() {
   const [homeworkWindow, setHomeworkWindow] = useState<HomeworkWindow | null>(null)
   const [hwTarget, setHwTarget] = useState<{ historyId: string; studentId: string } | null>(null)
 
-  // まだ出題できる有効なウィンドウか（未失効・宿題が進行中でない・カードが揃っている）
+  // まだ出題できる有効なウィンドウか（未失効・その生徒に進行中の宿題が無い・カードが揃っている）
   const activeHomeworkWindow = (): HomeworkWindow | null => {
-    if (homework) return null
     if (!homeworkWindow) return null
     if (Date.now() - homeworkWindow.endedAt > HOMEWORK_WINDOW_MS) return null
+    if (homeworks.some((h) => h.studentId === homeworkWindow.studentId)) return null
     const cards = history.find((h) => h.id === homeworkWindow.historyId)?.factsheet?.cards ?? []
     if (cards.length < HOMEWORK_CANDIDATE_COUNT) return null
     return homeworkWindow
@@ -239,43 +241,50 @@ export default function HomeScreen() {
       assignedAt: Date.now(),
       state: 'assigned',
     }
-    void saveHomework(hw)
-    setHomework(hw)
+    // その生徒の宿題を差し替え（生徒ごとに最大1件）
+    const next = [...homeworks.filter((h) => h.studentId !== hw.studentId), hw]
+    void saveHomeworks(next)
+    setHomeworks(next)
     void saveHomeworkWindow(null) // 出題したらウィンドウを閉じる
     setHomeworkWindow(null)
     setHwPickerOpen(false)
   }
 
-  // 起動時：宿題の読み込みと、出題から半日たっていれば答案を生成して届ける
+  // 起動時：宿題の読み込みと、出題から半日たった答案待ちすべての答案を生成して届ける
   const homeworkChecked = useRef(false)
   useEffect(() => {
     if (homeworkChecked.current) return
     homeworkChecked.current = true
     void (async () => {
       try {
-        const hw = await loadHomework()
-        if (!hw) return
-        setHomework(hw)
-        if (hw.state !== 'assigned' || Date.now() - hw.assignedAt < HOMEWORK_ARRIVE_MS) return
-        const student = STUDENTS.find((s) => s.id === hw.studentId)
-        if (!student) return
-        const res = await fetchHomeworkAnswers(hw.studentId, hw.cards)
-        if (!res.answers) return
-        const arrived: Homework = { ...hw, state: 'arrived', answers: res.answers }
-        await saveHomework(arrived)
-        setHomework(arrived)
-        const updated = await addMail({
-          id: `homework-${Date.now()}`,
-          type: 'student',
-          from: student.name,
-          studentId: student.id,
-          subject: '宿題やってきました！',
-          content: `「${hw.materialTitle}」の宿題、がんばって解いてきました！添削おねがいします📝`,
-          timestamp: new Date().toISOString(),
-          read: false,
-          homework: true,
-        })
-        setMailMessages(updated)
+        const list = await loadHomeworks()
+        if (list.length === 0) return
+        setHomeworks(list)
+        const due = list.filter((h) => h.state === 'assigned' && Date.now() - h.assignedAt >= HOMEWORK_ARRIVE_MS)
+        if (due.length === 0) return
+        let updated = [...list]
+        for (const hw of due) {
+          const student = STUDENTS.find((s) => s.id === hw.studentId)
+          if (!student) continue
+          const res = await fetchHomeworkAnswers(hw.studentId, hw.cards)
+          if (!res.answers) continue
+          const answers = res.answers
+          updated = updated.map((h) => h.studentId === hw.studentId ? { ...h, state: 'arrived' as const, answers } : h)
+          const mails = await addMail({
+            id: `homework-${hw.studentId}-${Date.now()}`,
+            type: 'student',
+            from: student.name,
+            studentId: student.id,
+            subject: '宿題やってきました！',
+            content: `「${hw.materialTitle}」の宿題、がんばって解いてきました！添削おねがいします📝`,
+            timestamp: new Date().toISOString(),
+            read: false,
+            homework: true,
+          })
+          setMailMessages(mails)
+        }
+        await saveHomeworks(updated)
+        setHomeworks(updated)
       } catch { /* 失敗時は次回起動時に再挑戦（stateはassignedのまま） */ }
     })()
   }, [])
@@ -289,9 +298,10 @@ export default function HomeScreen() {
     openHomeworkPicker(w.historyId, w.studentId)
   }, [pendingHomeworkPicker, homeworkWindow, history])
 
-  const openHomeworkGrading = () => {
-    if (!homework?.answers) return
-    setHwMarks(Array(homework.answers.length).fill(null))
+  const openHomeworkGrading = (hw: Homework) => {
+    if (!hw.answers) return
+    setGradingHomework(hw)
+    setHwMarks(Array(hw.answers.length).fill(null))
     setHwGradeResult(false)
     setShowInbox(false)
     setExpandedMailId(null)
@@ -299,8 +309,12 @@ export default function HomeScreen() {
   }
 
   const finishHomework = () => {
-    void saveHomework(null)
-    setHomework(null)
+    if (gradingHomework) {
+      const next = homeworks.filter((h) => h.studentId !== gradingHomework.studentId)
+      void saveHomeworks(next)
+      setHomeworks(next)
+    }
+    setGradingHomework(null)
     setHwGradeOpen(false)
   }
 
@@ -647,13 +661,14 @@ export default function HomeScreen() {
         </View>
 
         {/* 宿題ステータス：トップに常駐する時計スロット。
-            優先度 答案の添削（arrived）＞ 答案待ち（assigned）＞ 宿題の受付（授業後の一定時間） */}
+            優先度 答案の添削（arrived）＞ 宿題の受付（授業後の一定時間）＞ 答案待ち（assigned） */}
         {(() => {
-          // ① 答案が届いている → 添削へ誘導（タップ可）
-          if (homework?.state === 'arrived') {
-            const st = STUDENTS.find((s) => s.id === homework.studentId)
+          // ① いずれかの答案が届いている → その子の添削へ（複数届いていれば1件ずつ捌く）
+          const arrived = homeworks.find((h) => h.state === 'arrived')
+          if (arrived) {
+            const st = STUDENTS.find((s) => s.id === arrived.studentId)
             return (
-              <TouchableOpacity style={styles.hwBadge} onPress={openHomeworkGrading} activeOpacity={0.85}>
+              <TouchableOpacity style={styles.hwBadge} onPress={() => openHomeworkGrading(arrived)} activeOpacity={0.85}>
                 <View style={styles.hwBadgeIconWrap}><Text style={styles.hwBadgeClock}>📝</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.hwBadgeTitle}>{st?.name ?? '生徒'}から答案が届きました</Text>
@@ -663,33 +678,36 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )
           }
-          // ② 宿題を出して答案待ち → 状況表示（タップ不可）
-          if (homework?.state === 'assigned') {
-            const st = STUDENTS.find((s) => s.id === homework.studentId)
+          // ② 受付時間内で、その生徒にまだ宿題が無い → 宿題を送る（タップ可）
+          const w = activeHomeworkWindow()
+          if (w) {
+            const st = STUDENTS.find((s) => s.id === w.studentId)
+            return (
+              <TouchableOpacity style={styles.hwBadge} onPress={() => openHomeworkPicker(w.historyId, w.studentId)} activeOpacity={0.85}>
+                <View style={styles.hwBadgeIconWrap}><Text style={styles.hwBadgeClock}>⏰</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.hwBadgeTitle}>今なら宿題を送れます</Text>
+                  <Text style={styles.hwBadgeSub} numberOfLines={1}>{st?.name ?? '生徒'}に、いまの授業の宿題を送りましょう</Text>
+                </View>
+                <Text style={styles.hwBadgeChevron}>›</Text>
+              </TouchableOpacity>
+            )
+          }
+          // ③ 出題中（答案待ち）→ 出している生徒名を列挙（人数に依らず変数で表示）
+          const waiting = homeworks.filter((h) => h.state === 'assigned')
+          if (waiting.length > 0) {
+            const names = waiting.map((h) => STUDENTS.find((s) => s.id === h.studentId)?.name ?? '生徒').join('、')
             return (
               <View style={[styles.hwBadge, styles.hwBadgeMuted]}>
                 <View style={[styles.hwBadgeIconWrap, styles.hwBadgeIconMuted]}><Text style={styles.hwBadgeClock}>⏳</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.hwBadgeTitleMuted}>{st?.name ?? '生徒'}に宿題を出しました</Text>
-                  <Text style={styles.hwBadgeSubMuted} numberOfLines={1}>答案が返ってくるまで少し待ちましょう</Text>
+                  <Text style={styles.hwBadgeTitleMuted}>宿題を出しました</Text>
+                  <Text style={styles.hwBadgeSubMuted} numberOfLines={1}>{names}の答案を待っています</Text>
                 </View>
               </View>
             )
           }
-          // ③ 授業後の受付時間内 → 宿題を送る（タップ可）
-          const w = activeHomeworkWindow()
-          if (!w) return null
-          const st = STUDENTS.find((s) => s.id === w.studentId)
-          return (
-            <TouchableOpacity style={styles.hwBadge} onPress={() => openHomeworkPicker(w.historyId, w.studentId)} activeOpacity={0.85}>
-              <View style={styles.hwBadgeIconWrap}><Text style={styles.hwBadgeClock}>⏰</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.hwBadgeTitle}>今なら宿題を送れます</Text>
-                <Text style={styles.hwBadgeSub} numberOfLines={1}>{st?.name ?? '生徒'}に、いまの授業の宿題を送りましょう</Text>
-              </View>
-              <Text style={styles.hwBadgeChevron}>›</Text>
-            </TouchableOpacity>
-          )
+          return null
         })()}
 
         {/* 今日の授業 */}
@@ -1085,11 +1103,14 @@ export default function HomeScreen() {
                           <Text style={styles.inboxOpenBtnText}>🎓 昇進試験を受ける</Text>
                         </TouchableOpacity>
                       )}
-                      {isExpanded && msg.homework && homework?.state === 'arrived' && (
-                        <TouchableOpacity onPress={openHomeworkGrading} style={[styles.inboxOpenBtn, { backgroundColor: '#d97706' }]}>
-                          <Text style={styles.inboxOpenBtnText}>📝 答案を添削する</Text>
-                        </TouchableOpacity>
-                      )}
+                      {isExpanded && msg.homework && (() => {
+                        const hw = homeworks.find((h) => h.studentId === msg.studentId && h.state === 'arrived')
+                        return hw ? (
+                          <TouchableOpacity onPress={() => openHomeworkGrading(hw)} style={[styles.inboxOpenBtn, { backgroundColor: '#d97706' }]}>
+                            <Text style={styles.inboxOpenBtnText}>📝 答案を添削する</Text>
+                          </TouchableOpacity>
+                        ) : null
+                      })()}
                     </View>
                   </TouchableOpacity>
                 )
@@ -1258,7 +1279,7 @@ export default function HomeScreen() {
       </Modal>
 
       {/* 宿題の添削 */}
-      <Modal visible={hwGradeOpen && !!homework?.answers} transparent animationType="slide" onRequestClose={() => setHwGradeOpen(false)}>
+      <Modal visible={hwGradeOpen && !!gradingHomework?.answers} transparent animationType="slide" onRequestClose={() => setHwGradeOpen(false)}>
         <View style={styles.studentSheetContainer}>
           <Pressable style={styles.studentSheetOverlay} onPress={() => setHwGradeOpen(false)} />
           <View style={[styles.studentSheetBottom, { maxHeight: '88%', paddingBottom: 28 }]}>
@@ -1270,12 +1291,12 @@ export default function HomeScreen() {
             </View>
             <ScrollView>
               <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-                {homework?.answers && (!hwGradeResult ? (
+                {gradingHomework?.answers && (!hwGradeResult ? (
                   <>
                     <Text style={styles.hwHint}>それぞれの答えに ⭕ か ❌ をつけてください。まちがいが混ざっているかも...？</Text>
-                    {homework.answers.map((ans, i) => (
+                    {gradingHomework.answers.map((ans, i) => (
                       <View key={i} style={styles.hwAnswerCard}>
-                        <Text style={styles.hwAnswerQ}>問{i + 1}: {homework.cards[i]?.q}</Text>
+                        <Text style={styles.hwAnswerQ}>問{i + 1}: {gradingHomework.cards[i]?.q}</Text>
                         <Text style={styles.hwAnswerText}>{ans.text}</Text>
                         <View style={{ flexDirection: 'row', gap: 8 }}>
                           <TouchableOpacity
@@ -1303,29 +1324,29 @@ export default function HomeScreen() {
                   </>
                 ) : (
                   (() => {
-                    const allRight = homework.answers!.every((ans, i) => (hwMarks[i] === true) === !ans.wrong)
+                    const allRight = gradingHomework.answers!.every((ans, i) => (hwMarks[i] === true) === !ans.wrong)
                     return (
                       <>
                         <Text style={styles.examVerdict}>{allRight ? '🎉 完璧な添削！' : 'おしい...！'}</Text>
                         <Text style={styles.examScore}>
                           {allRight ? 'まちがいをちゃんと見抜きました。さすが先生！' : '見落としがありました。もう一度教材を確認してみましょう。'}
                         </Text>
-                        {homework.answers!.map((ans, i) => {
+                        {gradingHomework.answers!.map((ans, i) => {
                           const judgedRight = (hwMarks[i] === true) === !ans.wrong
                           return (
                             <View key={i} style={[styles.hwAnswerCard, { borderColor: judgedRight ? '#a7f3d0' : '#fecdd3' }]}>
-                              <Text style={styles.hwAnswerQ}>問{i + 1}: {homework.cards[i]?.q}</Text>
+                              <Text style={styles.hwAnswerQ}>問{i + 1}: {gradingHomework.cards[i]?.q}</Text>
                               <Text style={styles.hwAnswerText}>{ans.text}</Text>
                               <Text style={styles.hwResultText}>
                                 実際: {ans.wrong ? '❌ まちがい' : '⭕ 正解'} ／ あなたの添削: {hwMarks[i] ? '⭕' : '❌'} {judgedRight ? '→ 見抜けた！' : '→ 見落とし'}
                               </Text>
-                              {ans.wrong && <Text style={styles.examResultModel}>正しくは: {homework.cards[i]?.a}</Text>}
+                              {ans.wrong && <Text style={styles.examResultModel}>正しくは: {gradingHomework.cards[i]?.a}</Text>}
                             </View>
                           )
                         })}
                         <View style={styles.hwThanksRow}>
                           {(() => {
-                            const st = STUDENTS.find((s) => s.id === homework.studentId)
+                            const st = STUDENTS.find((s) => s.id === gradingHomework.studentId)
                             return st ? <Image source={{ uri: st.avatar }} style={styles.hwThanksAvatar} /> : null
                           })()}
                           <Text style={styles.hwThanksText}>添削ありがとうございました！なおしてもらったところ、ちゃんと覚え直します！📝✨</Text>

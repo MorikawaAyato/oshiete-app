@@ -29,18 +29,23 @@ export type Homework = {
 
 const HOMEWORK_KEY = 'oshiete_homework'
 
-export async function loadHomework(): Promise<Homework | null> {
+// 宿題は生徒ごとに最大1件（B案）。配列で保持し、旧形式（単一オブジェクト）も読めるようにする
+export async function loadHomeworks(): Promise<Homework[]> {
   try {
     const raw = await AsyncStorage.getItem(HOMEWORK_KEY)
-    return raw ? (JSON.parse(raw) as Homework) : null
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed as Homework[]
+    if (parsed && typeof parsed === 'object') return [parsed as Homework] // 旧形式の移行
+    return []
   } catch {
-    return null
+    return []
   }
 }
 
-export async function saveHomework(hw: Homework | null): Promise<void> {
+export async function saveHomeworks(list: Homework[]): Promise<void> {
   try {
-    if (hw) await AsyncStorage.setItem(HOMEWORK_KEY, JSON.stringify(hw))
+    if (list.length > 0) await AsyncStorage.setItem(HOMEWORK_KEY, JSON.stringify(list))
     else await AsyncStorage.removeItem(HOMEWORK_KEY)
   } catch {}
 }

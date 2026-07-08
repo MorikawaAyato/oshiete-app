@@ -10,7 +10,7 @@ import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
 import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
-import { addMail, loadRecap, loadFactsheet, saveRecapToHistory, saveHomeworkWindow, loadHomework } from '@/lib/storage'
+import { addMail, loadRecap, loadFactsheet, saveRecapToHistory, saveHomeworkWindow, loadHomeworks } from '@/lib/storage'
 import type { ChatMessage } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -159,12 +159,12 @@ export default function ChatScreen() {
   const [studentTyping, setStudentTyping] = useState(false) // 授業終了の連投を時差配信する間の入力中演出
   const [canAssignHomework, setCanAssignHomework] = useState(false) // この教材に宿題出題に足るカードがあるか
 
-  // 宿題を出せるか（一問一答バンクが6枚以上、かつ前回の宿題が残っていない）を確認
+  // 宿題を出せるか（一問一答バンクが6枚以上、かつこの生徒に進行中の宿題が無い）を確認
   useEffect(() => {
-    void Promise.all([loadFactsheet(currentHistoryId), loadHomework()]).then(
-      ([fs, hw]) => setCanAssignHomework((fs?.cards?.length ?? 0) >= 6 && !hw),
+    void Promise.all([loadFactsheet(currentHistoryId), loadHomeworks()]).then(
+      ([fs, list]) => setCanAssignHomework((fs?.cards?.length ?? 0) >= 6 && !list.some((h) => h.studentId === selectedStudentId)),
     )
-  }, [currentHistoryId, classEnded])
+  }, [currentHistoryId, classEnded, selectedStudentId])
 
   const remainingMins = classEnded ? 0 : (MAX_TURNS - turnCount) * 5
   const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
