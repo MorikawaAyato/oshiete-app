@@ -648,14 +648,15 @@ export default function HomeScreen() {
 
         {/* 今日の授業 */}
         <View style={styles.todaySection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>次の授業</Text>
-            {hasContent && (
+          {/* 教材が用意できてから「次の授業」を表示する（作成中は出さない） */}
+          {hasContent && (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>次の授業</Text>
               <TouchableOpacity onPress={clearSelection}>
                 <Text style={styles.sectionClear}>✕ 選択を解除</Text>
               </TouchableOpacity>
-            )}
-          </View>
+            </View>
+          )}
 
           {/* 入力モード タブ */}
           {!hasContent && (
@@ -832,7 +833,7 @@ export default function HomeScreen() {
                 </Text>
               ) : activeHomeworkWindow() && activeHomeworkWindow()!.historyId === activeHistoryId ? (
                 <TouchableOpacity style={styles.hwBtn} onPress={() => { const w = activeHomeworkWindow()!; openHomeworkPicker(w.historyId, w.studentId) }}>
-                  <Text style={styles.hwBtnText}>📝 帰りの宿題を出す</Text>
+                  <Text style={styles.hwBtnText}>📝 宿題を送る</Text>
                 </TouchableOpacity>
               ) : null}
             </Animated.View>

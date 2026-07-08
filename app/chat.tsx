@@ -508,7 +508,7 @@ export default function ChatScreen() {
                   style={styles.homeworkBtn}
                   onPress={() => { setPendingHomeworkPicker(true); handleBack() }}
                 >
-                  <Text style={styles.homeworkBtnText}>📝 帰りの宿題を出す</Text>
+                  <Text style={styles.homeworkBtnText}>📝 宿題を送る</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={styles.finishBtn} onPress={handleBack}>
