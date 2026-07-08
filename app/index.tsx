@@ -646,16 +646,43 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* 宿題の受付中バッジ：授業後の一定時間だけトップに常駐する（システムからの案内） */}
+        {/* 宿題ステータス：トップに常駐する時計スロット。
+            優先度 答案の添削（arrived）＞ 答案待ち（assigned）＞ 宿題の受付（授業後の一定時間） */}
         {(() => {
+          // ① 答案が届いている → 添削へ誘導（タップ可）
+          if (homework?.state === 'arrived') {
+            const st = STUDENTS.find((s) => s.id === homework.studentId)
+            return (
+              <TouchableOpacity style={styles.hwBadge} onPress={openHomeworkGrading} activeOpacity={0.85}>
+                <View style={styles.hwBadgeIconWrap}><Text style={styles.hwBadgeClock}>📝</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.hwBadgeTitle}>{st?.name ?? '生徒'}から答案が届きました</Text>
+                  <Text style={styles.hwBadgeSub} numberOfLines={1}>タップして添削してあげましょう</Text>
+                </View>
+                <Text style={styles.hwBadgeChevron}>›</Text>
+              </TouchableOpacity>
+            )
+          }
+          // ② 宿題を出して答案待ち → 状況表示（タップ不可）
+          if (homework?.state === 'assigned') {
+            const st = STUDENTS.find((s) => s.id === homework.studentId)
+            return (
+              <View style={[styles.hwBadge, styles.hwBadgeMuted]}>
+                <View style={[styles.hwBadgeIconWrap, styles.hwBadgeIconMuted]}><Text style={styles.hwBadgeClock}>⏳</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.hwBadgeTitleMuted}>{st?.name ?? '生徒'}に宿題を出しました</Text>
+                  <Text style={styles.hwBadgeSubMuted} numberOfLines={1}>答案が返ってくるまで少し待ちましょう</Text>
+                </View>
+              </View>
+            )
+          }
+          // ③ 授業後の受付時間内 → 宿題を送る（タップ可）
           const w = activeHomeworkWindow()
           if (!w) return null
           const st = STUDENTS.find((s) => s.id === w.studentId)
           return (
             <TouchableOpacity style={styles.hwBadge} onPress={() => openHomeworkPicker(w.historyId, w.studentId)} activeOpacity={0.85}>
-              <View style={styles.hwBadgeIconWrap}>
-                <Text style={styles.hwBadgeClock}>⏰</Text>
-              </View>
+              <View style={styles.hwBadgeIconWrap}><Text style={styles.hwBadgeClock}>⏰</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.hwBadgeTitle}>今なら宿題を送れます</Text>
                 <Text style={styles.hwBadgeSub} numberOfLines={1}>{st?.name ?? '生徒'}に、いまの授業の宿題を送りましょう</Text>
@@ -845,12 +872,6 @@ export default function HomeScreen() {
                 </Text>
               </BouncyPressable>
 
-              {/* 宿題の進行状況（送信中／答案到着）。出題導線はトップの受付中バッジに集約 */}
-              {homework && (
-                <Text style={styles.hwStatusText}>
-                  📝 {homework.state === 'assigned' ? '宿題を出しています。次にアプリをひらいたころ、答案が届きます' : '答案が届いています。メールボックスから添削できます'}
-                </Text>
-              )}
             </Animated.View>
           )}
         </View>
@@ -1631,13 +1652,16 @@ const styles = StyleSheet.create({
   examCloseBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   // 宿題
-  hwStatusText: { fontSize: 11, color: c.faint, textAlign: 'center', marginTop: 10, lineHeight: 16 },
   hwBadge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, marginHorizontal: 16, marginTop: 12 },
   hwBadgeIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#fcd34d', alignItems: 'center', justifyContent: 'center' },
   hwBadgeClock: { fontSize: 20 },
   hwBadgeTitle: { fontSize: 12, fontWeight: '700', color: '#92400e' },
   hwBadgeSub: { fontSize: 11, color: '#b45309', marginTop: 1 },
   hwBadgeChevron: { fontSize: 20, color: '#d97706', fontWeight: '400' },
+  hwBadgeMuted: { backgroundColor: c.bgSub, borderColor: c.border },
+  hwBadgeIconMuted: { backgroundColor: c.bg, borderColor: c.border },
+  hwBadgeTitleMuted: { fontSize: 12, fontWeight: '700', color: c.textMid },
+  hwBadgeSubMuted: { fontSize: 11, color: c.faint, marginTop: 1 },
   hwHint: { fontSize: 12, color: c.textSub, marginBottom: 10, lineHeight: 18 },
   hwCandidate: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 8, backgroundColor: '#fff' },
   hwCandidateSel: { borderColor: '#fbbf24', backgroundColor: '#fffbeb' },
