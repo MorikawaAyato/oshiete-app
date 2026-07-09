@@ -31,6 +31,7 @@ export type NotebookLine = {
   text: string
   status: 'correct' | 'wrong' | 'blank'
   correction?: string
+  teacherMark?: boolean // 先生（ユーザー）がつけた⭕(true)/❌(false)
 }
 
 export type Notebook = {

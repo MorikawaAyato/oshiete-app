@@ -31,22 +31,6 @@ function containsNG(text: string): boolean {
 }
 
 // 添削アニメ: 花丸スタンプ／赤ペンをぽんっと表示する
-function GradeIn({ delay, animate, stamp, children }: { delay: number; animate: boolean; stamp?: boolean; children: React.ReactNode }) {
-  const scale = useRef(new Animated.Value(animate ? (stamp ? 2 : 0.9) : 1)).current
-  const opacity = useRef(new Animated.Value(animate ? 0 : 1)).current
-  useEffect(() => {
-    if (!animate) return
-    Animated.sequence([
-      Animated.delay(delay),
-      Animated.parallel([
-        Animated.spring(scale, { toValue: 1, useNativeDriver: true, bounciness: 14, speed: 14 }),
-        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-      ]),
-    ]).start()
-  }, [])
-  return <Animated.View style={{ opacity, transform: [{ scale }] }}>{children}</Animated.View>
-}
-
 // 🐾 タイピング演出: 足あとがとことこ現れて消える
 function TypingPaws() {
   const paw0 = useRef(new Animated.Value(0)).current
@@ -155,14 +139,18 @@ export default function ChatScreen() {
   const [showHints, setShowHints] = useState(false)
   const [hintCharged, setHintCharged] = useState(false) // このターンのヒントを開封済みか（開閉で二重消費しない）
   const [showNotebook, setShowNotebook] = useState(false)
-  const [notebookGrading, setNotebookGrading] = useState(false)
+  const [showModelAnswer, setShowModelAnswer] = useState(false) // ノート採点時の「教材のポイント」参照の開閉
+  const [modelPoints, setModelPoints] = useState<string[]>([]) // 採点の見比べ用（教材の重要事実）
   const [studentTyping, setStudentTyping] = useState(false) // 授業終了の連投を時差配信する間の入力中演出
   const [canAssignHomework, setCanAssignHomework] = useState(false) // この教材に宿題出題に足るカードがあるか
 
-  // 宿題を出せるか（一問一答バンクが6枚以上、かつこの生徒に進行中の宿題が無い）を確認
+  // 宿題を出せるか（一問一答バンクが6枚以上、かつこの生徒に進行中の宿題が無い）を確認。あわせて採点の見比べ用の事実も読む
   useEffect(() => {
     void Promise.all([loadFactsheet(currentHistoryId), loadHomeworks()]).then(
-      ([fs, list]) => setCanAssignHomework((fs?.cards?.length ?? 0) >= 6 && !list.some((h) => h.studentId === selectedStudentId)),
+      ([fs, list]) => {
+        setCanAssignHomework((fs?.cards?.length ?? 0) >= 6 && !list.some((h) => h.studentId === selectedStudentId))
+        setModelPoints(fs?.facts ?? [])
+      },
     )
   }, [currentHistoryId, classEnded, selectedStudentId])
 
@@ -189,7 +177,7 @@ export default function ChatScreen() {
         setCorrectness([])
         setNotebook(null)
         setNotebookState(null)
-        setNotebookGrading(false)
+        setShowModelAnswer(false)
         return startChat(student.id, imageDescription, notes, teacherName, teacherCharacter, recap ?? undefined, factsheet)
       })
       .then((res) => {
@@ -332,12 +320,17 @@ export default function ChatScreen() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
   }
 
-  // 添削したノートを生徒に返す
+  // 先生（ユーザー）がノートの各行に⭕❌をつける（①化：AIの自動判定ではなく人間が採点）
+  const setNoteMark = (i: number, val: boolean) => {
+    if (!notebook) return
+    setNotebook({ ...notebook, lines: notebook.lines.map((l, j) => j === i ? { ...l, teacherMark: val } : l) })
+  }
+
+  // 採点して生徒に返す
   const handleReturnNotebook = () => {
     if (!student) return
     setNotebookState('returned')
     setShowNotebook(false)
-    setNotebookGrading(false)
     setChatMessages((prev) => [...prev, { role: 'mana', text: student.notebookThanks }])
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
   }
@@ -533,29 +526,45 @@ export default function ChatScreen() {
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.notebookScroll}>
+                {notebookState === 'received' && (
+                  <Text style={styles.notebookGradeHint}>先生として、ノートの内容が合っているか ⭕ か ❌ をつけてあげましょう。迷ったら「教材のポイント」を見比べてください。</Text>
+                )}
+                {modelPoints.length > 0 && (
+                  <View style={styles.modelBox}>
+                    <TouchableOpacity onPress={() => setShowModelAnswer((v) => !v)} style={styles.modelToggle}>
+                      <Text style={styles.modelToggleText}>📖 教材のポイント（見比べる用）</Text>
+                      <Text style={styles.modelToggleArrow}>{showModelAnswer ? '▲' : '▼'}</Text>
+                    </TouchableOpacity>
+                    {showModelAnswer && (
+                      <View style={{ paddingHorizontal: 12, paddingBottom: 10 }}>
+                        {modelPoints.map((f, i) => <Text key={i} style={styles.modelPoint}>・{f}</Text>)}
+                      </View>
+                    )}
+                  </View>
+                )}
                 <View style={styles.notebookPaper}>
                   <Text style={styles.notebookTitle}>{notebook?.title}</Text>
                   {notebook?.lines.map((line, i) => {
-                    const annotationsVisible = notebookGrading || notebookState === 'returned'
-                    const animate = notebookGrading && notebookState === 'received'
+                    const isBlank = line.status === 'blank'
                     return (
-                      <View key={i} style={styles.notebookLineRow}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.notebookLineText, line.status === 'blank' && styles.notebookLineBlank]}>
-                            {line.status === 'blank' ? '（ここ、書けませんでした…）' : line.text}
+                      <View key={i} style={styles.notebookLineCol}>
+                        <Text style={[styles.notebookLineText, isBlank && styles.notebookLineBlank]}>
+                          {isBlank ? '（ここ、書けませんでした…）' : line.text}
+                        </Text>
+                        {!isBlank && notebookState === 'received' && (
+                          <View style={styles.markRow}>
+                            <TouchableOpacity onPress={() => setNoteMark(i, true)} style={[styles.markBtn, line.teacherMark === true && styles.markBtnCorrect]}>
+                              <Text style={[styles.markBtnText, line.teacherMark === true && styles.markBtnTextSel]}>⭕</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setNoteMark(i, false)} style={[styles.markBtn, line.teacherMark === false && styles.markBtnWrong]}>
+                              <Text style={[styles.markBtnText, line.teacherMark === false && styles.markBtnTextSel]}>❌</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                        {!isBlank && notebookState === 'returned' && line.teacherMark !== undefined && (
+                          <Text style={[styles.notebookMarkResult, { color: line.teacherMark ? '#059669' : '#e11d48' }]}>
+                            {line.teacherMark ? '⭕' : '❌ もう一度教えてあげよう'}
                           </Text>
-                          {annotationsVisible && line.status !== 'correct' && line.correction && (
-                            <GradeIn delay={400 + i * 350} animate={animate}>
-                              <Text style={styles.notebookCorrection}>
-                                {line.status === 'wrong' ? '✗ ' : '＋ '}{line.correction}
-                              </Text>
-                            </GradeIn>
-                          )}
-                        </View>
-                        {annotationsVisible && line.status === 'correct' && (
-                          <GradeIn delay={400 + i * 350} animate={animate} stamp>
-                            <Text style={styles.notebookHanamaru}>💮</Text>
-                          </GradeIn>
                         )}
                       </View>
                     )
@@ -563,17 +572,17 @@ export default function ChatScreen() {
                 </View>
               </ScrollView>
               <View style={styles.notebookModalFooter}>
-                {!notebookGrading && notebookState === 'received' ? (
-                  <BouncyPressable onPress={() => setNotebookGrading(true)} style={styles.gradeBtn} haptic="medium">
-                    <Text style={styles.gradeBtnText}>🖊️ 赤ペンで添削する</Text>
-                  </BouncyPressable>
-                ) : notebookState === 'received' ? (
-                  <GradeIn delay={600 + (notebook?.lines.length ?? 0) * 350} animate>
-                    <BouncyPressable onPress={handleReturnNotebook} style={styles.returnBtn} haptic="success">
-                      <Text style={styles.gradeBtnText}>📮 ノートを返す</Text>
+                {notebookState === 'received' ? (() => {
+                  const gradable = notebook?.lines.filter((l) => l.status !== 'blank') ?? []
+                  const allGraded = gradable.every((l) => l.teacherMark !== undefined)
+                  return (
+                    <BouncyPressable onPress={() => { if (allGraded) handleReturnNotebook() }} style={[styles.returnBtn, !allGraded && styles.returnBtnDisabled]} haptic="success">
+                      <Text style={[styles.gradeBtnText, !allGraded && styles.gradeBtnTextDisabled]}>
+                        {allGraded ? '📮 採点してノートを返す' : 'すべての行に ⭕ か ❌ をつけてね'}
+                      </Text>
                     </BouncyPressable>
-                  </GradeIn>
-                ) : (
+                  )
+                })() : (
                   <TouchableOpacity onPress={() => setShowNotebook(false)} style={styles.closeNotebookBtn}>
                     <Text style={styles.closeNotebookBtnText}>閉じる</Text>
                   </TouchableOpacity>
@@ -744,25 +753,33 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2, borderBottomColor: c.paperRule,
     paddingBottom: 4, marginBottom: 6,
   },
-  notebookLineRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+  notebookLineText: { fontSize: 13, color: c.text, lineHeight: 20 },
+  notebookLineBlank: { color: c.borderStrong },
+  notebookLineCol: {
     borderBottomWidth: 1, borderBottomColor: c.paperLine + 'cc',
     paddingVertical: 7,
   },
-  notebookLineText: { fontSize: 13, color: c.text, lineHeight: 20 },
-  notebookLineBlank: { color: c.borderStrong },
-  notebookCorrection: { fontSize: 12, fontWeight: '700', color: c.danger, lineHeight: 17, marginTop: 3 },
-  notebookHanamaru: { fontSize: 30 },
+  notebookMarkResult: { fontSize: 13, fontWeight: '700', marginTop: 3 },
+  notebookGradeHint: { fontSize: 12, color: c.textSub, lineHeight: 18, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 4 },
+  modelBox: { marginHorizontal: 16, marginTop: 8, borderWidth: 1, borderColor: '#bae6fd', borderRadius: 12, backgroundColor: '#f0f9ff' },
+  modelToggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9 },
+  modelToggleText: { fontSize: 12, fontWeight: '700', color: '#0369a1' },
+  modelToggleArrow: { fontSize: 11, color: '#7dd3fc' },
+  modelPoint: { fontSize: 12, color: c.textMid, lineHeight: 19, marginBottom: 2 },
+  markRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
+  markBtn: { flex: 1, borderWidth: 1, borderColor: c.borderStrong, borderRadius: 10, paddingVertical: 5, alignItems: 'center', backgroundColor: '#fff' },
+  markBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
+  markBtnWrong: { backgroundColor: '#f43f5e', borderColor: '#f43f5e' },
+  markBtnText: { fontSize: 16, color: c.faint },
+  markBtnTextSel: { color: '#fff' },
   notebookModalFooter: { paddingHorizontal: 18, paddingTop: 12 },
-  gradeBtn: {
-    backgroundColor: c.danger, borderRadius: 12,
-    paddingVertical: 13, alignItems: 'center',
-  },
   returnBtn: {
     backgroundColor: c.primaryStrong, borderRadius: 12,
     paddingVertical: 13, alignItems: 'center',
   },
+  returnBtnDisabled: { backgroundColor: c.bgSub },
   gradeBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
+  gradeBtnTextDisabled: { color: c.faint },
   closeNotebookBtn: { ...btn.secondary, borderRadius: 12 },
   closeNotebookBtnText: { ...btn.secondaryText },
 
