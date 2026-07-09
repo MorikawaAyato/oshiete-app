@@ -1,4 +1,4 @@
-import type { Factsheet, Notebook, Recap, QACard } from './types'
+import type { Factsheet, Notebook, Recap } from './types'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? ''
 
@@ -62,15 +62,16 @@ export async function gradeExam(
   return res.json()
 }
 
-// 宿題の答案生成（1問だけ誤答が仕込まれる。どれが誤答かはサーバが決めて返す）
-export async function fetchHomeworkAnswers(
+// 宿題の生成（ノート採点で❌にした項目から、設問・模範解答・生徒の答案を作る）
+export async function fetchHomework(
   studentId: string,
-  cards: QACard[],
-): Promise<{ answers?: { text: string; wrong: boolean }[]; error?: string }> {
+  wrongLines: string[],
+  facts: string[],
+): Promise<{ items?: { question: string; modelAnswer: string; studentAnswer: string }[]; error?: string }> {
   const res = await fetch(`${API_BASE}/api/homework`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, cards }),
+    body: JSON.stringify({ studentId, wrongLines, facts }),
   })
   return res.json()
 }

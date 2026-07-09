@@ -10,7 +10,7 @@ import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
 import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
-import { addMail, loadRecap, loadFactsheet, saveRecapToHistory, saveHomeworkWindow, loadHomeworks } from '@/lib/storage'
+import { addMail, loadRecap, loadFactsheet, saveRecapToHistory, saveHomeworkWindow } from '@/lib/storage'
 import type { ChatMessage } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -122,7 +122,6 @@ export default function ChatScreen() {
     lessonRecap, setLessonRecap,
     notebook, setNotebook,
     notebookState, setNotebookState,
-    setPendingHomeworkPicker,
     resetChatSession,
   } = useApp()
   const teacherName = teacherProfile.name || undefined
@@ -142,17 +141,11 @@ export default function ChatScreen() {
   const [showModelAnswer, setShowModelAnswer] = useState(false) // ノート採点時の「教材のポイント」参照の開閉
   const [modelPoints, setModelPoints] = useState<string[]>([]) // 採点の見比べ用（教材の重要事実）
   const [studentTyping, setStudentTyping] = useState(false) // 授業終了の連投を時差配信する間の入力中演出
-  const [canAssignHomework, setCanAssignHomework] = useState(false) // この教材に宿題出題に足るカードがあるか
 
-  // 宿題を出せるか（一問一答バンクが6枚以上、かつこの生徒に進行中の宿題が無い）を確認。あわせて採点の見比べ用の事実も読む
+  // ノート採点の見比べ用に、教材の重要事実を読む
   useEffect(() => {
-    void Promise.all([loadFactsheet(currentHistoryId), loadHomeworks()]).then(
-      ([fs, list]) => {
-        setCanAssignHomework((fs?.cards?.length ?? 0) >= 6 && !list.some((h) => h.studentId === selectedStudentId))
-        setModelPoints(fs?.facts ?? [])
-      },
-    )
-  }, [currentHistoryId, classEnded, selectedStudentId])
+    void loadFactsheet(currentHistoryId).then((fs) => setModelPoints(fs?.facts ?? []))
+  }, [currentHistoryId])
 
   const remainingMins = classEnded ? 0 : (MAX_TURNS - turnCount) * 5
   const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
@@ -229,10 +222,7 @@ export default function ChatScreen() {
           if (res.recap && currentHistoryId) {
             void saveRecapToHistory(currentHistoryId, student.id, res.recap)
           }
-          // 授業の締めから24時間、「この教材×この生徒」への宿題出題ウィンドウを開く
-          if (currentHistoryId) {
-            void saveHomeworkWindow({ historyId: currentHistoryId, studentId: student.id, endedAt: Date.now() })
-          }
+          // 宿題ウィンドウはノート採点で❌がついたとき（handleReturnNotebook）に開く
           if (res.mailContent) {
             void addMail({
               id: Date.now().toString(),
@@ -326,12 +316,16 @@ export default function ChatScreen() {
     setNotebook({ ...notebook, lines: notebook.lines.map((l, j) => j === i ? { ...l, teacherMark: val } : l) })
   }
 
-  // 採点して生徒に返す
+  // 採点して生徒に返す。❌にした行（うまく説明できなかったこと）があれば宿題の元として保持する
   const handleReturnNotebook = () => {
     if (!student) return
     setNotebookState('returned')
     setShowNotebook(false)
     setChatMessages((prev) => [...prev, { role: 'mana', text: student.notebookThanks }])
+    const wrongLines = (notebook?.lines ?? []).filter((l) => l.teacherMark === false).map((l) => l.text)
+    if (currentHistoryId && wrongLines.length > 0) {
+      void saveHomeworkWindow({ historyId: currentHistoryId, studentId: student.id, endedAt: Date.now(), wrongLines })
+    }
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
   }
 
@@ -495,14 +489,6 @@ export default function ChatScreen() {
           {classEnded && (
             <View style={styles.endedActions}>
               <Text style={styles.endedLabel}>授業が終わりました</Text>
-              {canAssignHomework && (
-                <TouchableOpacity
-                  style={styles.homeworkBtn}
-                  onPress={() => { setPendingHomeworkPicker(true); handleBack() }}
-                >
-                  <Text style={styles.homeworkBtnText}>📝 宿題を送る</Text>
-                </TouchableOpacity>
-              )}
               <TouchableOpacity style={styles.finishBtn} onPress={handleBack}>
                 <Text style={styles.finishBtnText}>ホームに戻る</Text>
               </TouchableOpacity>

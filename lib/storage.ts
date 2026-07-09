@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { Factsheet, HistoryItem, PreviewContent, Recap, QACard } from './types'
+import type { Factsheet, HistoryItem, PreviewContent, Recap } from './types'
 
 export type MailMessage = {
   id: string
@@ -15,16 +15,16 @@ export type MailMessage = {
   homework?: boolean // 宿題の答案が届いたメール（メールから添削するCTA用）
 }
 
-// 宿題：先生が3問選んで出すと、時間をおいて生徒の答案（1問だけ誤答入り）が届き、間違い探しの添削をする
-export type HomeworkAnswer = { text: string; wrong: boolean }
+// 宿題：ノート採点で先生が❌とした（うまく説明できなかった）項目を源に、設問・模範解答・
+// 生徒の答案（誤解を抱えたまま解いてくる）を生成。後日、先生が模範解答と見比べて自分で採点する。
+export type HomeworkItem = { question: string; modelAnswer: string; studentAnswer: string; teacherMark?: boolean }
 export type Homework = {
   historyId: string
   materialTitle: string
   studentId: string
-  cards: QACard[]
+  items: HomeworkItem[]
   assignedAt: number
   state: 'assigned' | 'arrived'
-  answers?: HomeworkAnswer[]
 }
 
 const HOMEWORK_KEY = 'oshiete_homework'
@@ -35,9 +35,9 @@ export async function loadHomeworks(): Promise<Homework[]> {
     const raw = await AsyncStorage.getItem(HOMEWORK_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed)) return parsed as Homework[]
-    if (parsed && typeof parsed === 'object') return [parsed as Homework] // 旧形式の移行
-    return []
+    const list = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' ? [parsed] : [])
+    // 新形式（items を持つ）のみ通す。旧形式（cards/answers）は破棄
+    return (list as Homework[]).filter((h) => h && Array.isArray(h.items))
   } catch {
     return []
   }
@@ -50,8 +50,8 @@ export async function saveHomeworks(list: Homework[]): Promise<void> {
   } catch {}
 }
 
-// 宿題は授業の締めに出すもの：授業終了から24時間だけ「その授業の教材×生徒」への出題導線が開く
-export type HomeworkWindow = { historyId: string; studentId: string; endedAt: number }
+// 宿題は授業の締めに出すもの：ノート採点で❌にした項目（wrongLines）を持って24時間だけ出題導線が開く
+export type HomeworkWindow = { historyId: string; studentId: string; endedAt: number; wrongLines: string[] }
 const HOMEWORK_WINDOW_KEY = 'oshiete_homework_window'
 
 export async function loadHomeworkWindow(): Promise<HomeworkWindow | null> {
