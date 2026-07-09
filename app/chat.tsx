@@ -132,7 +132,7 @@ export default function ChatScreen() {
     turnCount, setTurnCount,
     classEnded, setClassEnded,
     hints, setHints,
-    correctHintIndex, setCorrectHintIndex,
+    setCorrectHintIndex,
     hintUsesLeft, setHintUsesLeft,
     correctness, setCorrectness,
     lessonRecap, setLessonRecap,
@@ -223,11 +223,8 @@ export default function ChatScreen() {
       const isFinalTurn = turnCount + 1 >= MAX_TURNS
       const turnsLeft = MAX_TURNS - (turnCount + 1)
       const factsheet = await loadFactsheet(currentHistoryId)
-      // 虎の巻の正解を無編集で送った場合は正解確定として採点AIを通さない（表示と採点の食い違い防止）
-      const lastUserText = [...next].reverse().find((m) => m.role === 'user')?.text
-      const sentCorrectHint =
-        hints !== null && correctHintIndex !== null && lastUserText?.trim() === hints[correctHintIndex]?.trim()
-      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, lessonRecap ?? undefined, factsheet, sentCorrectHint ? true : undefined)
+      // 虎の巻から選んだ説明も必ず採点AIで判定する（ラベルを盲信すると誤ラベルの誤答が正解確定してしまうため）
+      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, lessonRecap ?? undefined, factsheet)
       if (res.text) {
         const newMessages: ChatMessage[] = [...next, { role: 'mana', text: res.text }]
         setChatMessages(newMessages)
