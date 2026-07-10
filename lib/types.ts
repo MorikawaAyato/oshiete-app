@@ -40,6 +40,13 @@ export type Notebook = {
   lines: NotebookLine[]
 }
 
+// カード駆動授業のQ&Aペア（照合コールが紐づけた「カード×先生の説明」。ノート生成の源泉になる）
+export type CardLogEntry = {
+  cardIndex: number
+  explanation: string
+  verdict: boolean | null
+}
+
 export type HistoryItem = {
   id: string
   title: string

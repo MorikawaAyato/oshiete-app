@@ -11,6 +11,7 @@ import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, getUnlockedTitleCount } from '@/lib/teacherProfile'
 import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail, fetchHomework } from '@/lib/api'
+import { needsFactsheetUpgrade } from '@/lib/factsheet'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
@@ -529,8 +530,8 @@ export default function HomeScreen() {
     if (!item.previewContent) {
       void backgroundFetchPreview(item.imageDescription, item.id)
     }
-    // ファクトシート（一問一答バンク）未生成の教材はここでバックフィル
-    if (!item.factsheet?.cards?.length) {
+    // ファクトシート（一問一答バンク）が未生成・または旧版の教材はここで自動更新（FACTSHEET_AUTO_UPGRADE）
+    if (needsFactsheetUpgrade(item.factsheet)) {
       void backgroundFetchFactsheet(item.imageDescription, item.notes, item.id)
     }
   }
@@ -1233,7 +1234,7 @@ export default function HomeScreen() {
                           <Text style={styles.hwAnswerQ}>問{i + 1}: {it.question}</Text>
                           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
                             <View style={{ flex: 1 }}>
-                              <Text style={styles.hwAnswerText}>{it.studentAnswer}</Text>
+                              <Text style={styles.hwAnswerText}><Text style={styles.hwPenMark}>✎ </Text>{it.studentAnswer}</Text>
                               <Text style={styles.hwModelText}>
                                 <Text style={styles.hwModelMark}>答 </Text>{it.modelAnswer}
                               </Text>
@@ -1594,7 +1595,8 @@ const styles = StyleSheet.create({
   hwAssignBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   hwAnswerCard: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 10 },
   hwAnswerQ: { fontSize: 12, fontWeight: '700', color: c.textMid, marginBottom: 4, lineHeight: 18 },
-  hwAnswerText: { fontSize: 13, color: c.text, lineHeight: 19 },
+  hwAnswerText: { fontSize: 13, color: c.text, lineHeight: 19, fontWeight: '600' },
+  hwPenMark: { color: c.textSub, fontWeight: '400' },
   hwModelText: { fontSize: 11, color: '#e11d48', lineHeight: 17, marginTop: 3 },
   hwModelMark: { fontWeight: '700' },
   hwModelWord: { fontWeight: '700', color: '#e11d48' },

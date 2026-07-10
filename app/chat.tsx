@@ -119,6 +119,8 @@ export default function ChatScreen() {
     setCorrectHintIndex,
     hintUsesLeft, setHintUsesLeft,
     correctness, setCorrectness,
+    coveredCards, setCoveredCards,
+    cardLog, setCardLog,
     lessonRecap, setLessonRecap,
     notebook, setNotebook,
     notebookState, setNotebookState,
@@ -161,6 +163,8 @@ export default function ChatScreen() {
       .then(([recap, factsheet]) => {
         setLessonRecap(recap)
         setCorrectness([])
+        setCoveredCards([])
+        setCardLog([])
         setNotebook(null)
         setNotebookState(null)
         return startChat(student.id, imageDescription, notes, teacherName, teacherCharacter, recap ?? undefined, factsheet)
@@ -197,7 +201,10 @@ export default function ChatScreen() {
       const turnsLeft = MAX_TURNS - (turnCount + 1)
       const factsheet = await loadFactsheet(currentHistoryId)
       // 虎の巻から選んだ説明も必ず採点AIで判定する（ラベルを盲信すると誤ラベルの誤答が正解確定してしまうため）
-      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, lessonRecap ?? undefined, factsheet)
+      // カード駆動：バンクがある教材では消化状態を送り、質問はカード（2ターンに1枚）から出させる
+      const cardMode = (factsheet?.cards?.length ?? 0) > 0
+      const cardState = cardMode ? { covered: coveredCards, askCard: turnCount % 2 === 0 } : undefined
+      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, lessonRecap ?? undefined, factsheet, undefined, cardState)
       if (res.text) {
         const newMessages: ChatMessage[] = [...next, { role: 'mana', text: res.text }]
         setChatMessages(newMessages)
@@ -206,6 +213,24 @@ export default function ChatScreen() {
         setShowHints(false)
         setHintCharged(false)
         setCorrectness(prev => [...prev, res.correct ?? null])
+        if (res.cardResult) {
+          const cr = res.cardResult
+          setCoveredCards(cr.covered)
+          // 照合が紐づけた「カード×先生の説明」をQ&Aペアとして記録（同じカードは最新の説明で上書き）
+          const teacherText = [...next].reverse().find((m) => m.role === 'user')?.text ?? ''
+          if (teacherText && cr.addressed.length > 0) {
+            setCardLog(prev => {
+              const nextLog = [...prev]
+              for (const i of cr.addressed) {
+                const entry = { cardIndex: i, explanation: teacherText, verdict: cr.verdict }
+                const at = nextLog.findIndex(e => e.cardIndex === i)
+                if (at >= 0) nextLog[at] = entry
+                else nextLog.push(entry)
+              }
+              return nextLog
+            })
+          }
+        }
         const newTurnCount = turnCount + 1
         setTurnCount(newTurnCount)
         if (newTurnCount >= MAX_TURNS) {
@@ -517,6 +542,7 @@ export default function ChatScreen() {
                       <View key={i} style={styles.notebookLineRow}>
                         <View style={{ flex: 1 }}>
                           <Text style={[styles.notebookLineText, isBlank && styles.notebookLineBlank]}>
+                            {!isBlank && <Text style={styles.notebookPenMark}>✎ </Text>}
                             {isBlank ? '（ここ、書けませんでした…）' : line.text}
                           </Text>
                           {!!line.reference && (
@@ -727,8 +753,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2, borderBottomColor: c.paperRule,
     paddingBottom: 4, marginBottom: 6,
   },
-  notebookLineText: { fontSize: 13, color: c.text, lineHeight: 20 },
-  notebookLineBlank: { color: c.borderStrong },
+  notebookLineText: { fontSize: 13, color: c.text, lineHeight: 20, fontWeight: '600' },
+  notebookLineBlank: { color: c.borderStrong, fontWeight: '400' },
+  notebookPenMark: { color: c.textSub, fontWeight: '400' },
   notebookLineRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     borderBottomWidth: 1, borderBottomColor: c.paperLine + 'cc',

@@ -121,11 +121,13 @@ export async function sendChat(
   recap?: Recap,
   factsheet?: Factsheet,
   hintCorrect?: boolean,
-): Promise<{ text?: string; mailSubject?: string; mailContent?: string; hints?: string[]; correctHintIndex?: number; correct?: boolean; notebook?: Notebook; recap?: Recap; error?: string }> {
+  // カード駆動授業：消化済みカード番号と、このターンでカードから質問させるか
+  cardState?: { covered: number[]; askCard: boolean },
+): Promise<{ text?: string; mailSubject?: string; mailContent?: string; hints?: string[]; correctHintIndex?: number; correct?: boolean; cardResult?: { covered: number[]; addressed: number[]; verdict: boolean | null }; notebook?: Notebook; recap?: Recap; error?: string }> {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, recap, factsheet, hintCorrect }),
+    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, recap, factsheet, hintCorrect, cardState }),
   })
   return res.json()
 }

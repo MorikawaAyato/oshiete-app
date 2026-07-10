@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { PreviewContent, ChatMessage, Recap, Notebook } from './types'
+import type { PreviewContent, ChatMessage, Recap, Notebook, CardLogEntry } from './types'
 import { type TeacherProfile, DEFAULT_TEACHER, normalizeAvatarId } from './teacherProfile'
 
 const STUDENT_KEY = 'oshiete_student'
@@ -22,6 +22,8 @@ type ChatSession = {
   lessonRecap: Recap | null
   notebook: Notebook | null
   notebookState: 'received' | 'returned' | null
+  coveredCards?: number[]
+  cardLog?: CardLogEntry[]
 }
 
 type AppState = {
@@ -56,6 +58,10 @@ type AppState = {
   setHintUsesLeft: (v: number | ((prev: number) => number)) => void
   correctness: (boolean | null)[]
   setCorrectness: (v: (boolean | null)[] | ((prev: (boolean | null)[]) => (boolean | null)[])) => void
+  coveredCards: number[]
+  setCoveredCards: (v: number[]) => void
+  cardLog: CardLogEntry[]
+  setCardLog: (v: CardLogEntry[] | ((prev: CardLogEntry[]) => CardLogEntry[])) => void
   lessonRecap: Recap | null
   setLessonRecap: (v: Recap | null) => void
   notebook: Notebook | null
@@ -124,6 +130,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [correctHintIndex, setCorrectHintIndex] = useState<number | null>(null) // 虎の巻の正解位置（無編集送信の検出用）
   const [hintUsesLeft, setHintUsesLeft] = useState(3)
   const [correctness, setCorrectness] = useState<(boolean | null)[]>([])
+  const [coveredCards, setCoveredCards] = useState<number[]>([]) // カード駆動：この授業で消化済みのカード番号
+  const [cardLog, setCardLog] = useState<CardLogEntry[]>([]) // カード駆動：カード×先生の説明のQ&Aペア
   const [lessonRecap, setLessonRecap] = useState<Recap | null>(null)
   const [notebook, setNotebook] = useState<Notebook | null>(null)
   const [notebookState, setNotebookState] = useState<'received' | 'returned' | null>(null)
@@ -146,6 +154,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setCorrectHintIndex(s.correctHintIndex ?? null)
             setHintUsesLeft(typeof s.hintUsesLeft === 'number' ? s.hintUsesLeft : 3)
             setCorrectness(Array.isArray(s.correctness) ? s.correctness : [])
+            setCoveredCards(Array.isArray(s.coveredCards) ? s.coveredCards : [])
+            setCardLog(Array.isArray(s.cardLog) ? s.cardLog : [])
             setLessonRecap(s.lessonRecap ?? null)
             setNotebook(s.notebook ?? null)
             setNotebookState(s.notebookState ?? null)
@@ -166,9 +176,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       imageDescription, notes, currentHistoryId,
       messages: chatMessages, turnCount, classEnded,
       hints, correctHintIndex, hintUsesLeft, correctness, lessonRecap, notebook, notebookState,
+      coveredCards, cardLog,
     }
     AsyncStorage.setItem(CHAT_SESSION_KEY, JSON.stringify(session)).catch(() => {})
-  }, [chatMessages, turnCount, classEnded, hints, correctHintIndex, hintUsesLeft, correctness, lessonRecap, notebook, notebookState, imageDescription, notes, currentHistoryId])
+  }, [chatMessages, turnCount, classEnded, hints, correctHintIndex, hintUsesLeft, correctness, coveredCards, cardLog, lessonRecap, notebook, notebookState, imageDescription, notes, currentHistoryId])
 
   const resetChatSession = () => {
     setChatMessages([])
@@ -178,6 +189,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCorrectHintIndex(null)
     setHintUsesLeft(3)
     setCorrectness([])
+    setCoveredCards([])
+    setCardLog([])
     setLessonRecap(null)
     setNotebook(null)
     setNotebookState(null)
@@ -201,6 +214,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         correctHintIndex, setCorrectHintIndex,
         hintUsesLeft, setHintUsesLeft,
         correctness, setCorrectness,
+        coveredCards, setCoveredCards,
+        cardLog, setCardLog,
         lessonRecap, setLessonRecap,
         notebook, setNotebook,
         notebookState, setNotebookState,
