@@ -138,14 +138,7 @@ export default function ChatScreen() {
   const [showHints, setShowHints] = useState(false)
   const [hintCharged, setHintCharged] = useState(false) // このターンのヒントを開封済みか（開閉で二重消費しない）
   const [showNotebook, setShowNotebook] = useState(false)
-  const [showModelAnswer, setShowModelAnswer] = useState(false) // ノート採点時の「教材のポイント」参照の開閉
-  const [modelPoints, setModelPoints] = useState<string[]>([]) // 採点の見比べ用（教材の重要事実）
   const [studentTyping, setStudentTyping] = useState(false) // 授業終了の連投を時差配信する間の入力中演出
-
-  // ノート採点の見比べ用に、教材の重要事実を読む
-  useEffect(() => {
-    void loadFactsheet(currentHistoryId).then((fs) => setModelPoints(fs?.facts ?? []))
-  }, [currentHistoryId])
 
   const remainingMins = classEnded ? 0 : (MAX_TURNS - turnCount) * 5
   const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
@@ -170,7 +163,6 @@ export default function ChatScreen() {
         setCorrectness([])
         setNotebook(null)
         setNotebookState(null)
-        setShowModelAnswer(false)
         return startChat(student.id, imageDescription, notes, teacherName, teacherCharacter, recap ?? undefined, factsheet)
       })
       .then((res) => {
@@ -513,43 +505,39 @@ export default function ChatScreen() {
               </View>
               <ScrollView style={styles.notebookScroll}>
                 {notebookState === 'received' && (
-                  <Text style={styles.notebookGradeHint}>先生として、ノートの内容が合っているか ⭕ か ❌ をつけてあげましょう。迷ったら「教材のポイント」を見比べてください。</Text>
-                )}
-                {modelPoints.length > 0 && (
-                  <View style={styles.modelBox}>
-                    <TouchableOpacity onPress={() => setShowModelAnswer((v) => !v)} style={styles.modelToggle}>
-                      <Text style={styles.modelToggleText}>📖 教材のポイント（見比べる用）</Text>
-                      <Text style={styles.modelToggleArrow}>{showModelAnswer ? '▲' : '▼'}</Text>
-                    </TouchableOpacity>
-                    {showModelAnswer && (
-                      <View style={{ paddingHorizontal: 12, paddingBottom: 10 }}>
-                        {modelPoints.map((f, i) => <Text key={i} style={styles.modelPoint}>・{f}</Text>)}
-                      </View>
-                    )}
-                  </View>
+                  <Text style={styles.notebookGradeHint}>
+                    <Text style={styles.modelAnswerWord}>模範解答</Text>（教材から自動でつくったもの）とくらべて、○ か ✕ をつけましょう。
+                  </Text>
                 )}
                 <View style={styles.notebookPaper}>
                   <Text style={styles.notebookTitle}>{notebook?.title}</Text>
                   {notebook?.lines.map((line, i) => {
                     const isBlank = line.status === 'blank'
                     return (
-                      <View key={i} style={styles.notebookLineCol}>
-                        <Text style={[styles.notebookLineText, isBlank && styles.notebookLineBlank]}>
-                          {isBlank ? '（ここ、書けませんでした…）' : line.text}
-                        </Text>
+                      <View key={i} style={styles.notebookLineRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.notebookLineText, isBlank && styles.notebookLineBlank]}>
+                            {isBlank ? '（ここ、書けませんでした…）' : line.text}
+                          </Text>
+                          {!!line.reference && (
+                            <Text style={styles.notebookReference}>
+                              <Text style={styles.notebookReferenceMark}>答 </Text>{line.reference}
+                            </Text>
+                          )}
+                        </View>
                         {!isBlank && notebookState === 'received' && (
                           <View style={styles.markRow}>
                             <TouchableOpacity onPress={() => setNoteMark(i, true)} style={[styles.markBtn, line.teacherMark === true && styles.markBtnCorrect]}>
-                              <Text style={[styles.markBtnText, line.teacherMark === true && styles.markBtnTextSel]}>⭕</Text>
+                              <Text style={[styles.markBtnText, line.teacherMark === true && styles.markBtnTextSel]}>○</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={() => setNoteMark(i, false)} style={[styles.markBtn, line.teacherMark === false && styles.markBtnWrong]}>
-                              <Text style={[styles.markBtnText, line.teacherMark === false && styles.markBtnTextSel]}>❌</Text>
+                              <Text style={[styles.markBtnText, line.teacherMark === false && styles.markBtnTextSel]}>✕</Text>
                             </TouchableOpacity>
                           </View>
                         )}
                         {!isBlank && notebookState === 'returned' && line.teacherMark !== undefined && (
                           <Text style={[styles.notebookMarkResult, { color: line.teacherMark ? '#059669' : '#e11d48' }]}>
-                            {line.teacherMark ? '⭕' : '❌ もう一度教えてあげよう'}
+                            {line.teacherMark ? '○' : '✕'}
                           </Text>
                         )}
                       </View>
@@ -564,7 +552,7 @@ export default function ChatScreen() {
                   return (
                     <BouncyPressable onPress={() => { if (allGraded) handleReturnNotebook() }} style={[styles.returnBtn, !allGraded && styles.returnBtnDisabled]} haptic="success">
                       <Text style={[styles.gradeBtnText, !allGraded && styles.gradeBtnTextDisabled]}>
-                        {allGraded ? '📮 採点してノートを返す' : 'すべての行に ⭕ か ❌ をつけてね'}
+                        {allGraded ? '📮 採点してノートを返す' : 'すべての行に ○ か ✕ をつけてね'}
                       </Text>
                     </BouncyPressable>
                   )
@@ -741,22 +729,21 @@ const styles = StyleSheet.create({
   },
   notebookLineText: { fontSize: 13, color: c.text, lineHeight: 20 },
   notebookLineBlank: { color: c.borderStrong },
-  notebookLineCol: {
+  notebookLineRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     borderBottomWidth: 1, borderBottomColor: c.paperLine + 'cc',
-    paddingVertical: 7,
+    paddingVertical: 8,
   },
-  notebookMarkResult: { fontSize: 13, fontWeight: '700', marginTop: 3 },
+  notebookReference: { fontSize: 11, color: '#e11d48', lineHeight: 17, marginTop: 3 },
+  notebookReferenceMark: { fontWeight: '700' },
+  notebookMarkResult: { fontSize: 18, fontWeight: '700', paddingTop: 1 },
   notebookGradeHint: { fontSize: 12, color: c.textSub, lineHeight: 18, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 4 },
-  modelBox: { marginHorizontal: 16, marginTop: 8, borderWidth: 1, borderColor: '#bae6fd', borderRadius: 12, backgroundColor: '#f0f9ff' },
-  modelToggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9 },
-  modelToggleText: { fontSize: 12, fontWeight: '700', color: '#0369a1' },
-  modelToggleArrow: { fontSize: 11, color: '#7dd3fc' },
-  modelPoint: { fontSize: 12, color: c.textMid, lineHeight: 19, marginBottom: 2 },
-  markRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
-  markBtn: { flex: 1, borderWidth: 1, borderColor: c.borderStrong, borderRadius: 10, paddingVertical: 5, alignItems: 'center', backgroundColor: '#fff' },
+  modelAnswerWord: { fontWeight: '700', color: '#e11d48' },
+  markRow: { flexDirection: 'row', gap: 6 },
+  markBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   markBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
   markBtnWrong: { backgroundColor: '#f43f5e', borderColor: '#f43f5e' },
-  markBtnText: { fontSize: 16, color: c.faint },
+  markBtnText: { fontSize: 16, fontWeight: '700', color: c.borderStrong },
   markBtnTextSel: { color: '#fff' },
   notebookModalFooter: { paddingHorizontal: 18, paddingTop: 12 },
   returnBtn: {

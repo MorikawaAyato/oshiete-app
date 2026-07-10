@@ -31,7 +31,8 @@ export type NotebookLine = {
   text: string
   status: 'correct' | 'wrong' | 'blank'
   correction?: string
-  teacherMark?: boolean // 先生（ユーザー）がつけた⭕(true)/❌(false)
+  reference?: string // 採点時に見比べる「教材からの模範解答」（1行1文）
+  teacherMark?: boolean // 先生（ユーザー）がつけた○(true)/✕(false)
 }
 
 export type Notebook = {

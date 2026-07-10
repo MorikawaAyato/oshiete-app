@@ -194,7 +194,6 @@ export default function HomeScreen() {
   const [gradingHomework, setGradingHomework] = useState<Homework | null>(null) // 添削モーダルで開いている宿題
   const [hwGradeOpen, setHwGradeOpen] = useState(false)
   const [hwSending, setHwSending] = useState(false) // 宿題生成の通信中
-  const [showHwModel, setShowHwModel] = useState<number | null>(null) // 宿題採点で模範解答を開いている設問index
   const [homeworkWindow, setHomeworkWindow] = useState<HomeworkWindow | null>(null)
 
   // まだ出題できる有効なウィンドウか（未失効・その生徒に進行中の宿題が無い・❌項目がある）
@@ -269,7 +268,6 @@ export default function HomeScreen() {
 
   const openHomeworkGrading = (hw: Homework) => {
     setGradingHomework(hw)
-    setShowHwModel(null)
     setShowInbox(false)
     setExpandedMailId(null)
     setTimeout(() => setHwGradeOpen(true), 400)
@@ -1226,22 +1224,28 @@ export default function HomeScreen() {
                   </View>
                   <ScrollView>
                     <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-                      <Text style={styles.hwHint}>前回うまく説明できなかったところを{st?.name ?? '生徒'}が解いてきました。模範解答と見比べて ⭕ か ❌ をつけてあげましょう。</Text>
+                      <Text style={styles.hwHint}>
+                        前回うまく説明できなかったところを{st?.name ?? '生徒'}が解いてきました。
+                        <Text style={styles.hwModelWord}>模範解答</Text>（教材から自動でつくったもの）とくらべて、○ か ✕ をつけましょう。
+                      </Text>
                       {hw.items.map((it, i) => (
                         <View key={i} style={styles.hwAnswerCard}>
                           <Text style={styles.hwAnswerQ}>問{i + 1}: {it.question}</Text>
-                          <Text style={styles.hwAnswerText}>{st?.name ?? '生徒'}の答え：{it.studentAnswer}</Text>
-                          <TouchableOpacity onPress={() => setShowHwModel((v) => v === i ? null : i)}>
-                            <Text style={styles.hwModelToggle}>📖 模範解答を{showHwModel === i ? '閉じる' : '見る'}</Text>
-                          </TouchableOpacity>
-                          {showHwModel === i && <Text style={styles.hwModelText}>{it.modelAnswer}</Text>}
-                          <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-                            <TouchableOpacity style={[styles.hwMarkBtn, it.teacherMark === true && styles.hwMarkBtnCorrect]} onPress={() => setHwItemMark(i, true)}>
-                              <Text style={[styles.hwMarkBtnText, it.teacherMark === true && styles.hwMarkBtnTextSel]}>⭕</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.hwMarkBtn, it.teacherMark === false && styles.hwMarkBtnWrong]} onPress={() => setHwItemMark(i, false)}>
-                              <Text style={[styles.hwMarkBtnText, it.teacherMark === false && styles.hwMarkBtnTextSel]}>❌</Text>
-                            </TouchableOpacity>
+                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.hwAnswerText}>{it.studentAnswer}</Text>
+                              <Text style={styles.hwModelText}>
+                                <Text style={styles.hwModelMark}>答 </Text>{it.modelAnswer}
+                              </Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', gap: 6 }}>
+                              <TouchableOpacity style={[styles.hwMarkBtn, it.teacherMark === true && styles.hwMarkBtnCorrect]} onPress={() => setHwItemMark(i, true)}>
+                                <Text style={[styles.hwMarkBtnText, it.teacherMark === true && styles.hwMarkBtnTextSel]}>○</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity style={[styles.hwMarkBtn, it.teacherMark === false && styles.hwMarkBtnWrong]} onPress={() => setHwItemMark(i, false)}>
+                                <Text style={[styles.hwMarkBtnText, it.teacherMark === false && styles.hwMarkBtnTextSel]}>✕</Text>
+                              </TouchableOpacity>
+                            </View>
                           </View>
                         </View>
                       ))}
@@ -1250,7 +1254,7 @@ export default function HomeScreen() {
                         <Text style={styles.hwThanksText}>{allGraded ? 'みてくれてありがとうございます！なおすところ、しっかり覚え直します！📝✨' : '先生、宿題どうでしたか…？'}</Text>
                       </View>
                       <TouchableOpacity style={[styles.examCloseBtn, !allGraded && styles.hwAssignBtnDisabled]} disabled={!allGraded} onPress={finishHomework}>
-                        <Text style={styles.examCloseBtnText}>{allGraded ? '採点して返す' : 'すべてに ⭕ か ❌ をつけてね'}</Text>
+                        <Text style={styles.examCloseBtnText}>{allGraded ? '採点して返す' : 'すべてに ○ か ✕ をつけてね'}</Text>
                       </TouchableOpacity>
                     </View>
                   </ScrollView>
@@ -1590,13 +1594,14 @@ const styles = StyleSheet.create({
   hwAssignBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   hwAnswerCard: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 10 },
   hwAnswerQ: { fontSize: 12, fontWeight: '700', color: c.textMid, marginBottom: 4, lineHeight: 18 },
-  hwAnswerText: { fontSize: 13, color: c.text, lineHeight: 19, marginBottom: 8 },
-  hwModelToggle: { fontSize: 11, fontWeight: '700', color: '#0369a1', marginBottom: 4 },
-  hwModelText: { fontSize: 12, color: c.textMid, lineHeight: 18, marginBottom: 4 },
-  hwMarkBtn: { flex: 1, borderWidth: 1, borderColor: c.borderStrong, borderRadius: 10, paddingVertical: 7, alignItems: 'center', backgroundColor: '#fff' },
+  hwAnswerText: { fontSize: 13, color: c.text, lineHeight: 19 },
+  hwModelText: { fontSize: 11, color: '#e11d48', lineHeight: 17, marginTop: 3 },
+  hwModelMark: { fontWeight: '700' },
+  hwModelWord: { fontWeight: '700', color: '#e11d48' },
+  hwMarkBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   hwMarkBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
   hwMarkBtnWrong: { backgroundColor: '#f43f5e', borderColor: '#f43f5e' },
-  hwMarkBtnText: { fontSize: 12, fontWeight: '700', color: c.textSub },
+  hwMarkBtnText: { fontSize: 16, fontWeight: '700', color: c.borderStrong },
   hwMarkBtnTextSel: { color: '#fff' },
   hwResultText: { fontSize: 11, color: c.textSub, lineHeight: 17 },
   hwThanksRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginTop: 6, marginBottom: 4 },
