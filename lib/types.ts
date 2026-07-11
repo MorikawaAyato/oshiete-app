@@ -20,11 +20,20 @@ export type QACard = {
 }
 
 // 教材ファクトシート（取り込み後にバックグラウンド生成。正誤判定の基準・虎の巻の誤答の素材）
+// 正誤表エントリ：先生がカードの答えを直したときの記録（教材本文は書き換えず注記で伝播）
+export type Erratum = {
+  source: string
+  oldAnswer: string
+  newAnswer: string
+  correctedAt: number
+}
+
 export type Factsheet = {
   facts: string[]
   misconceptions: string[]
   cards?: QACard[] // 一問一答バンク（生成失敗時は欠落し従来動作）
   version?: number // バンク生成ルールの版。旧版はバックフィルで再生成される
+  errata?: Erratum[] // 先生による訂正。あれば自動再生成しない
 }
 
 export type NotebookLine = {

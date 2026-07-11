@@ -10,8 +10,9 @@ import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
 import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
-import { addMail, loadRecap, loadFactsheet, saveRecapToHistory, saveHomeworkWindow } from '@/lib/storage'
+import { addMail, loadRecap, loadFactsheet, saveRecapToHistory, saveHomeworkWindow, updateHistoryFactsheet } from '@/lib/storage'
 import type { HomeworkItem } from '@/lib/storage'
+import { applyCardCorrection } from '@/lib/factsheet'
 import type { ChatMessage } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -142,6 +143,9 @@ export default function ChatScreen() {
   const [hintCharged, setHintCharged] = useState(false) // このターンのヒントを開封済みか（開閉で二重消費しない）
   const [showNotebook, setShowNotebook] = useState(false)
   const [studentTyping, setStudentTyping] = useState(false) // 授業終了の連投を時差配信する間の入力中演出
+  const [editingLine, setEditingLine] = useState<number | null>(null) // ✎で答えを直している行
+  const [editValue, setEditValue] = useState('')
+  const [principalToast, setPrincipalToast] = useState<string | null>(null) // 🐯校長の受理メッセージ
 
   const remainingMins = classEnded ? 0 : (MAX_TURNS - turnCount) * 5
   const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
@@ -363,6 +367,28 @@ export default function ChatScreen() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
   }
 
+  // ✎ 先生がノートの「答」を直す：バンクの該当カードを上書き（判定・虎の巻・宿題・試験・教材文脈に一括反映）。
+  // 校長は「受理の顔」として一言添えるだけ。教材が誤っているとはアプリから言わない。
+  const saveCardCorrection = async (lineIndex: number) => {
+    const line = notebook?.lines[lineIndex]
+    const newAnswer = editValue.trim()
+    setEditingLine(null)
+    if (!line || line.cardIndex == null || !currentHistoryId || !newAnswer) return
+    const fs = await loadFactsheet(currentHistoryId)
+    const res = fs?.cards ? applyCardCorrection(fs.cards, fs.errata, line.cardIndex, newAnswer) : null
+    if (fs && res) {
+      await updateHistoryFactsheet(currentHistoryId, { ...fs, cards: res.cards, facts: res.facts, errata: res.errata })
+      if (notebook) {
+        setNotebook({
+          ...notebook,
+          lines: notebook.lines.map((l, i) => i === lineIndex ? { ...l, reference: newAnswer, correction: l.status === 'wrong' ? newAnswer : l.correction } : l),
+        })
+      }
+      setPrincipalToast('🐯 校長先生に伝えました。教材を訂正しておきますね')
+      setTimeout(() => setPrincipalToast(null), 3200)
+    }
+  }
+
   const handleBack = () => {
     if (chatMessages.length > 0 && !classEnded) {
       Alert.alert(
@@ -562,11 +588,36 @@ export default function ChatScreen() {
                             {!isBlank && <Text style={styles.notebookPenMark}>✎ </Text>}
                             {isBlank ? '（ここ、書けませんでした…）' : line.text}
                           </Text>
-                          {!!line.reference && (
-                            <Text style={styles.notebookReference}>
-                              <Text style={styles.notebookReferenceMark}>答 </Text>{line.reference}
-                            </Text>
-                          )}
+                          {!!line.reference && (editingLine === i ? (
+                            <View style={styles.editRefWrap}>
+                              <TextInput
+                                value={editValue}
+                                onChangeText={setEditValue}
+                                multiline
+                                autoFocus
+                                style={styles.editRefInput}
+                              />
+                              <View style={styles.editRefBtns}>
+                                <TouchableOpacity onPress={() => void saveCardCorrection(i)} style={styles.editRefSave}>
+                                  <Text style={styles.editRefSaveText}>直す</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setEditingLine(null)} style={styles.editRefCancel}>
+                                  <Text style={styles.editRefCancelText}>やめる</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          ) : (
+                            <View style={styles.refRow}>
+                              <Text style={[styles.notebookReference, { flex: 1 }]}>
+                                <Text style={styles.notebookReferenceMark}>答 </Text>{line.reference}
+                              </Text>
+                              {line.cardIndex != null && (
+                                <TouchableOpacity onPress={() => { setEditingLine(i); setEditValue(line.reference ?? '') }} style={styles.editRefBtn}>
+                                  <Text style={styles.editRefBtnText}>✎</Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          ))}
                         </View>
                         {!isBlank && notebookState === 'received' && (
                           <View style={styles.markRow}>
@@ -606,6 +657,11 @@ export default function ChatScreen() {
                 )}
               </View>
             </View>
+            {principalToast && (
+              <View style={styles.principalToast} pointerEvents="none">
+                <Text style={styles.principalToastText}>{principalToast}</Text>
+              </View>
+            )}
           </View>
         </Modal>
 
@@ -785,6 +841,18 @@ const styles = StyleSheet.create({
   },
   notebookReference: { fontSize: 11, color: '#e11d48', lineHeight: 17, marginTop: 3 },
   notebookReferenceMark: { fontWeight: '700' },
+  refRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  editRefBtn: { paddingHorizontal: 4, paddingVertical: 1, marginTop: 2 },
+  editRefBtnText: { fontSize: 13, color: c.textSub },
+  editRefWrap: { marginTop: 4, gap: 6 },
+  editRefInput: { borderWidth: 1, borderColor: '#fca5a5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, fontSize: 12, color: c.text, backgroundColor: c.paper, minHeight: 40 },
+  editRefBtns: { flexDirection: 'row', gap: 8 },
+  editRefSave: { backgroundColor: '#e11d48', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
+  editRefSaveText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  editRefCancel: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
+  editRefCancelText: { color: c.textSub, fontSize: 12, fontWeight: '700' },
+  principalToast: { position: 'absolute', bottom: 40, alignSelf: 'center', backgroundColor: '#1e293b', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10 },
+  principalToastText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   notebookMarkResult: { fontSize: 18, fontWeight: '700', paddingTop: 1 },
   notebookGradeHint: { fontSize: 12, color: c.textSub, lineHeight: 18, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 4 },
   modelAnswerWord: { fontWeight: '700', color: '#e11d48' },
