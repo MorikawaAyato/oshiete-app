@@ -594,7 +594,7 @@ export default function ChatScreen() {
         {/* 入力エリア */}
         {!classEnded && (
           <View style={styles.inputAreaWrap}>
-            {hints && (
+            {hints ? (
               <View style={styles.hintsWrap}>
                 <TouchableOpacity
                   onPress={openHints}
@@ -617,6 +617,11 @@ export default function ChatScreen() {
                     ))}
                   </>
                 )}
+              </View>
+            ) : (
+              // 虎の巻が出ないターンも枠を残し、消えて不具合に見えないようにする（深掘りの質問等では出ないのが正常）
+              <View style={styles.hintsWrap}>
+                <Text style={styles.hintRestNote}>📜 今回は虎の巻はお休み。自分の言葉で説明してみよう！</Text>
               </View>
             )}
             <View style={styles.inputArea}>
@@ -798,6 +803,7 @@ const styles = StyleSheet.create({
   hintToggleText: { fontSize: 12, fontWeight: '600', color: c.paperText },
   hintToggleTextDisabled: { color: c.borderStrong },
   hintNote: { fontSize: 11, color: c.textSub, marginBottom: 2 },
+  hintRestNote: { fontSize: 12, color: c.faint },
   hintItem: {
     borderWidth: 1, borderColor: c.paperLine, borderRadius: 12,
     backgroundColor: c.paper, paddingHorizontal: 14, paddingVertical: 10,
