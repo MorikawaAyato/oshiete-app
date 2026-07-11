@@ -60,7 +60,7 @@ export default function PreviewScreen() {
       const nextFs = { ...bankFs, cards: res.cards, facts: res.facts, errata: res.errata }
       await updateHistoryFactsheet(currentHistoryId, nextFs)
       setBankFs(nextFs)
-      setPrincipalToast('校長先生に伝えました。教材を訂正しておきますね')
+      setPrincipalToast('校長先生に伝えました。教材に反映しておきますね')
       setTimeout(() => setPrincipalToast(null), 3200)
     }
   }
@@ -68,11 +68,11 @@ export default function PreviewScreen() {
   // ✎押下時、データ変更であることを周知してから編集モードに入る
   const confirmEditThen = (onConfirm: () => void) => {
     Alert.alert(
-      'この内容を直しますか？',
-      '直すと、この教材の内容として保存され、授業中の判定・虎の巻・ノート・宿題・試験のすべてに反映されます。',
+      'この内容を編集しますか？',
+      '編集すると、この教材の内容として保存され、授業中の判定・虎の巻・ノート・宿題・試験のすべてに反映されます。',
       [
         { text: 'やめる', style: 'cancel' },
-        { text: '修正する', style: 'destructive', onPress: onConfirm },
+        { text: '編集する', style: 'destructive', onPress: onConfirm },
       ],
     )
   }
@@ -215,7 +215,7 @@ export default function PreviewScreen() {
                   <TextInput value={editCardValue} onChangeText={setEditCardValue} multiline autoFocus style={styles.editInput} />
                   <View style={styles.editBtns}>
                     <TouchableOpacity onPress={() => void saveCardCorrectionFromView(gi)} style={styles.editSave}>
-                      <Text style={styles.editSaveText}>直す</Text>
+                      <Text style={styles.editSaveText}>保存する</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => setEditingCardIdx(null)} style={styles.editCancel}>
                       <Text style={styles.editCancelText}>やめる</Text>
@@ -395,7 +395,8 @@ export default function PreviewScreen() {
               onPress={() => { setHiddenMode(!hiddenMode); setRevealed(new Set()) }}
             >
               <Text style={[styles.hiddenPillText, hiddenMode && styles.hiddenPillTextOn]}>
-                {bankSections ? (hiddenMode ? '読む' : '覚える') : '隠す'}
+                {hiddenMode ? '📖 ' : '🧠 '}
+                {bankSections ? (hiddenMode ? '読む' : '覚える') : (hiddenMode ? '表示' : '隠す')}
               </Text>
             </TouchableOpacity>
           ) : (
@@ -557,13 +558,13 @@ const styles = StyleSheet.create({
   principalToastText: { color: 'white', fontSize: 13, fontWeight: '600' },
 
   hiddenPill: {
-    paddingHorizontal: 12, paddingVertical: 12, borderRadius: 12,
-    borderWidth: 1.5, borderColor: c.border, backgroundColor: c.bg,
-    alignItems: 'center', justifyContent: 'center', minWidth: 56,
+    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12,
+    borderWidth: 1.5, borderColor: c.pinkBorder, backgroundColor: c.pinkSoft,
+    alignItems: 'center', justifyContent: 'center', minWidth: 72,
   },
-  hiddenPillOn: { borderColor: c.primary, backgroundColor: c.pinkTint },
-  hiddenPillText: { fontSize: 12, fontWeight: '700', color: c.textSub },
-  hiddenPillTextOn: { color: c.primaryStrong },
+  hiddenPillOn: { borderColor: c.primaryStrong, backgroundColor: c.primaryStrong },
+  hiddenPillText: { fontSize: 13, fontWeight: '700', color: c.primaryStrong },
+  hiddenPillTextOn: { color: 'white' },
   hiddenPillSpace: { minWidth: 56 },
 
   startClassBtn: {

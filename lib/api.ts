@@ -76,6 +76,19 @@ export async function fetchHomework(
   return res.json()
 }
 
+// カード直結の宿題：設問・模範解答は確定済みで、生徒の答案だけをミックス生成（直せた答案が多め）
+export async function fetchHomeworkAnswers(
+  studentId: string,
+  items: { question: string; modelAnswer: string; misconception: string }[],
+): Promise<{ items?: { question: string; modelAnswer: string; studentAnswer: string }[]; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/homework`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ studentId, items }),
+  })
+  return res.json()
+}
+
 // あとから質問メール（授業の数日後、生徒がつまずきを思い出して質問してくる）の生成
 export async function fetchFollowupMail(
   studentId: string,

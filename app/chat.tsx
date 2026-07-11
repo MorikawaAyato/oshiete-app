@@ -384,7 +384,7 @@ export default function ChatScreen() {
           lines: notebook.lines.map((l, i) => i === lineIndex ? { ...l, reference: newAnswer, correction: l.status === 'wrong' ? newAnswer : l.correction } : l),
         })
       }
-      setPrincipalToast('校長先生に伝えました。教材を訂正しておきますね')
+      setPrincipalToast('校長先生に伝えました。教材に反映しておきますね')
       setTimeout(() => setPrincipalToast(null), 3200)
     }
   }
@@ -392,11 +392,11 @@ export default function ChatScreen() {
   // ✎押下時、データ変更であることを周知してから編集モードに入る（修正するを押して初めて）
   const confirmEditThen = (onConfirm: () => void) => {
     Alert.alert(
-      'この内容を直しますか？',
-      '直すと、この教材の内容として保存され、授業中の判定・虎の巻・ノート・宿題・試験のすべてに反映されます。',
+      'この内容を編集しますか？',
+      '編集すると、この教材の内容として保存され、授業中の判定・虎の巻・ノート・宿題・試験のすべてに反映されます。',
       [
         { text: 'やめる', style: 'cancel' },
-        { text: '修正する', style: 'destructive', onPress: onConfirm },
+        { text: '編集する', style: 'destructive', onPress: onConfirm },
       ],
     )
   }
@@ -584,17 +584,28 @@ export default function ChatScreen() {
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.notebookScroll}>
-                {notebookState === 'received' && (
-                  <Text style={styles.notebookGradeHint}>
-                    <Text style={styles.modelAnswerWord}>模範解答</Text>（教材から自動でつくったもの）とくらべて、○ か ✕ をつけましょう。
-                  </Text>
-                )}
+                {notebookState === 'received' && (() => {
+                  const hasAuto = notebook?.lines.some((l) => l.autoMarked)
+                  return (
+                    <View style={styles.gradePurposeBox}>
+                      <Text style={styles.gradePurposeText}>
+                        <Text style={styles.gradePurposeStrong}>{student.name}が授業を聞いて書いたノート</Text>です。まちがって伝わっていないか、チェックしてあげましょう。
+                      </Text>
+                      <Text style={[styles.gradePurposeText, { marginTop: 4 }]}>
+                        {hasAuto ? '教材とぴったり合っている行には、さきに ⭕ がついています（変更できます）。のこりの行' : '各行'}
+                        を赤い<Text style={styles.modelAnswerWord}>答</Text>と見くらべて ⭕ / ❌ をつけてください。
+                        <Text style={styles.gradePurposeStrong}>❌ の行は{student.name}の宿題（復習）になります。</Text>
+                      </Text>
+                    </View>
+                  )
+                })()}
                 <View style={styles.notebookPaper}>
                   <Text style={styles.notebookTitle}>{notebook?.title}</Text>
                   {notebook?.lines.map((line, i) => {
                     const isBlank = line.status === 'blank'
+                    const settled = notebookState === 'received' && line.autoMarked && line.teacherMark === true
                     return (
-                      <View key={i} style={styles.notebookLineRow}>
+                      <View key={i} style={[styles.notebookLineRow, settled && { opacity: 0.55 }]}>
                         <View style={{ flex: 1 }}>
                           <Text style={[styles.notebookLineText, isBlank && styles.notebookLineBlank]}>
                             {!isBlank && <Text style={styles.notebookPenMark}>✎ </Text>}
@@ -611,7 +622,7 @@ export default function ChatScreen() {
                               />
                               <View style={styles.editRefBtns}>
                                 <TouchableOpacity onPress={() => void saveCardCorrection(i)} style={styles.editRefSave}>
-                                  <Text style={styles.editRefSaveText}>直す</Text>
+                                  <Text style={styles.editRefSaveText}>保存する</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => setEditingLine(null)} style={styles.editRefCancel}>
                                   <Text style={styles.editRefCancelText}>やめる</Text>
@@ -870,6 +881,9 @@ const styles = StyleSheet.create({
   notebookMarkResult: { fontSize: 18, fontWeight: '700', paddingTop: 1 },
   notebookGradeHint: { fontSize: 12, color: c.textSub, lineHeight: 18, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 4 },
   modelAnswerWord: { fontWeight: '700', color: '#e11d48' },
+  gradePurposeBox: { marginHorizontal: 14, marginTop: 12, marginBottom: 4, backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 },
+  gradePurposeText: { fontSize: 11.5, color: c.textMid, lineHeight: 17 },
+  gradePurposeStrong: { fontWeight: '700', color: c.text },
   markRow: { flexDirection: 'row', gap: 6 },
   markBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   markBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },

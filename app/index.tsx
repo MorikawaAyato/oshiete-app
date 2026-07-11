@@ -10,13 +10,13 @@ import * as ImagePicker from 'expo-image-picker'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, getUnlockedTitleCount } from '@/lib/teacherProfile'
-import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail, fetchHomework } from '@/lib/api'
+import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail, fetchHomework, fetchHomeworkAnswers } from '@/lib/api'
 import { needsFactsheetUpgrade } from '@/lib/factsheet'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
   loadFollowupSent, saveFollowupSent, loadTeacherName, loadExamInviteSent, saveExamInviteSent, loadTeacherProfileStored,
-  loadHomeworks, saveHomeworks, loadHomeworkWindow, saveHomeworkWindow,
+  loadHomeworks, saveHomeworks, loadHomeworkWindow, saveHomeworkWindow, saveRecapToHistory,
 } from '@/lib/storage'
 import type { MailMessage, Homework, HomeworkItem, HomeworkWindow } from '@/lib/storage'
 import type { HistoryItem, Recap } from '@/lib/types'
@@ -213,7 +213,19 @@ export default function HomeScreen() {
     setHwSending(true)
     try {
       const material = history.find((h) => h.id === w.historyId)
-      let items: HomeworkItem[] = [...(w.items ?? [])]
+      let items: HomeworkItem[] = []
+      if ((w.items?.length ?? 0) > 0) {
+        // カード直結：生徒の答案だけAPIでミックス生成（直せた答案が多め）。失敗時は誤解のままの答案で成立させる
+        try {
+          const res = await fetchHomeworkAnswers(
+            w.studentId,
+            w.items!.map((it) => ({ question: it.question, modelAnswer: it.modelAnswer, misconception: it.studentAnswer })),
+          )
+          items = res.items?.length ? res.items : [...w.items!]
+        } catch {
+          items = [...w.items!]
+        }
+      }
       if ((w.wrongLines?.length ?? 0) > 0) {
         const facts = material?.factsheet?.facts ?? []
         const res = await fetchHomework(w.studentId, w.wrongLines!, facts)
@@ -287,7 +299,18 @@ export default function HomeScreen() {
 
   const finishHomework = () => {
     if (gradingHomework) {
-      const next = homeworks.filter((h) => h.studentId !== gradingHomework.studentId)
+      // ❌（まだ誤解が残る）項目は、その生徒のrecapのつまずきポイントに書き戻し、次回授業で優先復習させる
+      const hw = gradingHomework
+      const stillWrong = hw.items.filter((it) => it.teacherMark === false).map((it) => it.modelAnswer)
+      const recap = history.find((h) => h.id === hw.historyId)?.recaps?.[hw.studentId]
+      if (stillWrong.length > 0 && recap) {
+        const merged = [...new Set([...stillWrong, ...recap.struggledPoints])].slice(0, 6)
+        void (async () => {
+          await saveRecapToHistory(hw.historyId, hw.studentId, { ...recap, struggledPoints: merged })
+          setHistory(await loadHistory())
+        })()
+      }
+      const next = homeworks.filter((h) => h.studentId !== hw.studentId)
       void saveHomeworks(next)
       setHomeworks(next)
     }
@@ -574,9 +597,12 @@ export default function HomeScreen() {
     }
   }
 
-  const shortTitle = imageDescription
-    ? imageDescription.replace(/^この(教材|文書|画像)は[、,]?\s*/u, '').split('。')[0].slice(0, 36)
-    : ''
+  // 履歴に保存されたタイトルを優先（アップロード直後と履歴選択時でタイトルが食い違わないように）
+  const shortTitle = (() => {
+    const saved = history.find((h) => h.id === currentHistoryId)?.title
+    const raw = saved ?? (imageDescription ? imageDescription.split('。')[0] : '')
+    return raw ? raw.replace(/^この(教材|文書|画像|写真)は[、,，]?\s*/u, '').slice(0, 36) : ''
+  })()
 
   const toastOpacity = useRef(new Animated.Value(0)).current
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1231,7 +1257,7 @@ export default function HomeScreen() {
                     <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
                       <Text style={styles.hwHint}>
                         前回うまく説明できなかったところを{st?.name ?? '生徒'}が解いてきました。
-                        <Text style={styles.hwModelWord}>模範解答</Text>（教材から自動でつくったもの）とくらべて、○ か ✕ をつけましょう。
+                        前回つまずいた項目を解き直してきました。ちゃんと直せているか、赤い<Text style={styles.hwModelWord}>答</Text>と見くらべて ⭕ / ❌ をつけてください。❌ の項目は次の授業でもう一度復習します。
                       </Text>
                       {hw.items.map((it, i) => (
                         <View key={i} style={styles.hwAnswerCard}>
