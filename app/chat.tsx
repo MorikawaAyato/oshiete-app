@@ -590,6 +590,7 @@ export default function ChatScreen() {
                           </Text>
                           {!!line.reference && (editingLine === i ? (
                             <View style={styles.editRefWrap}>
+                              <Text style={styles.editRefNote}>✏️ 直すと、この教材の内容として保存され、授業・宿題・試験すべてに反映されます</Text>
                               <TextInput
                                 value={editValue}
                                 onChangeText={setEditValue}
@@ -845,6 +846,7 @@ const styles = StyleSheet.create({
   editRefBtn: { paddingHorizontal: 4, paddingVertical: 1, marginTop: 2 },
   editRefBtnText: { fontSize: 13, color: c.textSub },
   editRefWrap: { marginTop: 4, gap: 6 },
+  editRefNote: { fontSize: 11, lineHeight: 15, color: c.faint },
   editRefInput: { borderWidth: 1, borderColor: '#fca5a5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, fontSize: 12, color: c.text, backgroundColor: c.paper, minHeight: 40 },
   editRefBtns: { flexDirection: 'row', gap: 8 },
   editRefSave: { backgroundColor: '#e11d48', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
