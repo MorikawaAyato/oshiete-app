@@ -151,7 +151,7 @@ export default function TrainingScreen() {
     allCards.length === 0
       ? `${teacherCall}、よく来たね。だが研修はまだ早い。まずは教材を取り込んで、生徒に授業をしてきなさい。話はそれからだ。`
       : canExam
-      ? `${teacherCall}、よく来たね。研修は嘘をつかん。カードで鍛えたら、「${nextTitle}」への昇進試験に挑みなさい。待っておるぞ。`
+      ? `${teacherCall}、よく来たね。研修は嘘をつかん。カードで鍛えたら、次の昇進試験に挑みなさい。待っておるぞ。`
       : `${teacherCall}、よく来たね。教えるとは、二度学ぶことだ。カードをめくって、教えの引き出しを増やしなさい。`
   const drillActive = drillCards.length > 0
 
@@ -182,9 +182,9 @@ export default function TrainingScreen() {
               </View>
             </View>
 
-            {/* 一問一答れんしゅう */}
+            {/* 一問一答研修 */}
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>📇 一問一答れんしゅう</Text>
+              <Text style={styles.sectionTitle}>📇 一問一答研修</Text>
               <Text style={styles.sectionDesc}>カードをめくって自分の言葉で答え、「おぼえた／まだ」をつけていく研修です。「まだ」のカードは次回優先で出ます。</Text>
               {allCards.length === 0 ? (
                 <Text style={styles.emptyText}>教材を取り込むと、その内容からカードが用意されます</Text>
@@ -213,7 +213,7 @@ export default function TrainingScreen() {
                     style={styles.primaryBtn}
                     onPress={() => void startDrill(drillMaterialId === 'all' || materialsWithCards.some((h) => h.id === drillMaterialId) ? drillMaterialId : 'all')}
                   >
-                    <Text style={styles.primaryBtnText}>れんしゅうをはじめる（最大{DRILL_SESSION_SIZE}問）</Text>
+                    <Text style={styles.primaryBtnText}>研修をはじめる（最大{DRILL_SESSION_SIZE}問）</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -225,7 +225,7 @@ export default function TrainingScreen() {
               {nextTitle ? (
                 <>
                   <Text style={styles.sectionDesc}>
-                    現在の称号: <Text style={styles.bold}>{teacherProfile.title}</Text> → 合格すると <Text style={[styles.bold, { color: '#b45309' }]}>{nextTitle}</Text>。校長先生が{EXAM_QUESTION_COUNT}問出題し、{EXAM_PASS_COUNT}問正解で合格です。
+                    校長先生が{EXAM_QUESTION_COUNT}問出題し、{EXAM_PASS_COUNT}問正解で合格。次の称号が解放されます（何がもらえるかは、受かってからのお楽しみ）。
                   </Text>
                   {canExam ? (
                     <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#d97706' }]} onPress={startExam}>
@@ -353,7 +353,7 @@ export default function TrainingScreen() {
                     <Image source={PRINCIPAL_IMAGE} style={styles.principalAvatarSmall} />
                     <Text style={styles.examSpeechText}>
                       {examStep === 0
-                        ? `それでは始めよう。全${examQuestions.length}問、${EXAM_PASS_COUNT}問正解で「${nextTitle ?? ''}」に昇進だ。自分の言葉で答えなさい。`
+                        ? `それでは始めよう。全${examQuestions.length}問、${EXAM_PASS_COUNT}問正解で次の称号に昇進だ。自分の言葉で答えなさい。`
                         : 'つぎの問題だ。'}
                     </Text>
                   </View>

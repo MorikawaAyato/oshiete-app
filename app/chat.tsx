@@ -365,6 +365,8 @@ export default function ChatScreen() {
           ...(legacy.length > 0 ? { wrongLines: legacy } : {}),
         })
       })()
+      setPrincipalToast(`まちがえた問題は、${student.name}が宿題としてもう一度やってきます`)
+      setTimeout(() => setPrincipalToast(null), 3600)
     }
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
   }
@@ -590,8 +592,8 @@ export default function ChatScreen() {
                   const hasAuto = notebook?.lines.some((l) => l.autoMarked)
                   return (
                     <Text style={styles.notebookGradeHint}>
-                      赤い<Text style={styles.modelAnswerWord}>答</Text>と見くらべて ⭕ / ❌（<Text style={styles.gradePurposeStrong}>❌は宿題になります</Text>）。
-                      {hasAuto ? 'ぴったり合う行には、さきに ⭕ がついています。' : ''}
+                      赤い<Text style={styles.modelAnswerWord}>答</Text>と見くらべて、合っていたら <Text style={styles.gradeMarkO}>○</Text>、ちがえば <Text style={styles.gradeMarkX}>✕</Text> をつけてね。
+                      {hasAuto ? <Text>{' '}ぴったり合う行には、さきに <Text style={styles.gradeMarkO}>○</Text> がついています。</Text> : null}
                     </Text>
                   )
                 })()}
@@ -879,7 +881,8 @@ const styles = StyleSheet.create({
   modelAnswerWord: { fontWeight: '700', color: '#e11d48' },
   gradePurposeBox: { marginHorizontal: 14, marginTop: 12, marginBottom: 4, backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 },
   gradePurposeText: { fontSize: 11.5, color: c.textMid, lineHeight: 17 },
-  gradePurposeStrong: { fontWeight: '700', color: c.text },
+  gradeMarkO: { fontWeight: '700', color: '#10b981' },
+  gradeMarkX: { fontWeight: '700', color: '#f43f5e' },
   markRow: { flexDirection: 'row', gap: 6 },
   markBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   markBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },

@@ -15,7 +15,7 @@ import { needsFactsheetUpgrade } from '@/lib/factsheet'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
-  loadFollowupSent, saveFollowupSent, loadTeacherName, loadExamInviteSent, saveExamInviteSent, loadTeacherProfileStored,
+  loadFollowupSent, saveFollowupSent, loadTeacherName,
   loadHomeworks, saveHomeworks, loadHomeworkWindow, saveHomeworkWindow, saveRecapToHistory,
 } from '@/lib/storage'
 import type { MailMessage, Homework, HomeworkItem, HomeworkWindow } from '@/lib/storage'
@@ -34,7 +34,6 @@ const FOLLOWUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 
 // 昇進試験：校長先生が一問一答バンクから出題する短答記述式テスト。合格で次の称号が解放される
 const EXAM_QUESTION_COUNT = 5
-const EXAM_PASS_COUNT = 4
 
 // 宿題：ノート採点で❌にした項目から生成。半日後以降の起動で「届いた」状態になる
 const HOMEWORK_ARRIVE_MS = 12 * 60 * 60 * 1000
@@ -164,36 +163,6 @@ export default function HomeScreen() {
         sent.add(best.key)
         await saveFollowupSent(sent)
       } catch { /* メールは任意機能。失敗時は次回起動時に再挑戦 */ }
-    })()
-  }, [])
-
-  // 昇進試験の案内メール：次の称号があり、出題に足るカードが貯まったら校長先生から一度だけ届く
-  const examInviteChecked = useRef(false)
-  useEffect(() => {
-    if (examInviteChecked.current) return
-    examInviteChecked.current = true
-    void (async () => {
-      try {
-        const [items, sentTitles, stored] = await Promise.all([loadHistory(), loadExamInviteSent(), loadTeacherProfileStored()])
-        const profile = { name: stored?.name ?? '', title: stored?.title ?? TEACHER_TITLES[0], avatarId: '', unlockedTitleCount: stored?.unlockedTitleCount }
-        const nextTitle = TEACHER_TITLES[getUnlockedTitleCount(profile)]
-        if (!nextTitle || sentTitles.includes(nextTitle)) return
-        const totalCards = items.reduce((n, h) => n + (h.factsheet?.cards?.length ?? 0), 0)
-        if (totalCards < EXAM_QUESTION_COUNT) return
-        const salutation = profile.name ? `${profile.name}先生` : '先生'
-        const updated = await addMail({
-          id: `exam-invite-${Date.now()}`,
-          type: 'notice',
-          from: '校長先生',
-          subject: `昇進試験のご案内（${nextTitle}）`,
-          content: `${salutation}、日頃の授業への熱意、職員室からいつも感心して見ています。\nそろそろ「${nextTitle}」への昇進試験を受けてみませんか？これまでの教材から私が${EXAM_QUESTION_COUNT}問出題します。${EXAM_PASS_COUNT}問正解で合格です。\n準備ができたら、このメールから受験してください。 — 校長`,
-          timestamp: new Date().toISOString(),
-          read: false,
-          examInvite: true,
-        })
-        setMailMessages(updated)
-        await saveExamInviteSent([...sentTitles, nextTitle])
-      } catch {}
     })()
   }, [])
 
@@ -1220,33 +1189,6 @@ export default function HomeScreen() {
                           </TouchableOpacity>
                         ))}
                       </View>
-                    </View>
-                    <View>
-                      <Text style={styles.teacherSectionLabel}>称号</Text>
-                      <View style={styles.titleRow}>
-                        {TEACHER_TITLES.map((title, i) => {
-                          const unlocked = i < getUnlockedTitleCount(teacherProfile)
-                          return (
-                            <TouchableOpacity
-                              key={title}
-                              disabled={!unlocked}
-                              style={[styles.titleChip, teacherProfile.title === title && styles.titleChipSel, !unlocked && styles.titleChipLocked]}
-                              onPress={() => setTeacherProfile({ ...teacherProfile, title })}
-                            >
-                              <Text style={[styles.titleChipText, teacherProfile.title === title && styles.titleChipTextSel, !unlocked && styles.titleChipTextLocked]}>{unlocked ? title : `🔒${title}`}</Text>
-                            </TouchableOpacity>
-                          )
-                        })}
-                      </View>
-                      {!!TEACHER_TITLES[getUnlockedTitleCount(teacherProfile)] && (
-                        examCardPool().length >= EXAM_QUESTION_COUNT ? (
-                          <TouchableOpacity style={styles.examBtn} onPress={goToTraining}>
-                            <Text style={styles.examBtnText}>🎓 昇進試験を受ける（{TEACHER_TITLES[getUnlockedTitleCount(teacherProfile)]}）</Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <Text style={styles.examHint}>教材を取り込んで授業をすると、昇進試験を受けられます</Text>
-                        )
-                      )}
                     </View>
                   </ScrollView>
                 </View>
