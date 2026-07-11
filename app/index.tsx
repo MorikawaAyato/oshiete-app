@@ -1027,7 +1027,7 @@ export default function HomeScreen() {
       {/* アバター拡大表示 */}
       <Modal visible={showTeacherAvatar} transparent animationType="fade" onRequestClose={() => setShowTeacherAvatar(false)}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowTeacherAvatar(false)}>
-          <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white' }}>
+          <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white', backgroundColor: 'white' }}>
             <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: '100%', height: '100%' }} />
           </View>
         </Pressable>
