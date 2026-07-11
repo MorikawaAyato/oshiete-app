@@ -734,8 +734,9 @@ export default function HomeScreen() {
           {hasContent && (
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>次の授業</Text>
+              {/* カード内の「新しい教材を作る」と同一動作だったため、ここに一本化 */}
               <TouchableOpacity onPress={clearSelection}>
-                <Text style={styles.sectionClear}>✕ 選択を解除</Text>
+                <Text style={styles.sectionClear}>＋ 新しい教材を作る</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -830,57 +831,64 @@ export default function HomeScreen() {
           {/* 状態3: 分析済み */}
           {hasContent && (
             <Animated.View style={{ transform: [{ scale: materialScale }] }}>
-              {/* 教材＋生徒 分割カード */}
+              {/* 教材＋生徒 分割カード（脚部に授業の長さ。カード＝授業の設定、下のボタン＝実行） */}
               <View style={styles.lessonCard}>
-                {/* 左：教材 */}
-                <View style={styles.lessonMaterial}>
-                  {thumbnails[0] ? (
-                    <Image source={{ uri: thumbnails[0] }} style={styles.lessonThumb} />
-                  ) : (
-                    <View style={[styles.lessonThumb, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]}>
-                      <View style={{ position: 'absolute', top: -30, left: 0, right: 0, bottom: -70 }}>
-                        <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
+                <View style={styles.lessonCardRow}>
+                  {/* 左：教材 */}
+                  <View style={styles.lessonMaterial}>
+                    {thumbnails[0] ? (
+                      <Image source={{ uri: thumbnails[0] }} style={styles.lessonThumb} />
+                    ) : (
+                      <View style={[styles.lessonThumb, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]}>
+                        <View style={{ position: 'absolute', top: -30, left: 0, right: 0, bottom: -70 }}>
+                          <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
+                        </View>
                       </View>
-                    </View>
-                  )}
-                  <Text style={styles.lessonMaterialTitle} numberOfLines={3}>{shortTitle}</Text>
-                  <TouchableOpacity style={styles.lessonChangeBtn} onPress={clearSelection}>
-                    <Text style={styles.lessonChangeBtnText}>新しい教材を作る</Text>
+                    )}
+                    <Text style={styles.lessonMaterialTitle} numberOfLines={2}>{shortTitle}</Text>
+                  </View>
+
+                  {/* 縦区切り */}
+                  <View style={styles.lessonDivider} />
+
+                  {/* 右：生徒 */}
+                  <TouchableOpacity
+                    style={styles.lessonStudent}
+                    onPress={() => setStudentSheet(selectedStudent ? 'profile' : 'picker')}
+                    activeOpacity={0.85}
+                  >
+                    {selectedStudent ? (
+                      <>
+                        <Image source={{ uri: selectedStudent.avatar }} style={[styles.lessonStudentAvatar, { borderColor: c.border }]} />
+                        <View style={{ gap: 1, alignItems: 'center' }}>
+                          <Text style={styles.lessonStudentName}>{selectedStudent.name}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.success }} />
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: c.successText }}>オンライン</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.lessonStudentAppeal} numberOfLines={3}>
+                          {selectedStudent.appeal}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.lessonStudentEmpty}>
+                          <Text style={{ fontSize: 26 }}>🐾</Text>
+                        </View>
+                        <Text style={styles.lessonStudentPickText}>生徒を{'\n'}選ぶ</Text>
+                        <Text style={styles.lessonStudentPickSub}>タップ →</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </View>
 
-                {/* 縦区切り */}
-                <View style={styles.lessonDivider} />
-
-                {/* 右：生徒 */}
-                <TouchableOpacity
-                  style={styles.lessonStudent}
-                  onPress={() => setStudentSheet(selectedStudent ? 'profile' : 'picker')}
-                  activeOpacity={0.85}
-                >
-                  {selectedStudent ? (
-                    <>
-                      <Image source={{ uri: selectedStudent.avatar }} style={[styles.lessonStudentAvatar, { borderColor: c.border }]} />
-                      <View style={{ gap: 1 }}>
-                        <Text style={styles.lessonStudentName}>{selectedStudent.name}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.success }} />
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: c.successText }}>オンライン</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.lessonStudentAppeal} numberOfLines={4}>
-                        {selectedStudent.appeal}
-                      </Text>
-                    </>
-                  ) : (
-                    <>
-                      <View style={styles.lessonStudentEmpty}>
-                        <Text style={{ fontSize: 26 }}>🐾</Text>
-                      </View>
-                      <Text style={styles.lessonStudentPickText}>生徒を{'\n'}選ぶ</Text>
-                      <Text style={styles.lessonStudentPickSub}>タップ →</Text>
-                    </>
-                  )}
+                {/* 脚部：授業の長さ（選択は記憶される） */}
+                <TouchableOpacity style={styles.lessonLengthRow} onPress={openTurnsPicker} activeOpacity={0.7}>
+                  <Text style={styles.lessonLengthLabel}>授業の長さ</Text>
+                  <Text style={styles.lessonLengthValue}>
+                    {(LESSON_PRESETS.find((p) => p.turns === lessonMaxTurns) ?? LESSON_PRESETS[1]).emoji} {(LESSON_PRESETS.find((p) => p.turns === lessonMaxTurns) ?? LESSON_PRESETS[1]).label}（やりとり{lessonMaxTurns}回） ▾
+                  </Text>
                 </TouchableOpacity>
               </View>
 
@@ -897,23 +905,16 @@ export default function HomeScreen() {
                 )}
               </TouchableOpacity>
 
-              {/* 授業をするボタン＋長さチップ（選択は記憶。いつも通りの人は今まで通り1タップで開始） */}
-              <View style={styles.startRow}>
-                <BouncyPressable
-                  style={[styles.startBtn, { flex: 1 }, !selectedStudentId && styles.startBtnDisabled]}
-                  onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
-                  haptic="medium"
-                >
-                  <Text style={[styles.startBtnText, !selectedStudentId && styles.startBtnTextDisabled]}>
-                    {selectedStudentId ? '授業をする' : '生徒を選んでからスタート →'}
-                  </Text>
-                </BouncyPressable>
-                <TouchableOpacity style={styles.turnsChip} onPress={openTurnsPicker}>
-                  <Text style={styles.turnsChipText}>
-                    {(LESSON_PRESETS.find((p) => p.turns === lessonMaxTurns) ?? LESSON_PRESETS[1]).emoji} {(LESSON_PRESETS.find((p) => p.turns === lessonMaxTurns) ?? LESSON_PRESETS[1]).label} ▾
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              {/* 授業をするボタン（長さの設定は「次の授業」カードの脚部へ） */}
+              <BouncyPressable
+                style={[styles.startBtn, !selectedStudentId && styles.startBtnDisabled]}
+                onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
+                haptic="medium"
+              >
+                <Text style={[styles.startBtnText, !selectedStudentId && styles.startBtnTextDisabled]}>
+                  {selectedStudentId ? '授業をする' : '生徒を選んでからスタート →'}
+                </Text>
+              </BouncyPressable>
 
             </Animated.View>
           )}
@@ -1428,13 +1429,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 20,
     overflow: 'hidden',
-    flexDirection: 'row',
     shadowColor: c.link,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.14,
     shadowRadius: 10,
     elevation: 5,
   },
+  lessonCardRow: { flexDirection: 'row' },
+  lessonLengthRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderTopWidth: 1, borderTopColor: c.bgSub,
+  },
+  lessonLengthLabel: { fontSize: 11, fontWeight: '600', color: c.textSub },
+  lessonLengthValue: { fontSize: 12, fontWeight: '700', color: c.textStrong },
   lessonMaterial: { flex: 1, padding: 14, gap: 8 },
   lessonThumb: { width: '100%', aspectRatio: 1.4, borderRadius: 12 },
   lessonThumbText: { backgroundColor: c.pinkSoft, alignItems: 'center', justifyContent: 'center' },
@@ -1449,12 +1457,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   lessonPreviewBtnText: { fontSize: 14, fontFamily: font.round, color: c.link },
-  lessonChangeBtn: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10, paddingVertical: 5,
-    backgroundColor: c.bg, borderRadius: 20,
-  },
-  lessonChangeBtnText: { fontSize: 11, fontWeight: '600', color: c.textSub },
   lessonDivider: { width: 1, backgroundColor: c.border, marginVertical: 16 },
   lessonStudent: {
     width: 118, padding: 14,
@@ -1472,12 +1474,6 @@ const styles = StyleSheet.create({
   lessonStudentPickSub: { fontSize: 10, color: c.primary },
 
   // 授業スタートボタン
-  startRow: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
-  turnsChip: {
-    marginTop: 10, borderRadius: 16, borderWidth: 1, borderColor: c.border,
-    backgroundColor: 'white', paddingHorizontal: 12, justifyContent: 'center',
-  },
-  turnsChipText: { fontSize: 12, fontWeight: '700', color: c.textSub },
   startBtn: {
     backgroundColor: c.primaryStrong,
     borderRadius: 16,
