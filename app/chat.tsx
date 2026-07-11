@@ -482,7 +482,7 @@ export default function ChatScreen() {
                 {classEnded ? '終了' : `残り${remainingMins}分`}
               </Text>
               {!classEnded && (
-                <Text style={styles.timerSub}>送信ごとに10分</Text>
+                <Text style={styles.timerSub}>送信ごとに時計が10分すすむ</Text>
               )}
             </View>
           </View>

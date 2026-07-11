@@ -62,7 +62,7 @@ export default function HomeScreen() {
       '',
       [
         ...LESSON_PRESETS.map((p) => ({
-          text: `${p.emoji} ${p.label}（${p.turns}ラリー・${p.turns * MINUTES_PER_TURN}分）${lessonMaxTurns === p.turns ? ' ✓' : ''}`,
+          text: `${p.emoji} ${p.label}（やりとり${p.turns}回）${lessonMaxTurns === p.turns ? ' ✓' : ''}`,
           onPress: () => chooseLessonTurns(p.turns),
         })),
         { text: 'キャンセル', style: 'cancel' as const },
@@ -909,7 +909,9 @@ export default function HomeScreen() {
                   </Text>
                 </BouncyPressable>
                 <TouchableOpacity style={styles.turnsChip} onPress={openTurnsPicker}>
-                  <Text style={styles.turnsChipText}>⏱ {lessonMaxTurns * MINUTES_PER_TURN}分 ▾</Text>
+                  <Text style={styles.turnsChipText}>
+                    {(LESSON_PRESETS.find((p) => p.turns === lessonMaxTurns) ?? LESSON_PRESETS[1]).emoji} {(LESSON_PRESETS.find((p) => p.turns === lessonMaxTurns) ?? LESSON_PRESETS[1]).label} ▾
+                  </Text>
                 </TouchableOpacity>
               </View>
 
