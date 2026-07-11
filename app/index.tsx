@@ -7,6 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as ImagePicker from 'expo-image-picker'
+import { Feather } from '@expo/vector-icons'
 import { useApp, LESSON_PRESETS, MINUTES_PER_TURN } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, getUnlockedTitleCount } from '@/lib/teacherProfile'
@@ -924,7 +925,7 @@ export default function HomeScreen() {
                           {itemTitle}
                         </Text>
                         <Text style={styles.recentDate}>
-                          {item.groupName ? `📁 ${item.groupName}　` : ''}{new Date(item.savedAt).toLocaleDateString('ja-JP')}
+                          {item.groupName ? <><Feather name="folder" size={10} color={c.faint} /> {`${item.groupName}　`}</> : null}{new Date(item.savedAt).toLocaleDateString('ja-JP')}
                         </Text>
                       </View>
                       {isActive && <Text style={styles.checkMark}>✓</Text>}

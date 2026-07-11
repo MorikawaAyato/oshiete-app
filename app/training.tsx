@@ -169,7 +169,7 @@ export default function TrainingScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🏫 研修ルーム</Text>
+        <Text style={styles.headerTitle}>研修ルーム</Text>
         {drillActive && !drillDone && (
           <TouchableOpacity onPress={exitDrill}>
             <Text style={styles.headerQuit}>研修をやめる</Text>
@@ -200,7 +200,7 @@ export default function TrainingScreen() {
             {/* 一問一答研修 */}
             <View style={styles.card}>
               <View style={styles.sectionTitleRow}>
-                <Text style={styles.sectionTitle}>📇 一問一答研修</Text>
+                <Text style={styles.sectionTitle}>一問一答研修</Text>
                 {allPending > 0 && (
                   <View style={styles.pendingBadge}>
                     <Text style={styles.pendingBadgeText}>まだ {allPending}枚</Text>
@@ -242,7 +242,7 @@ export default function TrainingScreen() {
 
             {/* 昇進試験 */}
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>🎓 昇進試験</Text>
+              <Text style={styles.sectionTitle}>昇進試験</Text>
               {nextTitle ? (
                 <>
                   <Text style={styles.sectionDesc}>
@@ -375,7 +375,7 @@ export default function TrainingScreen() {
           <Pressable style={styles.sheetOverlay} onPress={() => { if (!examGrading) setExamOpen(false) }} />
           <View style={styles.sheetBottom}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>🎓 昇進試験</Text>
+              <Text style={styles.sheetTitle}>昇進試験</Text>
               <TouchableOpacity onPress={() => setExamOpen(false)}>
                 <Text style={styles.sheetClose}>✕</Text>
               </TouchableOpacity>

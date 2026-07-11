@@ -15,6 +15,7 @@ import {
 import { fetchPreviewContent } from '@/lib/api'
 import type { HistoryItem } from '@/lib/types'
 import { STUDENTS } from '@/lib/students'
+import { Feather } from '@expo/vector-icons'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -243,7 +244,7 @@ export default function LibraryScreen() {
           onPress={() => openSheet(item)}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <Text style={styles.cardMenuDot}>⋮</Text>
+          <Feather name="more-vertical" size={13} color="white" />
         </TouchableOpacity>
         {isActive && (
           <View style={styles.activeBadge}>
@@ -259,7 +260,7 @@ export default function LibraryScreen() {
       <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* ヘッダー */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📚 教材ライブラリ</Text>
+        <Text style={styles.headerTitle}>教材ライブラリ</Text>
         <Text style={styles.headerCount}>{history.length}件 <Text style={styles.headerCountMax}>/ 最大{HISTORY_MAX}件</Text></Text>
       </View>
 
@@ -307,7 +308,8 @@ export default function LibraryScreen() {
                 </View>
               ) : (
                 <View style={styles.groupHeader}>
-                  <Text style={styles.groupTitle}>📁 {name}</Text>
+                  <Feather name="folder" size={14} color={c.faint} />
+                  <Text style={styles.groupTitle}>{name}</Text>
                   <Text style={styles.groupCount}>{items.length}件</Text>
                   <View style={styles.flex1} />
                   <TouchableOpacity
@@ -315,14 +317,14 @@ export default function LibraryScreen() {
                     style={styles.groupIconBtn}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                   >
-                    <Text style={styles.groupIconBtnText}>✏️</Text>
+                    <Feather name="edit-2" size={14} color={c.textSub} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => setDeletingGroup(name)}
                     style={styles.groupIconBtn}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                   >
-                    <Text style={styles.groupIconBtnText}>🗑️</Text>
+                    <Feather name="trash-2" size={14} color={c.textSub} />
                   </TouchableOpacity>
                 </View>
               )}
@@ -437,25 +439,25 @@ export default function LibraryScreen() {
                 </Text>
                 <View style={styles.sheetRows}>
                   <TouchableOpacity style={styles.sheetRow} onPress={() => setSheetMode('detail')}>
-                    <Text style={styles.sheetRowIcon}>📄</Text>
+                    <View style={styles.sheetRowIconWrap}><Feather name="file-text" size={16} color={c.textSub} /></View>
                     <Text style={styles.sheetRowText}>詳細を見る</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.sheetRow} onPress={() => {
                     setRenameValue(actionItem.title.replace(TITLE_RE, ''))
                     setSheetMode('rename')
                   }}>
-                    <Text style={styles.sheetRowIcon}>✏️</Text>
+                    <View style={styles.sheetRowIconWrap}><Feather name="edit-2" size={16} color={c.textSub} /></View>
                     <Text style={styles.sheetRowText}>名前を変更</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.sheetRow} onPress={() => setSheetMode('group')}>
-                    <Text style={styles.sheetRowIcon}>📁</Text>
+                    <View style={styles.sheetRowIconWrap}><Feather name="folder" size={16} color={c.textSub} /></View>
                     <Text style={styles.sheetRowText}>グループを変更</Text>
                     {actionItem.groupName && (
                       <Text style={styles.sheetRowSub} numberOfLines={1}>{actionItem.groupName}</Text>
                     )}
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.sheetRow} onPress={() => setSheetMode('delete')}>
-                    <Text style={styles.sheetRowIcon}>🗑️</Text>
+                    <View style={styles.sheetRowIconWrap}><Feather name="trash-2" size={16} color={c.dangerText} /></View>
                     <Text style={[styles.sheetRowText, styles.sheetRowTextRed]}>削除</Text>
                   </TouchableOpacity>
                 </View>
@@ -474,7 +476,10 @@ export default function LibraryScreen() {
                     <Text style={styles.detailDesc}>{actionItem.imageDescription}</Text>
                   ) : null}
                   {actionItem.groupName ? (
-                    <Text style={styles.detailGroup}>📁 {actionItem.groupName}</Text>
+                    <View style={styles.detailGroupRow}>
+                      <Feather name="folder" size={12} color={c.link} />
+                      <Text style={styles.detailGroup}>{actionItem.groupName}</Text>
+                    </View>
                   ) : null}
                   <Text style={styles.detailDate}>
                     {new Date(actionItem.savedAt).toLocaleDateString('ja-JP')}
@@ -527,7 +532,7 @@ export default function LibraryScreen() {
                         onPress={() => { if (!isCurrent) handleMoveToGroup(actionItem.id, name) }}
                         disabled={isCurrent}
                       >
-                        <Text style={styles.sheetRowIcon}>📁</Text>
+                        <View style={styles.sheetRowIconWrap}><Feather name="folder" size={16} color={c.textSub} /></View>
                         <Text style={[styles.sheetRowText, isCurrent && styles.sheetRowTextPink]}>
                           {name}
                         </Text>
@@ -540,7 +545,7 @@ export default function LibraryScreen() {
                       style={styles.sheetRow}
                       onPress={() => handleMoveToGroup(actionItem.id, undefined)}
                     >
-                      <Text style={[styles.sheetRowIcon, styles.sheetRowIconSm]}>✕</Text>
+                      <View style={styles.sheetRowIconWrap}><Feather name="x" size={16} color={c.textSub} /></View>
                       <Text style={[styles.sheetRowText, styles.sheetRowTextMuted]}>グループから外す</Text>
                     </TouchableOpacity>
                   ) : null}
@@ -635,7 +640,6 @@ const styles = StyleSheet.create({
   groupCount: { fontSize: 11, color: c.textSub },
   flex1: { flex: 1, minHeight: 0 },
   groupIconBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  groupIconBtnText: { fontSize: 14 },
 
   groupEditRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -764,8 +768,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.bg,
   },
-  sheetRowIcon: { fontSize: 18, width: 24, textAlign: 'center' },
-  sheetRowIconSm: { fontSize: 12 },
+  sheetRowIconWrap: { width: 24, alignItems: 'center' },
   sheetRowText: { fontSize: 14, color: c.text, fontWeight: '500', flex: 1 },
   sheetRowTextRed: { color: c.danger },
   sheetRowTextPink: { color: c.primary, fontWeight: '600' },
@@ -787,6 +790,7 @@ const styles = StyleSheet.create({
   detailBody: { paddingVertical: 12, gap: 8, marginBottom: 12 },
   detailTitle: { fontSize: 14, fontWeight: '700', color: c.textStrong },
   detailDesc: { fontSize: 13, color: c.textSub, lineHeight: 20 },
+  detailGroupRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   detailGroup: { fontSize: 12, color: c.link },
   detailDate: { fontSize: 11, color: c.textSub },
 

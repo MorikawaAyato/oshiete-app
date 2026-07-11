@@ -12,9 +12,10 @@ export const TEACHER_AVATAR_IMAGES: Record<string, ReturnType<typeof require>> =
   neko:    require('../assets/neko_sensei.webp'),
 }
 
+// 先頭がデフォルトの先生（初回起動時に設定される）
 export const TEACHER_AVATARS = [
-  { id: 'usagi',   label: 'ウサギ',   character: 'ウサギ（男性教師）' },
   { id: 'ookami',  label: 'オオカミ', character: 'オオカミ（男性教師）' },
+  { id: 'usagi',   label: 'ウサギ',   character: 'ウサギ（男性教師）' },
   { id: 'kitsune', label: 'キツネ',   character: 'キツネ（女性教師）' },
   { id: 'neko',    label: 'ネコ',     character: 'ネコ（女性教師）' },
 ]
@@ -34,13 +35,13 @@ export function getUnlockedTitleCount(profile: TeacherProfile): number {
   return Math.min(TEACHER_TITLES.length, Math.max(profile.unlockedTitleCount ?? 1, fromTitle, 1))
 }
 
-export const DEFAULT_TEACHER: TeacherProfile = { name: '', title: '新人先生', avatarId: 'usagi' }
+export const DEFAULT_TEACHER: TeacherProfile = { name: '', title: '新人先生', avatarId: 'ookami' }
 
 export function getTeacherAvatarImage(avatarId: string): ReturnType<typeof require> {
-  return TEACHER_AVATAR_IMAGES[normalizeAvatarId(avatarId)] ?? TEACHER_AVATAR_IMAGES['usagi']
+  return TEACHER_AVATAR_IMAGES[normalizeAvatarId(avatarId)] ?? TEACHER_AVATAR_IMAGES['ookami']
 }
 
 export function getTeacherCharacter(avatarId: string): string {
   const id = normalizeAvatarId(avatarId)
-  return TEACHER_AVATARS.find(a => a.id === id)?.character ?? 'ウサギ（男性教師）'
+  return TEACHER_AVATARS.find(a => a.id === id)?.character ?? 'オオカミ（男性教師）'
 }
