@@ -14,6 +14,7 @@ import {
 } from '@/lib/storage'
 import { fetchPreviewContent } from '@/lib/api'
 import type { HistoryItem } from '@/lib/types'
+import { STUDENTS } from '@/lib/students'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -205,6 +206,10 @@ export default function LibraryScreen() {
   const renderCard = ({ item }: { item: HistoryItem }) => {
     const isActive = currentHistoryId === item.id
     const title = item.title.replace(TITLE_RE, '')
+    // 前回の授業：この教材のrecapのうち一番新しいものの生徒と日付（オンライン授業の「配った相手」を主役に）
+    const lastLesson = Object.entries(item.recaps ?? {}).reduce<{ studentId: string; at: number } | null>(
+      (acc, [studentId, r]) => (r.savedAt > (acc?.at ?? 0) ? { studentId, at: r.savedAt } : acc), null)
+    const lastStudent = lastLesson ? STUDENTS.find((s) => s.id === lastLesson.studentId) : null
     return (
       <View style={[styles.card, isActive && styles.cardActive]}>
         <TouchableOpacity onPress={() => openSheet(item, 'select')} activeOpacity={0.85}>
@@ -221,9 +226,16 @@ export default function LibraryScreen() {
             <Text style={[styles.cardTitle, isActive && styles.cardTitleActive]} numberOfLines={2}>
               {title}
             </Text>
-            <Text style={styles.cardDate}>
-              {new Date(item.savedAt).toLocaleDateString('ja-JP')}
-            </Text>
+            {lastStudent && lastLesson ? (
+              <View style={styles.cardLessonRow}>
+                <Image source={{ uri: lastStudent.avatar }} style={styles.cardLessonAvatar} />
+                <Text style={styles.cardLessonText} numberOfLines={1}>
+                  {new Date(lastLesson.at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.cardDateFaint}>授業はこれから</Text>
+            )}
           </View>
         </TouchableOpacity>
         <TouchableOpacity
@@ -235,7 +247,7 @@ export default function LibraryScreen() {
         </TouchableOpacity>
         {isActive && (
           <View style={styles.activeBadge}>
-            <Text style={styles.activeBadgeText}>選択中</Text>
+            <Text style={styles.activeBadgeText}>次の授業で使う</Text>
           </View>
         )}
       </View>
@@ -248,7 +260,7 @@ export default function LibraryScreen() {
       {/* ヘッダー */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>📚 教材ライブラリ</Text>
-        <Text style={styles.headerCount}>{history.length} / {HISTORY_MAX}件</Text>
+        <Text style={styles.headerCount}>{history.length}件 <Text style={styles.headerCountMax}>/ 最大{HISTORY_MAX}件</Text></Text>
       </View>
 
       {/* ボディ */}
@@ -314,14 +326,21 @@ export default function LibraryScreen() {
                   </TouchableOpacity>
                 </View>
               )}
-              <FlatList
-                data={items}
-                keyExtractor={item => item.id}
-                numColumns={3}
-                scrollEnabled={false}
-                contentContainerStyle={styles.grid}
-                renderItem={renderCard}
-              />
+              {items.length === 0 ? (
+                <TouchableOpacity onPress={() => router.back()} style={styles.emptySlot}>
+                  <Text style={styles.emptySlotPlus}>＋</Text>
+                  <Text style={styles.emptySlotText}>教材を追加</Text>
+                </TouchableOpacity>
+              ) : (
+                <FlatList
+                  data={items}
+                  keyExtractor={item => item.id}
+                  numColumns={3}
+                  scrollEnabled={false}
+                  contentContainerStyle={styles.grid}
+                  renderItem={renderCard}
+                />
+              )}
             </View>
           ))}
           {ungrouped.length > 0 && (
@@ -591,16 +610,18 @@ export default function LibraryScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: c.bgSub },
+  safe: { flex: 1, backgroundColor: c.bg },
 
+  // ヘッダーは教材タブ・研修タブで同一スタイル（library.tsx / training.tsx で揃えること）
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
     backgroundColor: 'white',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border,
   },
-  headerTitle: { fontSize: 15, fontFamily: font.round, color: c.textStrong },
+  headerTitle: { fontSize: 16, fontFamily: font.round, color: c.textStrong },
   headerCount: { fontSize: 12, color: c.textSub },
+  headerCountMax: { color: c.faint },
 
   bodyScroll: { flex: 1 },
   bodyContent: { paddingBottom: 8 },
@@ -668,6 +689,17 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 10, fontWeight: '600', color: c.textStrong, lineHeight: 14, minHeight: 28 },
   cardTitleActive: { color: c.primary },
   cardDate: { fontSize: 9, color: c.textSub, marginTop: 2 },
+  cardDateFaint: { fontSize: 9, color: c.faint, marginTop: 2 },
+  cardLessonRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  cardLessonAvatar: { width: 12, height: 12, borderRadius: 6 },
+  cardLessonText: { fontSize: 9, color: c.textSub, flex: 1 },
+  emptySlot: {
+    width: CARD_W, aspectRatio: 1, margin: 3, marginLeft: 9,
+    borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: c.border,
+    alignItems: 'center', justifyContent: 'center', gap: 2,
+  },
+  emptySlotPlus: { fontSize: 20, color: c.faint, lineHeight: 24 },
+  emptySlotText: { fontSize: 10, fontWeight: '600', color: c.faint },
   cardMenuBtn: {
     position: 'absolute', top: 4, right: 4,
     width: 22, height: 22, borderRadius: 11,

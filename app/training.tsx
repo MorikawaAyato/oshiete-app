@@ -11,7 +11,7 @@ import { loadHistory, loadDrillPending, saveDrillPending } from '@/lib/storage'
 import { gradeExam } from '@/lib/api'
 import type { HistoryItem, QACard } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
-import { c } from '@/lib/theme'
+import { c, font } from '@/lib/theme'
 
 const PRINCIPAL_IMAGE = require('../assets/tora_koutyou.webp')
 const TITLE_RE = /^この(教材|文書|画像|写真)は[、，]?\s*/u
@@ -40,14 +40,19 @@ export default function TrainingScreen() {
   const { teacherProfile, setTeacherProfile } = useApp()
   const [history, setHistory] = useState<HistoryItem[]>([])
 
+  // 「まだ」のカードキー集合。残数バッジと校長のセリフに使う（markDrillで更新）
+  const [drillPendingKeys, setDrillPendingKeys] = useState<Set<string>>(new Set())
+
   useFocusEffect(
     useCallback(() => {
       loadHistory().then(setHistory)
+      void loadDrillPending().then(setDrillPendingKeys)
     }, [])
   )
 
   // フラッシュカードの進行状態
   const [drillMaterialId, setDrillMaterialId] = useState<string>('all')
+  const [drillPickerOpen, setDrillPickerOpen] = useState(false) // 教材選択シート
   const [drillCards, setDrillCards] = useState<QACard[]>([])
   const [drillIdx, setDrillIdx] = useState(0)
   const [drillRevealed, setDrillRevealed] = useState(false)
@@ -83,6 +88,7 @@ export default function TrainingScreen() {
       pending.add(drillKey(card))
     }
     await saveDrillPending(pending)
+    setDrillPendingKeys(new Set(pending))
     if (drillIdx + 1 >= drillCards.length) {
       setDrillDone(true)
     } else {
@@ -147,9 +153,14 @@ export default function TrainingScreen() {
   const materialsWithCards = history.filter((h) => (h.factsheet?.cards?.length ?? 0) > 0)
   const canExam = !!nextTitle && allCards.length >= EXAM_QUESTION_COUNT
   const teacherCall = teacherProfile.name ? `${teacherProfile.name}先生` : '先生'
+  // 「まだ」のカード残数（全体・教材ごと）。研修に戻ってくる理由を可視化する
+  const pendingCountOf = (cards: QACard[]) => cards.filter((cd) => drillPendingKeys.has(drillKey(cd))).length
+  const allPending = pendingCountOf(allCards)
   const principalLine =
     allCards.length === 0
       ? `${teacherCall}、よく来たね。だが研修はまだ早い。まずは教材を取り込んで、生徒に授業をしてきなさい。話はそれからだ。`
+      : allPending > 0
+      ? `${teacherCall}、よく来たね。「まだ」のカードが${allPending}枚残っておるぞ。逃げずに、一枚ずつ潰していきなさい。`
       : canExam
       ? `${teacherCall}、よく来たね。研修は嘘をつかん。カードで鍛えたら、次の昇進試験に挑みなさい。待っておるぞ。`
       : `${teacherCall}、よく来たね。教えるとは、二度学ぶことだ。カードをめくって、教えの引き出しを増やしなさい。`
@@ -158,7 +169,7 @@ export default function TrainingScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🏫 研修室</Text>
+        <Text style={styles.headerTitle}>🏫 研修ルーム</Text>
         {drillActive && !drillDone && (
           <TouchableOpacity onPress={exitDrill}>
             <Text style={styles.headerQuit}>研修をやめる</Text>
@@ -169,46 +180,56 @@ export default function TrainingScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
         {!drillActive ? (
           <>
-            {/* 校長ヒーロー */}
+            {/* 校長との1on1ルーム：ビデオ通話のアバタータイル風 */}
             <View style={styles.card}>
-              <View style={styles.heroRow}>
-                <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.8}>
-                  <Image source={PRINCIPAL_IMAGE} style={styles.principalAvatar} />
-                </TouchableOpacity>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.principalName}>校長先生</Text>
-                  <Text style={styles.principalLine}>{principalLine}</Text>
+              <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.85} style={styles.callTile}>
+                <Image source={PRINCIPAL_IMAGE} style={styles.callTileAvatar} />
+                <View style={styles.callTileStatus}>
+                  <View style={styles.onlineDot} />
+                  <Text style={styles.callTileStatusText}>接続中</Text>
                 </View>
+                <View style={styles.callTileName}>
+                  <Text style={styles.callTileNameText}>校長先生</Text>
+                </View>
+              </TouchableOpacity>
+              <View style={styles.principalBubble}>
+                <Text style={styles.principalLine}>{principalLine}</Text>
               </View>
             </View>
 
             {/* 一問一答研修 */}
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>📇 一問一答研修</Text>
+              <View style={styles.sectionTitleRow}>
+                <Text style={styles.sectionTitle}>📇 一問一答研修</Text>
+                {allPending > 0 && (
+                  <View style={styles.pendingBadge}>
+                    <Text style={styles.pendingBadgeText}>まだ {allPending}枚</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.sectionDesc}>カードをめくって自分の言葉で答え、「おぼえた／まだ」をつけていく研修です。「まだ」のカードは次回優先で出ます。</Text>
               {allCards.length === 0 ? (
                 <Text style={styles.emptyText}>教材を取り込むと、その内容からカードが用意されます</Text>
               ) : (
                 <>
-                  <View style={styles.chipRow}>
-                    <TouchableOpacity
-                      style={[styles.chip, drillMaterialId === 'all' && styles.chipSel]}
-                      onPress={() => setDrillMaterialId('all')}
-                    >
-                      <Text style={[styles.chipText, drillMaterialId === 'all' && styles.chipTextSel]}>全部ミックス（{allCards.length}枚）</Text>
-                    </TouchableOpacity>
-                    {materialsWithCards.map((h) => (
-                      <TouchableOpacity
-                        key={h.id}
-                        style={[styles.chip, drillMaterialId === h.id && styles.chipSel]}
-                        onPress={() => setDrillMaterialId(h.id)}
-                      >
-                        <Text style={[styles.chipText, drillMaterialId === h.id && styles.chipTextSel]} numberOfLines={1}>
-                          {h.title.replace(TITLE_RE, '')}
-                        </Text>
+                  {/* 研修する教材の選択：プルダウン（教材が増えても場所を取らず、スマホでも操作しやすい） */}
+                  {(() => {
+                    const selectedMaterial = drillMaterialId === 'all' ? null : materialsWithCards.find((h) => h.id === drillMaterialId) ?? null
+                    const selectedLabel = selectedMaterial ? selectedMaterial.title.replace(TITLE_RE, '') : `全部ミックス（${allCards.length}枚）`
+                    const selectedPending = selectedMaterial ? pendingCountOf(selectedMaterial.factsheet?.cards ?? []) : allPending
+                    return (
+                      <TouchableOpacity style={styles.pickerBtn} onPress={() => setDrillPickerOpen(true)}>
+                        <Text style={styles.pickerLabel}>教材</Text>
+                        <Text style={styles.pickerValue} numberOfLines={1}>{selectedLabel}</Text>
+                        {selectedPending > 0 && (
+                          <View style={styles.chipBadge}>
+                            <Text style={styles.chipBadgeText}>まだ{selectedPending}</Text>
+                          </View>
+                        )}
+                        <Text style={styles.pickerCaret}>▾</Text>
                       </TouchableOpacity>
-                    ))}
-                  </View>
+                    )
+                  })()}
                   <TouchableOpacity
                     style={styles.primaryBtn}
                     onPress={() => void startDrill(drillMaterialId === 'all' || materialsWithCards.some((h) => h.id === drillMaterialId) ? drillMaterialId : 'all')}
@@ -228,8 +249,8 @@ export default function TrainingScreen() {
                     校長先生が{EXAM_QUESTION_COUNT}問出題し、{EXAM_PASS_COUNT}問正解で合格。次の称号が解放されます（何がもらえるかは、受かってからのお楽しみ）。
                   </Text>
                   {canExam ? (
-                    <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#d97706' }]} onPress={startExam}>
-                      <Text style={styles.primaryBtnText}>受験する</Text>
+                    <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#1e293b' }]} onPress={startExam}>
+                      <Text style={styles.primaryBtnText}>🎓 校長先生の試験を受ける</Text>
                     </TouchableOpacity>
                   ) : (
                     <Text style={styles.emptyText}>教材を取り込んで授業をすると受験できます（カード{EXAM_QUESTION_COUNT}枚以上）</Text>
@@ -301,6 +322,51 @@ export default function TrainingScreen() {
             <Image source={PRINCIPAL_IMAGE} style={styles.zoomImage} />
           </View>
         </Pressable>
+      </Modal>
+
+      {/* 研修する教材の選択シート */}
+      <Modal visible={drillPickerOpen} transparent animationType="slide" onRequestClose={() => setDrillPickerOpen(false)}>
+        <View style={styles.sheetContainer}>
+          <Pressable style={styles.sheetOverlay} onPress={() => setDrillPickerOpen(false)} />
+          <View style={styles.sheetBottom}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>研修する教材</Text>
+              <TouchableOpacity onPress={() => setDrillPickerOpen(false)}>
+                <Text style={styles.sheetClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              <TouchableOpacity style={styles.pickerRow} onPress={() => { setDrillMaterialId('all'); setDrillPickerOpen(false) }}>
+                <Text style={[styles.pickerRowText, drillMaterialId === 'all' && styles.pickerRowTextSel]} numberOfLines={1}>
+                  全部ミックス（{allCards.length}枚）
+                </Text>
+                {allPending > 0 && (
+                  <View style={styles.chipBadge}>
+                    <Text style={styles.chipBadgeText}>まだ{allPending}</Text>
+                  </View>
+                )}
+                {drillMaterialId === 'all' && <Text style={styles.pickerCheck}>✓</Text>}
+              </TouchableOpacity>
+              {materialsWithCards.map((h) => {
+                const pending = pendingCountOf(h.factsheet?.cards ?? [])
+                const sel = drillMaterialId === h.id
+                return (
+                  <TouchableOpacity key={h.id} style={styles.pickerRow} onPress={() => { setDrillMaterialId(h.id); setDrillPickerOpen(false) }}>
+                    <Text style={[styles.pickerRowText, sel && styles.pickerRowTextSel]} numberOfLines={1}>
+                      {h.title.replace(TITLE_RE, '')}
+                    </Text>
+                    {pending > 0 && (
+                      <View style={styles.chipBadge}>
+                        <Text style={styles.chipBadgeText}>まだ{pending}</Text>
+                      </View>
+                    )}
+                    {sel && <Text style={styles.pickerCheck}>✓</Text>}
+                  </TouchableOpacity>
+                )
+              })}
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
 
       {/* 昇進試験（校長室） */}
@@ -397,12 +463,14 @@ export default function TrainingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: c.bg },
+  // ヘッダーは教材タブ・研修タブで同一スタイル（library.tsx / training.tsx で揃えること）
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border, backgroundColor: 'white',
+    backgroundColor: 'white',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border,
   },
-  headerTitle: { fontSize: 16, fontWeight: '900', color: c.text },
+  headerTitle: { fontSize: 16, fontFamily: font.round, color: c.textStrong },
   headerQuit: { fontSize: 12, fontWeight: '700', color: c.faint },
   content: { padding: 16, gap: 14, paddingBottom: 32 },
 
@@ -410,20 +478,56 @@ const styles = StyleSheet.create({
   heroRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   principalAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fde68a' },
   principalAvatarSmall: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fde68a' },
-  principalName: { fontSize: 10, fontWeight: '700', color: '#b45309', letterSpacing: 1 },
-  principalLine: { fontSize: 13, color: c.textMid, lineHeight: 20, marginTop: 4 },
+  // 1on1コールのアバタータイル（ビデオ通話でカメラオフのときの表示風）
+  callTile: { backgroundColor: '#1e293b', borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingVertical: 22 },
+  callTileAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: 'rgba(52,211,153,0.7)' },
+  callTileStatus: {
+    position: 'absolute', top: 8, right: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2,
+  },
+  onlineDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34d399' },
+  callTileStatusText: { color: '#6ee7b7', fontSize: 9, fontWeight: '600' },
+  callTileName: {
+    position: 'absolute', bottom: 6, left: 8,
+    backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  callTileNameText: { color: 'rgba(255,255,255,0.92)', fontSize: 10, fontWeight: '600' },
+  principalBubble: {
+    marginTop: 10, alignSelf: 'flex-start',
+    backgroundColor: c.bgSub, borderRadius: 16, borderTopLeftRadius: 4,
+    paddingHorizontal: 14, paddingVertical: 10,
+  },
+  principalLine: { fontSize: 13, color: c.textMid, lineHeight: 20 },
   principalComment: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19, backgroundColor: c.bgSub, borderRadius: 12, padding: 10 },
 
   sectionTitle: { fontSize: 14, fontWeight: '900', color: c.text, marginBottom: 4 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  pendingBadge: { backgroundColor: '#fef3c7', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 4 },
+  pendingBadgeText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
   sectionDesc: { fontSize: 12, color: c.textSub, lineHeight: 18, marginBottom: 12 },
   bold: { fontWeight: '700', color: c.textMid },
   emptyText: { fontSize: 12, color: c.faint, lineHeight: 18 },
 
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-  chip: { backgroundColor: c.bgSub, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, maxWidth: 220 },
-  chipSel: { backgroundColor: '#f59e0b' },
-  chipText: { fontSize: 12, fontWeight: '600', color: c.textSub },
-  chipTextSel: { color: '#fff' },
+  // 教材選択プルダウン
+  pickerBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderWidth: 1, borderColor: c.border, borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12, backgroundColor: 'white',
+  },
+  pickerLabel: { fontSize: 10, fontWeight: '700', color: c.faint },
+  pickerValue: { flex: 1, fontSize: 13, fontWeight: '600', color: c.textMid },
+  pickerCaret: { fontSize: 11, color: c.faint },
+  pickerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 18, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: c.bgSub,
+  },
+  pickerRowText: { flex: 1, fontSize: 13, color: c.textMid },
+  pickerRowTextSel: { fontWeight: '700', color: '#b45309' },
+  pickerCheck: { fontSize: 13, fontWeight: '700', color: '#f59e0b' },
+  chipBadge: { backgroundColor: '#fef3c7', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
+  chipBadgeText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
 
   primaryBtn: { backgroundColor: '#f59e0b', borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   primaryBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
