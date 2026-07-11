@@ -11,9 +11,9 @@ const LESSON_TURNS_KEY = 'oshiete_lesson_turns'
 // 授業の長さ（1送信=10分のフィクション換算）。選択は記憶される
 export const MINUTES_PER_TURN = 10
 export const LESSON_PRESETS = [
-  { turns: 3, emoji: '⚡', label: 'さくっと' },
-  { turns: 6, emoji: '📚', label: 'ふつう' },
-  { turns: 9, emoji: '🎓', label: 'じっくり' },
+  { turns: 3, label: 'さくっと' },
+  { turns: 6, label: 'ふつう' },
+  { turns: 9, label: 'じっくり' },
 ] as const
 export const DEFAULT_LESSON_TURNS = 6
 

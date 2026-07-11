@@ -62,7 +62,7 @@ export default function HomeScreen() {
       '',
       [
         ...LESSON_PRESETS.map((p) => ({
-          text: `${p.emoji} ${p.label}（やりとり${p.turns}回）${lessonMaxTurns === p.turns ? ' ✓' : ''}`,
+          text: `${p.label}（やりとり${p.turns}回）${lessonMaxTurns === p.turns ? ' ✓' : ''}`,
           onPress: () => chooseLessonTurns(p.turns),
         })),
         { text: 'キャンセル', style: 'cancel' as const },
@@ -887,7 +887,7 @@ export default function HomeScreen() {
                 <TouchableOpacity style={styles.lessonLengthRow} onPress={openTurnsPicker} activeOpacity={0.7}>
                   <Text style={styles.lessonLengthLabel}>授業の長さ</Text>
                   <Text style={styles.lessonLengthValue}>
-                    {(LESSON_PRESETS.find((p) => p.turns === lessonMaxTurns) ?? LESSON_PRESETS[1]).emoji} {(LESSON_PRESETS.find((p) => p.turns === lessonMaxTurns) ?? LESSON_PRESETS[1]).label}（やりとり{lessonMaxTurns}回） ▾
+                    {(LESSON_PRESETS.find((p) => p.turns === lessonMaxTurns) ?? LESSON_PRESETS[1]).label}（やりとり{lessonMaxTurns}回） ▾
                   </Text>
                 </TouchableOpacity>
               </View>
