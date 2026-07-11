@@ -6,7 +6,8 @@ import type { QACard, Erratum } from './types'
 // バンク生成ルールの版。★web側 lib/factsheet.ts の FACTSHEET_VERSION と必ず同じ値にすること。
 // ずれると再生成が無限に走る／永久に更新されない、のどちらかになる。
 // v3: sections/sectionTitle追加＋網羅修復ループ（教材ビューのバンク描画対応）
-export const FACTSHEET_VERSION = 3
+// v4: 教材外の語の機械検証（一般知識の補完を排除）＋空セクション除去
+export const FACTSHEET_VERSION = 4
 
 // ─── 自動更新（バックフィル）のオン/オフ ───
 // 教材を開いたとき、バンク未生成・または旧版のファクトシートを裏で自動再生成するか。

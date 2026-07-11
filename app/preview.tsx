@@ -44,8 +44,10 @@ export default function PreviewScreen() {
 
   const bankSections: FactsheetSection[] | null = (() => {
     if (!bankFs?.cards?.length || !bankFs.sections?.length) return null
-    const sections = [...bankFs.sections]
-    if (bankFs.cards.some((cd) => !sections.some((s) => s.title === cd.sectionTitle))) {
+    const cards = bankFs.cards
+    // カードが1枚も属さないセクション（タイトルだけの空ページ）は出さない
+    const sections = bankFs.sections.filter((s) => cards.some((cd) => cd.sectionTitle === s.title))
+    if (cards.some((cd) => !sections.some((s) => s.title === cd.sectionTitle))) {
       sections.push({ title: 'その他', memo: '' })
     }
     return sections
