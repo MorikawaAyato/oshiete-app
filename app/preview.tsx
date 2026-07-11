@@ -1,35 +1,85 @@
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Image,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
-import type { Section } from '@/lib/types'
+import type { Section, Factsheet, FactsheetSection, QACard } from '@/lib/types'
+import { loadFactsheet, loadHistory, updateHistoryFactsheet } from '@/lib/storage'
+import { applyCardCorrection } from '@/lib/factsheet'
 import { c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 
 export default function PreviewScreen() {
   const router = useRouter()
-  const { previewContent, selectedStudentId, setSelectedStudentId, chatMessages, classEnded } = useApp()
+  const { previewContent, selectedStudentId, chatMessages, classEnded, currentHistoryId } = useApp()
   const student = STUDENTS.find(s => s.id === selectedStudentId) ?? null
   const hasActiveChat = chatMessages.length > 0 && !classEnded
   const [step, setStep] = useState(0)
   const [revealed, setRevealed] = useState<Set<string>>(new Set())
   const [hiddenMode, setHiddenMode] = useState(false)
 
-  if (!previewContent) {
+  // バンク描画ビュー：一問一答バンク（v3: sections付き）がある教材はカードから機械描画する。
+  // 表示＝台帳そのものなので、✎でカードを直せばこの画面も判定も一斉に変わる（旧プレビューはフォールバック）
+  const [bankFs, setBankFs] = useState<Factsheet | null>(null)
+  const [materialTitle, setMaterialTitle] = useState('教材')
+  const [fsLoaded, setFsLoaded] = useState(false)
+  const [editingCardIdx, setEditingCardIdx] = useState<number | null>(null)
+  const [editCardValue, setEditCardValue] = useState('')
+  const [principalToast, setPrincipalToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    ;(async () => {
+      if (currentHistoryId) {
+        const fs = await loadFactsheet(currentHistoryId)
+        if (fs?.cards?.length && fs.sections?.length) setBankFs(fs)
+        const item = (await loadHistory()).find((h) => h.id === currentHistoryId)
+        if (item?.title) setMaterialTitle(item.title)
+      }
+      setFsLoaded(true)
+    })()
+  }, [currentHistoryId])
+
+  const bankSections: FactsheetSection[] | null = (() => {
+    if (!bankFs?.cards?.length || !bankFs.sections?.length) return null
+    const sections = [...bankFs.sections]
+    if (bankFs.cards.some((cd) => !sections.some((s) => s.title === cd.sectionTitle))) {
+      sections.push({ title: 'その他', memo: '' })
+    }
+    return sections
+  })()
+
+  const saveCardCorrectionFromView = async (cardIdx: number) => {
+    const newAnswer = editCardValue.trim()
+    setEditingCardIdx(null)
+    if (!currentHistoryId || !newAnswer || !bankFs?.cards) return
+    const res = applyCardCorrection(bankFs.cards, bankFs.errata, cardIdx, newAnswer)
+    if (res) {
+      const nextFs = { ...bankFs, cards: res.cards, facts: res.facts, errata: res.errata }
+      await updateHistoryFactsheet(currentHistoryId, nextFs)
+      setBankFs(nextFs)
+      setPrincipalToast('🐯 校長先生に伝えました。教材を訂正しておきますね')
+      setTimeout(() => setPrincipalToast(null), 3200)
+    }
+  }
+
+  if (!fsLoaded || (!bankSections && !previewContent)) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <ActivityIndicator color={c.primary} />
+          {fsLoaded ? (
+            <Text style={styles.preparingText}>教材を準備しています。{'\n'}少し待ってからもう一度開いてください。</Text>
+          ) : (
+            <ActivityIndicator color={c.primary} />
+          )}
         </View>
       </SafeAreaView>
     )
   }
 
-  const totalSteps = 2 + previewContent.sections.length
+  const totalSteps = bankSections ? 2 + bankSections.length : 2 + (previewContent?.sections.length ?? 0)
   const isFirst = step === 0
   const isLast = step === totalSteps - 1
 
@@ -68,14 +118,108 @@ export default function PreviewScreen() {
   )
 
   let content: React.ReactNode
-  const currentSection: Section | null = step >= 2 ? previewContent.sections[step - 2] : null
-  const showHiddenToggle = !!currentSection && currentSection.keywords.length > 0
+  const currentSection: Section | null = !bankSections && step >= 2 ? previewContent!.sections[step - 2] : null
+  const showHiddenToggle = bankSections ? step >= 2 : !!currentSection && currentSection.keywords.length > 0
 
-  if (step === 0) {
+  if (bankSections && bankFs?.cards) {
+    const cards = bankFs.cards
+    if (step === 0) {
+      content = (
+        <View style={styles.centerContent}>
+          <Text style={styles.stepLabel}>この教材のテーマ</Text>
+          <Text style={styles.themeText}>{materialTitle}</Text>
+          <Text style={styles.bankMeta}>{bankSections.length}つのまとまり・{cards.length}個のポイント</Text>
+          <Text style={styles.hint}>次へ進んで全体の概要を確認しよう →</Text>
+        </View>
+      )
+    } else if (step === 1) {
+      content = (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <Text style={styles.stepLabel}>全体の概要</Text>
+          {bankSections.map((s, i) => (
+            <View key={i} style={styles.flowItem}>
+              <View style={styles.flowNum}>
+                <Text style={styles.flowNumText}>{i + 1}</Text>
+              </View>
+              <View style={styles.flowInfo}>
+                <Text style={styles.flowTitle}>{s.title}</Text>
+                {!!s.memo && <Text style={styles.flowSummary}>{s.memo}</Text>}
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      )
+    } else {
+      const section = bankSections[step - 2]
+      const isOther = section.title === 'その他'
+      const rows = cards
+        .map((cd, gi) => ({ cd, gi }))
+        .filter(({ cd }) => (isOther ? !bankSections.some((s) => s.title !== 'その他' && s.title === cd.sectionTitle) : cd.sectionTitle === section.title))
+      content = (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionNum}>
+              <Text style={styles.sectionNumText}>{step - 1}</Text>
+            </View>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+          </View>
+          {!!section.memo && (
+            <View style={styles.summaryBox}>
+              <Text style={styles.summaryText}>🖊 {section.memo}</Text>
+            </View>
+          )}
+          <View style={styles.detailsBox}>
+            {rows.map(({ cd, gi }, j) =>
+              hiddenMode ? (
+                // 覚えるモード：問いを見て、答えをタップで確認
+                <View key={gi} style={styles.bankRow}>
+                  <Text style={styles.bankNum}>{j + 1}.</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.bankQ}>{cd.q}</Text>
+                    <TouchableOpacity
+                      onPress={() => toggleReveal(`c${gi}`)}
+                      style={[styles.bankA, revealed.has(`c${gi}`) ? styles.bankARevealed : styles.bankAHidden]}
+                    >
+                      <Text style={[styles.bankAText, !revealed.has(`c${gi}`) && styles.bankATextHidden]}>{cd.a}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : editingCardIdx === gi ? (
+                <View key={gi} style={styles.editWrap}>
+                  <Text style={styles.editNote}>✏️ 直すと、この教材の内容として保存され、授業・宿題・試験すべてに反映されます</Text>
+                  <Text style={styles.bankQ}>{cd.q}</Text>
+                  <TextInput value={editCardValue} onChangeText={setEditCardValue} multiline autoFocus style={styles.editInput} />
+                  <View style={styles.editBtns}>
+                    <TouchableOpacity onPress={() => void saveCardCorrectionFromView(gi)} style={styles.editSave}>
+                      <Text style={styles.editSaveText}>直す</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setEditingCardIdx(null)} style={styles.editCancel}>
+                      <Text style={styles.editCancelText}>やめる</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                // 読むモード：平叙文＋✎（この行＝カードなので、直せば全機能に反映）
+                <View key={gi} style={styles.bankRow}>
+                  <Text style={styles.bankNum}>{j + 1}.</Text>
+                  <Text style={styles.bankStatement}>{cd.statement}</Text>
+                  <TouchableOpacity onPress={() => { setEditingCardIdx(gi); setEditCardValue(cd.a) }} style={styles.bankEditBtn} hitSlop={6}>
+                    <Text style={styles.bankEditBtnText}>✎</Text>
+                  </TouchableOpacity>
+                </View>
+              ),
+            )}
+          </View>
+          {hiddenMode && <Text style={styles.revealHint}>こたえをタップして確認</Text>}
+          <View style={{ height: 16 }} />
+        </ScrollView>
+      )
+    }
+  } else if (step === 0) {
     content = (
       <View style={styles.centerContent}>
         <Text style={styles.stepLabel}>この教材のテーマ</Text>
-        <Text style={styles.themeText}>{previewContent.theme}</Text>
+        <Text style={styles.themeText}>{previewContent!.theme}</Text>
         <Text style={styles.hint}>次へ進んで各項目の詳細を確認しよう →</Text>
       </View>
     )
@@ -83,7 +227,7 @@ export default function PreviewScreen() {
     content = (
       <View>
         <Text style={styles.stepLabel}>全体の概要</Text>
-        {previewContent.sections.map((s, i) => (
+        {previewContent!.sections.map((s, i) => (
           <View key={i} style={styles.flowItem}>
             <View style={styles.flowNum}>
               <Text style={styles.flowNumText}>{i + 1}</Text>
@@ -194,6 +338,13 @@ export default function PreviewScreen() {
         {/* コンテンツ */}
         <View style={styles.body}>{content}</View>
 
+        {/* 🐯 校長先生の受理トースト（✎修正したとき） */}
+        {principalToast && (
+          <View style={styles.principalToast} pointerEvents="none">
+            <Text style={styles.principalToastText}>{principalToast}</Text>
+          </View>
+        )}
+
         {/* 前へ / 隠して覚える / 次へ */}
         <View style={styles.footer}>
           <TouchableOpacity
@@ -210,7 +361,7 @@ export default function PreviewScreen() {
               onPress={() => { setHiddenMode(!hiddenMode); setRevealed(new Set()) }}
             >
               <Text style={[styles.hiddenPillText, hiddenMode && styles.hiddenPillTextOn]}>
-                隠す
+                {bankSections ? (hiddenMode ? '読む' : '覚える') : '隠す'}
               </Text>
             </TouchableOpacity>
           ) : (
@@ -342,6 +493,31 @@ const styles = StyleSheet.create({
   kwText: { fontSize: 11, fontWeight: '600', color: c.link },
   kwTextHidden: { color: c.border },
   revealHint: { fontSize: 11, color: c.textSub, marginBottom: 4 },
+
+  // バンク描画ビュー用
+  preparingText: { fontSize: 13, color: c.textSub, textAlign: 'center', lineHeight: 20 },
+  bankMeta: { fontSize: 13, color: c.textSub, marginTop: 14 },
+  bankRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+  bankNum: { fontSize: 12, color: c.textSub, width: 20, textAlign: 'right', marginTop: 2, fontVariant: ['tabular-nums'] },
+  bankStatement: { flex: 1, fontSize: 13, color: c.text, lineHeight: 21 },
+  bankQ: { fontSize: 13, color: c.text, lineHeight: 20, fontWeight: '600' },
+  bankA: { marginTop: 6, borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 7, alignSelf: 'flex-start' },
+  bankARevealed: { borderColor: c.pinkBorder, backgroundColor: c.pinkTint },
+  bankAHidden: { borderColor: c.border, backgroundColor: c.border },
+  bankAText: { fontSize: 13, color: c.text, lineHeight: 19 },
+  bankATextHidden: { color: c.border },
+  bankEditBtn: { paddingHorizontal: 4, marginTop: 1 },
+  bankEditBtnText: { fontSize: 14, color: c.faint },
+  editWrap: { gap: 6, borderWidth: 1, borderColor: c.pinkBorder, borderRadius: 10, padding: 10, backgroundColor: c.bg },
+  editNote: { fontSize: 11, lineHeight: 15, color: c.faint },
+  editInput: { borderWidth: 1, borderColor: '#fca5a5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, fontSize: 13, color: c.text, backgroundColor: 'white', minHeight: 44 },
+  editBtns: { flexDirection: 'row', gap: 8 },
+  editSave: { backgroundColor: '#e11d48', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
+  editSaveText: { color: 'white', fontSize: 12, fontWeight: '700' },
+  editCancel: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
+  editCancelText: { color: c.textSub, fontSize: 12, fontWeight: '700' },
+  principalToast: { position: 'absolute', bottom: 130, alignSelf: 'center', backgroundColor: '#1e293b', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10 },
+  principalToastText: { color: 'white', fontSize: 13, fontWeight: '600' },
 
   hiddenPill: {
     paddingHorizontal: 12, paddingVertical: 12, borderRadius: 12,

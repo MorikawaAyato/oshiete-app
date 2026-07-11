@@ -17,6 +17,13 @@ export type QACard = {
   a: string // 一答
   statement: string // 平叙文1文（facts互換）
   source: string // 教材内の根拠記述の引用
+  sectionTitle?: string // 教材ビューでの所属セクション（v3以降）
+}
+
+// 教材ビューのセクション見出し（バンク描画の骨格。v3以降）
+export type FactsheetSection = {
+  title: string
+  memo: string // おぼえ方メモ（読み物専用。無ければ空文字）
 }
 
 // 教材ファクトシート（取り込み後にバックグラウンド生成。正誤判定の基準・虎の巻の誤答の素材）
@@ -32,6 +39,7 @@ export type Factsheet = {
   facts: string[]
   misconceptions: string[]
   cards?: QACard[] // 一問一答バンク（生成失敗時は欠落し従来動作）
+  sections?: FactsheetSection[] // 教材ビューのセクション見出し（v3以降。バンク描画の骨格）
   version?: number // バンク生成ルールの版。旧版はバックフィルで再生成される
   errata?: Erratum[] // 先生による訂正。あれば自動再生成しない
 }

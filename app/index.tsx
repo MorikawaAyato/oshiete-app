@@ -501,7 +501,7 @@ export default function HomeScreen() {
       setActiveHistoryId(saved.id)
       setHistory(await loadHistory())
       triggerMaterialAnimation()
-      void backgroundFetchPreview(res.imageDescription, saved.id)
+      // 教材ビューはバンク（ファクトシート）から描画するため、旧プレビューの生成は行わない
       void backgroundFetchFactsheet(res.imageDescription, res.notes, saved.id)
     } catch (e) {
       console.error('analyzeFromPending error:', e)
@@ -532,10 +532,8 @@ export default function HomeScreen() {
     setImageDescription(item.imageDescription)
     setNotes(item.notes)
     setThumbnails(item.thumbnails)
+    // 教材ビューはバンク描画が主。旧プレビューは保存済みのものだけフォールバック表示に使う（新規生成はしない）
     setPreviewContent(item.previewContent ?? null)
-    if (!item.previewContent) {
-      void backgroundFetchPreview(item.imageDescription, item.id)
-    }
     // ファクトシート（一問一答バンク）が未生成・または旧版の教材はここで自動更新（FACTSHEET_AUTO_UPGRADE）
     if (needsFactsheetUpgrade(item.factsheet)) {
       void backgroundFetchFactsheet(item.imageDescription, item.notes, item.id)
