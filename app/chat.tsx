@@ -204,7 +204,7 @@ export default function ChatScreen() {
       // カード駆動：バンクがある教材では消化状態を送り、質問はカード（2ターンに1枚）から出させる
       const cardMode = (factsheet?.cards?.length ?? 0) > 0
       const cardState = cardMode ? { covered: coveredCards, askCard: turnCount % 2 === 0 } : undefined
-      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, lessonRecap ?? undefined, factsheet, undefined, cardState)
+      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, lessonRecap ?? undefined, factsheet, undefined, cardState, cardMode ? cardLog : undefined)
       if (res.text) {
         const newMessages: ChatMessage[] = [...next, { role: 'mana', text: res.text }]
         setChatMessages(newMessages)

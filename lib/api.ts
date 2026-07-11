@@ -1,4 +1,4 @@
-import type { Factsheet, Notebook, Recap } from './types'
+import type { Factsheet, Notebook, Recap, CardLogEntry } from './types'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? ''
 
@@ -123,11 +123,12 @@ export async function sendChat(
   hintCorrect?: boolean,
   // カード駆動授業：消化済みカード番号と、このターンでカードから質問させるか
   cardState?: { covered: number[]; askCard: boolean },
+  cardLog?: CardLogEntry[],
 ): Promise<{ text?: string; mailSubject?: string; mailContent?: string; hints?: string[]; correctHintIndex?: number; correct?: boolean; cardResult?: { covered: number[]; addressed: number[]; verdict: boolean | null }; notebook?: Notebook; recap?: Recap; error?: string }> {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, recap, factsheet, hintCorrect, cardState }),
+    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, recap, factsheet, hintCorrect, cardState, cardLog }),
   })
   return res.json()
 }
