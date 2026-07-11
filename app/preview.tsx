@@ -1,5 +1,5 @@
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, TextInput,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, TextInput, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -8,7 +8,7 @@ import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import type { Section, Factsheet, FactsheetSection, QACard } from '@/lib/types'
 import { loadFactsheet, loadHistory, updateHistoryFactsheet } from '@/lib/storage'
-import { applyCardCorrection } from '@/lib/factsheet'
+import { applyCardCorrection, undoCardCorrection } from '@/lib/factsheet'
 import { c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 
@@ -60,8 +60,33 @@ export default function PreviewScreen() {
       const nextFs = { ...bankFs, cards: res.cards, facts: res.facts, errata: res.errata }
       await updateHistoryFactsheet(currentHistoryId, nextFs)
       setBankFs(nextFs)
-      setPrincipalToast('🐯 校長先生に伝えました。教材を訂正しておきますね')
+      setPrincipalToast('校長先生に伝えました。教材を訂正しておきますね')
       setTimeout(() => setPrincipalToast(null), 3200)
+    }
+  }
+
+  // ✎押下時、データ変更であることを周知してから編集モードに入る
+  const confirmEditThen = (onConfirm: () => void) => {
+    Alert.alert(
+      'この内容を直しますか？',
+      '直すと、この教材の内容として保存され、授業中の判定・虎の巻・ノート・宿題・試験のすべてに反映されます。',
+      [
+        { text: 'やめる', style: 'cancel' },
+        { text: '修正する', style: 'destructive', onPress: onConfirm },
+      ],
+    )
+  }
+
+  // ✎修正を取り消して原文に戻す
+  const undoCorrectionFromView = async (source: string) => {
+    if (!currentHistoryId || !bankFs?.cards) return
+    const res = undoCardCorrection(bankFs.cards, bankFs.errata, source)
+    if (res) {
+      const nextFs = { ...bankFs, cards: res.cards, facts: res.facts, errata: res.errata }
+      await updateHistoryFactsheet(currentHistoryId, nextFs)
+      setBankFs(nextFs)
+      setPrincipalToast('元に戻しました')
+      setTimeout(() => setPrincipalToast(null), 2400)
     }
   }
 
@@ -186,7 +211,6 @@ export default function PreviewScreen() {
                 </View>
               ) : editingCardIdx === gi ? (
                 <View key={gi} style={styles.editWrap}>
-                  <Text style={styles.editNote}>✏️ 直すと、この教材の内容として保存され、授業・宿題・試験すべてに反映されます</Text>
                   <Text style={styles.bankQ}>{cd.q}</Text>
                   <TextInput value={editCardValue} onChangeText={setEditCardValue} multiline autoFocus style={styles.editInput} />
                   <View style={styles.editBtns}>
@@ -202,8 +226,18 @@ export default function PreviewScreen() {
                 // 読むモード：平叙文＋✎（この行＝カードなので、直せば全機能に反映）
                 <View key={gi} style={styles.bankRow}>
                   <Text style={styles.bankNum}>{j + 1}.</Text>
-                  <Text style={styles.bankStatement}>{cd.statement}</Text>
-                  <TouchableOpacity onPress={() => { setEditingCardIdx(gi); setEditCardValue(cd.a) }} style={styles.bankEditBtn} hitSlop={6}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.bankStatement}>{cd.statement}</Text>
+                    {bankFs?.errata?.some((e) => e.source === cd.source) && (
+                      <View style={styles.correctedRow}>
+                        <Text style={styles.correctedTag}>先生が訂正</Text>
+                        <TouchableOpacity onPress={() => void undoCorrectionFromView(cd.source)}>
+                          <Text style={styles.undoLink}>元に戻す</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                  <TouchableOpacity onPress={() => confirmEditThen(() => { setEditingCardIdx(gi); setEditCardValue(cd.a) })} style={styles.bankEditBtn} hitSlop={6}>
                     <Text style={styles.bankEditBtnText}>✎</Text>
                   </TouchableOpacity>
                 </View>
@@ -499,7 +533,10 @@ const styles = StyleSheet.create({
   bankMeta: { fontSize: 13, color: c.textSub, marginTop: 14 },
   bankRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   bankNum: { fontSize: 12, color: c.textSub, width: 20, textAlign: 'right', marginTop: 2, fontVariant: ['tabular-nums'] },
-  bankStatement: { flex: 1, fontSize: 13, color: c.text, lineHeight: 21 },
+  bankStatement: { fontSize: 13, color: c.text, lineHeight: 21 },
+  correctedRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
+  correctedTag: { fontSize: 10, color: '#fb7185' },
+  undoLink: { fontSize: 10, color: c.textSub, textDecorationLine: 'underline' },
   bankQ: { fontSize: 13, color: c.text, lineHeight: 20, fontWeight: '600' },
   bankA: { marginTop: 6, borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 7, alignSelf: 'flex-start' },
   bankARevealed: { borderColor: c.pinkBorder, backgroundColor: c.pinkTint },

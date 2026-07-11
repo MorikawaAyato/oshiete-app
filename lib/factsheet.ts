@@ -38,7 +38,25 @@ export function applyCardCorrection(
   if (newAnswer === target.a.trim()) return null
   const nextCards = cards.map((c, i) => (i === cardIndex ? { ...c, a: newAnswer, statement: newAnswer } : c))
   const facts = nextCards.map((c) => c.statement)
-  const erratum: Erratum = { source: target.source, oldAnswer: target.a, newAnswer, correctedAt: Date.now() }
+  // 同じカードを再修正しても「元に戻す」で真の原文に戻れるよう、oldAnswerは初回の原文を保持する
+  const existing = (errata ?? []).find((e) => e.source === target.source)
+  const oldAnswer = existing ? existing.oldAnswer : target.a
+  const erratum: Erratum = { source: target.source, oldAnswer, newAnswer, correctedAt: Date.now() }
   const nextErrata = [...(errata ?? []).filter((e) => e.source !== target.source), erratum]
+  return { cards: nextCards, facts, errata: nextErrata }
+}
+
+// 先生の訂正を取り消して原文に戻す：カードのa/statementを訂正前(oldAnswer)に戻し、正誤表からそのエントリを削除。
+export function undoCardCorrection(
+  cards: QACard[],
+  errata: Erratum[] | undefined,
+  source: string,
+): { cards: QACard[]; facts: string[]; errata: Erratum[] } | null {
+  const e = (errata ?? []).find((x) => x.source === source)
+  const idx = cards.findIndex((c) => c.source === source)
+  if (!e || idx < 0) return null
+  const nextCards = cards.map((c, i) => (i === idx ? { ...c, a: e.oldAnswer, statement: e.oldAnswer } : c))
+  const facts = nextCards.map((c) => c.statement)
+  const nextErrata = (errata ?? []).filter((x) => x.source !== source)
   return { cards: nextCards, facts, errata: nextErrata }
 }

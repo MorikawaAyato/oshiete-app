@@ -384,9 +384,21 @@ export default function ChatScreen() {
           lines: notebook.lines.map((l, i) => i === lineIndex ? { ...l, reference: newAnswer, correction: l.status === 'wrong' ? newAnswer : l.correction } : l),
         })
       }
-      setPrincipalToast('🐯 校長先生に伝えました。教材を訂正しておきますね')
+      setPrincipalToast('校長先生に伝えました。教材を訂正しておきますね')
       setTimeout(() => setPrincipalToast(null), 3200)
     }
+  }
+
+  // ✎押下時、データ変更であることを周知してから編集モードに入る（修正するを押して初めて）
+  const confirmEditThen = (onConfirm: () => void) => {
+    Alert.alert(
+      'この内容を直しますか？',
+      '直すと、この教材の内容として保存され、授業中の判定・虎の巻・ノート・宿題・試験のすべてに反映されます。',
+      [
+        { text: 'やめる', style: 'cancel' },
+        { text: '修正する', style: 'destructive', onPress: onConfirm },
+      ],
+    )
   }
 
   const handleBack = () => {
@@ -590,7 +602,6 @@ export default function ChatScreen() {
                           </Text>
                           {!!line.reference && (editingLine === i ? (
                             <View style={styles.editRefWrap}>
-                              <Text style={styles.editRefNote}>✏️ 直すと、この教材の内容として保存され、授業・宿題・試験すべてに反映されます</Text>
                               <TextInput
                                 value={editValue}
                                 onChangeText={setEditValue}
@@ -613,7 +624,7 @@ export default function ChatScreen() {
                                 <Text style={styles.notebookReferenceMark}>答 </Text>{line.reference}
                               </Text>
                               {line.cardIndex != null && (
-                                <TouchableOpacity onPress={() => { setEditingLine(i); setEditValue(line.reference ?? '') }} style={styles.editRefBtn}>
+                                <TouchableOpacity onPress={() => confirmEditThen(() => { setEditingLine(i); setEditValue(line.reference ?? '') })} style={styles.editRefBtn}>
                                   <Text style={styles.editRefBtnText}>✎</Text>
                                 </TouchableOpacity>
                               )}
@@ -669,7 +680,8 @@ export default function ChatScreen() {
         {/* 入力エリア */}
         {!classEnded && (
           <View style={styles.inputAreaWrap}>
-            {hints ? (
+            {/* 生徒の応答待ち（入力中）は虎の巻もお休みも出さない */}
+            {loading || studentTyping ? null : hints ? (
               <View style={styles.hintsWrap}>
                 <TouchableOpacity
                   onPress={openHints}
