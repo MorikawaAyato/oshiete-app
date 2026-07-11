@@ -397,7 +397,6 @@ export default function PreviewScreen() {
               onPress={() => { setHiddenMode(!hiddenMode); setRevealed(new Set()) }}
             >
               <Text style={[styles.hiddenPillText, hiddenMode && styles.hiddenPillTextOn]}>
-                {hiddenMode ? '📖 ' : '🧠 '}
                 {bankSections ? (hiddenMode ? '読む' : '覚える') : (hiddenMode ? '表示' : '隠す')}
               </Text>
             </TouchableOpacity>
