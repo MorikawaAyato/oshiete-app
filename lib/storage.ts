@@ -50,8 +50,9 @@ export async function saveHomeworks(list: Homework[]): Promise<void> {
   } catch {}
 }
 
-// 宿題は授業の締めに出すもの：ノート採点で❌にした項目（wrongLines）を持って24時間だけ出題導線が開く
-export type HomeworkWindow = { historyId: string; studentId: string; endedAt: number; wrongLines: string[] }
+// 宿題は授業の締めに出すもの：ノート採点で❌にした項目を持って24時間だけ出題導線が開く。
+// items=カード紐付き（設問・模範解答をカードから直結、API不要）／wrongLines=非カード（後でAPI生成）
+export type HomeworkWindow = { historyId: string; studentId: string; endedAt: number; wrongLines?: string[]; items?: HomeworkItem[] }
 const HOMEWORK_WINDOW_KEY = 'oshiete_homework_window'
 
 export async function loadHomeworkWindow(): Promise<HomeworkWindow | null> {

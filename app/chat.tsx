@@ -11,6 +11,7 @@ import { getStudentById } from '@/lib/students'
 import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
 import { addMail, loadRecap, loadFactsheet, saveRecapToHistory, saveHomeworkWindow } from '@/lib/storage'
+import type { HomeworkItem } from '@/lib/storage'
 import type { ChatMessage } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -338,9 +339,26 @@ export default function ChatScreen() {
     setNotebookState('returned')
     setShowNotebook(false)
     setChatMessages((prev) => [...prev, { role: 'mana', text: student.notebookThanks }])
-    const wrongLines = (notebook?.lines ?? []).filter((l) => l.teacherMark === false).map((l) => l.text)
-    if (currentHistoryId && wrongLines.length > 0) {
-      void saveHomeworkWindow({ historyId: currentHistoryId, studentId: student.id, endedAt: Date.now(), wrongLines })
+    const wrongLineObjs = (notebook?.lines ?? []).filter((l) => l.teacherMark === false)
+    if (currentHistoryId && wrongLineObjs.length > 0) {
+      const histId = currentHistoryId
+      const sid = student.id
+      // カード紐付きの行は設問=カードの問い・模範解答=カードの答え・生徒の答案=誤解した本文、で直結（API不要）
+      void (async () => {
+        const cards = (await loadFactsheet(histId))?.cards ?? []
+        const items: HomeworkItem[] = []
+        const legacy: string[] = []
+        for (const l of wrongLineObjs) {
+          const card = l.cardIndex != null ? cards[l.cardIndex] : undefined
+          if (card) items.push({ question: card.q, modelAnswer: card.a, studentAnswer: l.text })
+          else legacy.push(l.text)
+        }
+        await saveHomeworkWindow({
+          historyId: histId, studentId: sid, endedAt: Date.now(),
+          ...(items.length > 0 ? { items } : {}),
+          ...(legacy.length > 0 ? { wrongLines: legacy } : {}),
+        })
+      })()
     }
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
   }

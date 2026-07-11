@@ -33,6 +33,7 @@ export type NotebookLine = {
   correction?: string
   reference?: string // 採点時に見比べる「教材からの模範解答」（1行1文）
   teacherMark?: boolean // 先生（ユーザー）がつけた○(true)/✕(false)
+  cardIndex?: number // カード駆動時、その行が由来する一問一答カードの番号（宿題のカード直結に使う）
 }
 
 export type Notebook = {

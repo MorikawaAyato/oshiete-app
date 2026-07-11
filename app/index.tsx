@@ -202,24 +202,30 @@ export default function HomeScreen() {
     if (!homeworkWindow) return null
     if (Date.now() - homeworkWindow.endedAt > HOMEWORK_WINDOW_MS) return null
     if (homeworks.some((h) => h.studentId === homeworkWindow.studentId)) return null
-    if ((homeworkWindow.wrongLines?.length ?? 0) === 0) return null
+    const count = (homeworkWindow.items?.length ?? 0) + (homeworkWindow.wrongLines?.length ?? 0)
+    if (count === 0) return null
     return homeworkWindow
   }
 
-  // ❌項目から宿題（設問＋模範解答＋生徒の答案）を生成して出す
+  // ❌項目から宿題を出す。カード紐付き（items）は生成済み、非カード（wrongLines）だけAPIで生成
   const sendHomework = async (w: HomeworkWindow) => {
     if (hwSending) return
     setHwSending(true)
     try {
       const material = history.find((h) => h.id === w.historyId)
-      const facts = material?.factsheet?.facts ?? []
-      const res = await fetchHomework(w.studentId, w.wrongLines, facts)
-      if (!res.items?.length) return
+      let items: HomeworkItem[] = [...(w.items ?? [])]
+      if ((w.wrongLines?.length ?? 0) > 0) {
+        const facts = material?.factsheet?.facts ?? []
+        const res = await fetchHomework(w.studentId, w.wrongLines!, facts)
+        if (res.items?.length) items = [...items, ...res.items]
+        else if (items.length === 0) return // API生成が唯一の源で失敗したら中止（ウィンドウは残す）
+      }
+      if (items.length === 0) return
       const hw: Homework = {
         historyId: w.historyId,
         materialTitle: material?.title ?? '授業',
         studentId: w.studentId,
-        items: res.items,
+        items: items.slice(0, 5),
         assignedAt: Date.now(),
         state: 'assigned',
       }
@@ -658,7 +664,7 @@ export default function HomeScreen() {
                 <View style={styles.hwBadgeIconWrap}><Text style={styles.hwBadgeClock}>⏰</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.hwBadgeTitle}>{hwSending ? '宿題を用意しています…' : '復習の宿題を送れます'}</Text>
-                  <Text style={styles.hwBadgeSub} numberOfLines={1}>{st?.name ?? '生徒'}がつまずいた{w.wrongLines.length}個を宿題にします</Text>
+                  <Text style={styles.hwBadgeSub} numberOfLines={1}>{st?.name ?? '生徒'}がつまずいた{(w.items?.length ?? 0) + (w.wrongLines?.length ?? 0)}個を宿題にします</Text>
                 </View>
                 <Text style={styles.hwBadgeChevron}>›</Text>
               </TouchableOpacity>
