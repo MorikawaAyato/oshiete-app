@@ -124,7 +124,7 @@ export async function sendChat(
   // カード駆動授業：消化済みカード番号と、このターンでカードから質問させるか
   cardState?: { covered: number[]; askCard: boolean },
   cardLog?: CardLogEntry[],
-): Promise<{ text?: string; mailSubject?: string; mailContent?: string; hints?: string[]; correctHintIndex?: number; correct?: boolean; cardResult?: { covered: number[]; addressed: number[]; verdict: boolean | null }; notebook?: Notebook; recap?: Recap; error?: string }> {
+): Promise<{ text?: string; mailSubject?: string; mailContent?: string; hints?: string[]; correctHintIndex?: number; correct?: boolean; cardResult?: { covered: number[]; cardIndex: number | null; verdict: boolean | null }; notebook?: Notebook; recap?: Recap; error?: string }> {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

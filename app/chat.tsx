@@ -216,17 +216,16 @@ export default function ChatScreen() {
         if (res.cardResult) {
           const cr = res.cardResult
           setCoveredCards(cr.covered)
-          // 照合が紐づけた「カード×先生の説明」をQ&Aペアとして記録（同じカードは最新の説明で上書き）
+          // 照合が紐づけた「主題カード×先生の説明」をQ&Aペアとして記録（同じカードは最新の説明で上書き）
           const teacherText = [...next].reverse().find((m) => m.role === 'user')?.text ?? ''
-          if (teacherText && cr.addressed.length > 0) {
+          if (teacherText && cr.cardIndex != null) {
+            const idx = cr.cardIndex
             setCardLog(prev => {
               const nextLog = [...prev]
-              for (const i of cr.addressed) {
-                const entry = { cardIndex: i, explanation: teacherText, verdict: cr.verdict }
-                const at = nextLog.findIndex(e => e.cardIndex === i)
-                if (at >= 0) nextLog[at] = entry
-                else nextLog.push(entry)
-              }
+              const entry = { cardIndex: idx, explanation: teacherText, verdict: cr.verdict }
+              const at = nextLog.findIndex(e => e.cardIndex === idx)
+              if (at >= 0) nextLog[at] = entry
+              else nextLog.push(entry)
               return nextLog
             })
           }
