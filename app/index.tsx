@@ -22,6 +22,7 @@ import type { MailMessage, Homework, HomeworkItem, HomeworkWindow } from '@/lib/
 import type { HistoryItem, Recap } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
+import StampText from '@/components/StampText'
 
 type ImageData = { data: string; mimeType: string; uri: string }
 
@@ -1257,7 +1258,7 @@ export default function HomeScreen() {
                     <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
                       <Text style={styles.hwHint}>
                         前回うまく説明できなかったところを{st?.name ?? '生徒'}が解いてきました。
-                        前回つまずいた項目を解き直してきました。ちゃんと直せているか、赤い<Text style={styles.hwModelWord}>答</Text>と見くらべて ⭕ / ❌ をつけてください。❌ の項目は次の授業でもう一度復習します。
+                        前回つまずいた項目の解き直しです。赤い<Text style={styles.hwModelWord}>答</Text>と見くらべて ⭕ / ❌（❌は次の授業で復習します）。
                       </Text>
                       {hw.items.map((it, i) => (
                         <View key={i} style={styles.hwAnswerCard}>
@@ -1271,10 +1272,10 @@ export default function HomeScreen() {
                             </View>
                             <View style={{ flexDirection: 'row', gap: 6 }}>
                               <TouchableOpacity style={[styles.hwMarkBtn, it.teacherMark === true && styles.hwMarkBtnCorrect]} onPress={() => setHwItemMark(i, true)}>
-                                <Text style={[styles.hwMarkBtnText, it.teacherMark === true && styles.hwMarkBtnTextSel]}>○</Text>
+                                <StampText active={it.teacherMark === true} style={[styles.hwMarkBtnText, it.teacherMark === true && styles.hwMarkBtnTextSel]}>○</StampText>
                               </TouchableOpacity>
                               <TouchableOpacity style={[styles.hwMarkBtn, it.teacherMark === false && styles.hwMarkBtnWrong]} onPress={() => setHwItemMark(i, false)}>
-                                <Text style={[styles.hwMarkBtnText, it.teacherMark === false && styles.hwMarkBtnTextSel]}>✕</Text>
+                                <StampText active={it.teacherMark === false} style={[styles.hwMarkBtnText, it.teacherMark === false && styles.hwMarkBtnTextSel]}>✕</StampText>
                               </TouchableOpacity>
                             </View>
                           </View>

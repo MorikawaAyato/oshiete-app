@@ -16,6 +16,7 @@ import { applyCardCorrection } from '@/lib/factsheet'
 import type { ChatMessage } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
+import StampText from '@/components/StampText'
 
 const MAX_TURNS = 9
 const HINT_MAX_USES = 3
@@ -587,16 +588,10 @@ export default function ChatScreen() {
                 {notebookState === 'received' && (() => {
                   const hasAuto = notebook?.lines.some((l) => l.autoMarked)
                   return (
-                    <View style={styles.gradePurposeBox}>
-                      <Text style={styles.gradePurposeText}>
-                        <Text style={styles.gradePurposeStrong}>{student.name}が授業を聞いて書いたノート</Text>です。まちがって伝わっていないか、チェックしてあげましょう。
-                      </Text>
-                      <Text style={[styles.gradePurposeText, { marginTop: 4 }]}>
-                        {hasAuto ? '教材とぴったり合っている行には、さきに ⭕ がついています（変更できます）。のこりの行' : '各行'}
-                        を赤い<Text style={styles.modelAnswerWord}>答</Text>と見くらべて ⭕ / ❌ をつけてください。
-                        <Text style={styles.gradePurposeStrong}>❌ の行は{student.name}の宿題（復習）になります。</Text>
-                      </Text>
-                    </View>
+                    <Text style={styles.notebookGradeHint}>
+                      赤い<Text style={styles.modelAnswerWord}>答</Text>と見くらべて ⭕ / ❌（<Text style={styles.gradePurposeStrong}>❌は宿題になります</Text>）。
+                      {hasAuto ? 'ぴったり合う行には、さきに ⭕ がついています。' : ''}
+                    </Text>
                   )
                 })()}
                 <View style={styles.notebookPaper}>
@@ -645,10 +640,10 @@ export default function ChatScreen() {
                         {!isBlank && notebookState === 'received' && (
                           <View style={styles.markRow}>
                             <TouchableOpacity onPress={() => setNoteMark(i, true)} style={[styles.markBtn, line.teacherMark === true && styles.markBtnCorrect]}>
-                              <Text style={[styles.markBtnText, line.teacherMark === true && styles.markBtnTextSel]}>○</Text>
+                              <StampText active={line.teacherMark === true} style={[styles.markBtnText, line.teacherMark === true && styles.markBtnTextSel]}>○</StampText>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={() => setNoteMark(i, false)} style={[styles.markBtn, line.teacherMark === false && styles.markBtnWrong]}>
-                              <Text style={[styles.markBtnText, line.teacherMark === false && styles.markBtnTextSel]}>✕</Text>
+                              <StampText active={line.teacherMark === false} style={[styles.markBtnText, line.teacherMark === false && styles.markBtnTextSel]}>✕</StampText>
                             </TouchableOpacity>
                           </View>
                         )}
