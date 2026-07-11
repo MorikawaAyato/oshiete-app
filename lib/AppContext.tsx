@@ -6,6 +6,16 @@ import { type TeacherProfile, DEFAULT_TEACHER, normalizeAvatarId } from './teach
 const STUDENT_KEY = 'oshiete_student'
 const TEACHER_KEY = 'oshiete_teacher'
 const CHAT_SESSION_KEY = 'oshiete_chat_session'
+const LESSON_TURNS_KEY = 'oshiete_lesson_turns'
+
+// 授業の長さ（1送信=10分のフィクション換算）。選択は記憶される
+export const MINUTES_PER_TURN = 10
+export const LESSON_PRESETS = [
+  { turns: 3, emoji: '⚡', label: 'さくっと' },
+  { turns: 6, emoji: '📚', label: 'ふつう' },
+  { turns: 9, emoji: '🎓', label: 'じっくり' },
+] as const
+export const DEFAULT_LESSON_TURNS = 6
 
 // アプリ強制終了後も授業を再開できるように保存する内容（E4）
 type ChatSession = {
@@ -24,6 +34,7 @@ type ChatSession = {
   notebookState: 'received' | 'returned' | null
   coveredCards?: number[]
   cardLog?: CardLogEntry[]
+  maxTurns?: number // この授業の長さ（再開時に保つ。旧セッションは9）
 }
 
 type AppState = {
@@ -62,6 +73,8 @@ type AppState = {
   setCoveredCards: (v: number[]) => void
   cardLog: CardLogEntry[]
   setCardLog: (v: CardLogEntry[] | ((prev: CardLogEntry[]) => CardLogEntry[])) => void
+  lessonMaxTurns: number
+  chooseLessonTurns: (turns: number) => void
   lessonRecap: Recap | null
   setLessonRecap: (v: Recap | null) => void
   notebook: Notebook | null
@@ -132,6 +145,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [correctness, setCorrectness] = useState<(boolean | null)[]>([])
   const [coveredCards, setCoveredCards] = useState<number[]>([]) // カード駆動：この授業で消化済みのカード番号
   const [cardLog, setCardLog] = useState<CardLogEntry[]>([]) // カード駆動：カード×先生の説明のQ&Aペア
+  const [lessonMaxTurns, setLessonMaxTurns] = useState(DEFAULT_LESSON_TURNS) // 授業の長さ（ラリー数）
+  const chooseLessonTurns = (turns: number) => {
+    setLessonMaxTurns(turns)
+    AsyncStorage.setItem(LESSON_TURNS_KEY, String(turns)).catch(() => {})
+  }
+  // 前回選んだ授業の長さを復元（進行中セッションから復元済みなら、そちらを優先）
+  const sessionTurnsRestored = useRef(false)
+  useEffect(() => {
+    AsyncStorage.getItem(LESSON_TURNS_KEY).then((v) => {
+      const turns = Number(v)
+      if (!sessionTurnsRestored.current && LESSON_PRESETS.some((p) => p.turns === turns)) setLessonMaxTurns(turns)
+    }).catch(() => {})
+  }, [])
   const [lessonRecap, setLessonRecap] = useState<Recap | null>(null)
   const [notebook, setNotebook] = useState<Notebook | null>(null)
   const [notebookState, setNotebookState] = useState<'received' | 'returned' | null>(null)
@@ -156,6 +182,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setCorrectness(Array.isArray(s.correctness) ? s.correctness : [])
             setCoveredCards(Array.isArray(s.coveredCards) ? s.coveredCards : [])
             setCardLog(Array.isArray(s.cardLog) ? s.cardLog : [])
+            setLessonMaxTurns(s.maxTurns ?? 9) // 旧セッションは9ラリー
+            sessionTurnsRestored.current = true
             setLessonRecap(s.lessonRecap ?? null)
             setNotebook(s.notebook ?? null)
             setNotebookState(s.notebookState ?? null)
@@ -177,9 +205,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       messages: chatMessages, turnCount, classEnded,
       hints, correctHintIndex, hintUsesLeft, correctness, lessonRecap, notebook, notebookState,
       coveredCards, cardLog,
+      maxTurns: lessonMaxTurns,
     }
     AsyncStorage.setItem(CHAT_SESSION_KEY, JSON.stringify(session)).catch(() => {})
-  }, [chatMessages, turnCount, classEnded, hints, correctHintIndex, hintUsesLeft, correctness, coveredCards, cardLog, lessonRecap, notebook, notebookState, imageDescription, notes, currentHistoryId])
+  }, [chatMessages, turnCount, classEnded, hints, correctHintIndex, hintUsesLeft, correctness, coveredCards, cardLog, lessonMaxTurns, lessonRecap, notebook, notebookState, imageDescription, notes, currentHistoryId])
 
   const resetChatSession = () => {
     setChatMessages([])
@@ -216,6 +245,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         correctness, setCorrectness,
         coveredCards, setCoveredCards,
         cardLog, setCardLog,
+        lessonMaxTurns, chooseLessonTurns,
         lessonRecap, setLessonRecap,
         notebook, setNotebook,
         notebookState, setNotebookState,

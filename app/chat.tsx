@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
-import { useApp } from '@/lib/AppContext'
+import { useApp, MINUTES_PER_TURN } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
 import { startChat, sendChat } from '@/lib/api'
 import { getTeacherCharacter } from '@/lib/teacherProfile'
@@ -18,7 +18,7 @@ import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 import StampText from '@/components/StampText'
 
-const MAX_TURNS = 9
+// 授業の長さはユーザ選択（AppContextのlessonMaxTurns）。1送信=10分換算
 const HINT_MAX_USES = 3
 const HINT_LIMIT_ENABLED = false // 実験中: 虎の巻の回数制限を無効化（戻すときは true）
 
@@ -124,6 +124,7 @@ export default function ChatScreen() {
     correctness, setCorrectness,
     coveredCards, setCoveredCards,
     cardLog, setCardLog,
+    lessonMaxTurns,
     lessonRecap, setLessonRecap,
     notebook, setNotebook,
     notebookState, setNotebookState,
@@ -148,8 +149,8 @@ export default function ChatScreen() {
   const [editValue, setEditValue] = useState('')
   const [principalToast, setPrincipalToast] = useState<string | null>(null) // 🐯校長の受理メッセージ
 
-  const remainingMins = classEnded ? 0 : (MAX_TURNS - turnCount) * 5
-  const progressRatio = (MAX_TURNS - turnCount) / MAX_TURNS
+  const remainingMins = classEnded ? 0 : (lessonMaxTurns - turnCount) * MINUTES_PER_TURN
+  const progressRatio = (lessonMaxTurns - turnCount) / lessonMaxTurns
   const timerColor = classEnded
     ? c.faint
     : progressRatio > 0.55 ? c.success : progressRatio > 0.3 ? c.warn : c.danger
@@ -203,8 +204,8 @@ export default function ChatScreen() {
     setLoading(true)
 
     try {
-      const isFinalTurn = turnCount + 1 >= MAX_TURNS
-      const turnsLeft = MAX_TURNS - (turnCount + 1)
+      const isFinalTurn = turnCount + 1 >= lessonMaxTurns
+      const turnsLeft = lessonMaxTurns - (turnCount + 1)
       const factsheet = await loadFactsheet(currentHistoryId)
       // 虎の巻から選んだ説明も必ず採点AIで判定する（ラベルを盲信すると誤ラベルの誤答が正解確定してしまうため）
       // カード駆動：バンクがある教材では消化状態を送り、質問はカード（2ターンに1枚）から出させる
@@ -238,7 +239,7 @@ export default function ChatScreen() {
         }
         const newTurnCount = turnCount + 1
         setTurnCount(newTurnCount)
-        if (newTurnCount >= MAX_TURNS) {
+        if (newTurnCount >= lessonMaxTurns) {
           setClassEnded(true)
           setHints(null)
           if (res.recap && currentHistoryId) {
@@ -481,7 +482,7 @@ export default function ChatScreen() {
                 {classEnded ? '終了' : `残り${remainingMins}分`}
               </Text>
               {!classEnded && (
-                <Text style={styles.timerSub}>送信ごとに5分</Text>
+                <Text style={styles.timerSub}>送信ごとに10分</Text>
               )}
             </View>
           </View>

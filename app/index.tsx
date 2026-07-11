@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as ImagePicker from 'expo-image-picker'
-import { useApp } from '@/lib/AppContext'
+import { useApp, LESSON_PRESETS, MINUTES_PER_TURN } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, getUnlockedTitleCount } from '@/lib/teacherProfile'
 import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail, fetchHomework, fetchHomeworkAnswers } from '@/lib/api'
@@ -51,8 +51,24 @@ export default function HomeScreen() {
     thumbnails, setThumbnails,
     currentHistoryId, setCurrentHistoryId,
     pendingMaterialAnimation, setPendingMaterialAnimation,
+    lessonMaxTurns, chooseLessonTurns,
     resetChatSession,
   } = useApp()
+
+  // 授業の長さ選択（かっこ表記つき3択・選択は記憶される）
+  const openTurnsPicker = () => {
+    Alert.alert(
+      '⏱ 授業の長さ',
+      '',
+      [
+        ...LESSON_PRESETS.map((p) => ({
+          text: `${p.emoji} ${p.label}（${p.turns}ラリー・${p.turns * MINUTES_PER_TURN}分）${lessonMaxTurns === p.turns ? ' ✓' : ''}`,
+          onPress: () => chooseLessonTurns(p.turns),
+        })),
+        { text: 'キャンセル', style: 'cancel' as const },
+      ],
+    )
+  }
 
   const [analyzing, setAnalyzing] = useState(false)
   const [inputMode, setInputMode] = useState<'photo' | 'text'>('photo')
@@ -881,16 +897,21 @@ export default function HomeScreen() {
                 )}
               </TouchableOpacity>
 
-              {/* 授業をするボタン */}
-              <BouncyPressable
-                style={[styles.startBtn, !selectedStudentId && styles.startBtnDisabled]}
-                onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
-                haptic="medium"
-              >
-                <Text style={[styles.startBtnText, !selectedStudentId && styles.startBtnTextDisabled]}>
-                  {selectedStudentId ? '授業をする' : '生徒を選んでからスタート →'}
-                </Text>
-              </BouncyPressable>
+              {/* 授業をするボタン＋長さチップ（選択は記憶。いつも通りの人は今まで通り1タップで開始） */}
+              <View style={styles.startRow}>
+                <BouncyPressable
+                  style={[styles.startBtn, { flex: 1 }, !selectedStudentId && styles.startBtnDisabled]}
+                  onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
+                  haptic="medium"
+                >
+                  <Text style={[styles.startBtnText, !selectedStudentId && styles.startBtnTextDisabled]}>
+                    {selectedStudentId ? '授業をする' : '生徒を選んでからスタート →'}
+                  </Text>
+                </BouncyPressable>
+                <TouchableOpacity style={styles.turnsChip} onPress={openTurnsPicker}>
+                  <Text style={styles.turnsChipText}>⏱ {lessonMaxTurns * MINUTES_PER_TURN}分 ▾</Text>
+                </TouchableOpacity>
+              </View>
 
             </Animated.View>
           )}
@@ -1449,6 +1470,12 @@ const styles = StyleSheet.create({
   lessonStudentPickSub: { fontSize: 10, color: c.primary },
 
   // 授業スタートボタン
+  startRow: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
+  turnsChip: {
+    marginTop: 10, borderRadius: 16, borderWidth: 1, borderColor: c.border,
+    backgroundColor: 'white', paddingHorizontal: 12, justifyContent: 'center',
+  },
+  turnsChipText: { fontSize: 12, fontWeight: '700', color: c.textSub },
   startBtn: {
     backgroundColor: c.primaryStrong,
     borderRadius: 16,
