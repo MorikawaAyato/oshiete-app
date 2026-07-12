@@ -902,14 +902,15 @@ export default function HomeScreen() {
           const pendingCount = history.flatMap((h) => h.factsheet?.cards ?? []).filter((cd) => drillPendingKeys.has(cd.statement.replace(/[\s　]/g, ''))).length
           return (
             <View style={styles.quickRow}>
+              {/* 並びはタブ順（教材が左・研修が右）に合わせる */}
+              <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/library')} activeOpacity={0.8}>
+                <Text style={styles.quickBtnText}>教材ライブラリへ</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/training')} activeOpacity={0.8}>
                 <Text style={styles.quickBtnText}>研修ルームへ</Text>
                 {pendingCount > 0 && (
                   <View style={styles.quickBadge}><Text style={styles.quickBadgeText}>まだ {pendingCount}</Text></View>
                 )}
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/library')} activeOpacity={0.8}>
-                <Text style={styles.quickBtnText}>教材ライブラリへ</Text>
               </TouchableOpacity>
             </View>
           )

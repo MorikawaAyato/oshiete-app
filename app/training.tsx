@@ -207,8 +207,9 @@ export default function TrainingScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
         {!drillActive ? (
           <>
-            {/* 校長との1on1：チャット風のコンパクトなバー（丸アバター＋名前・接続中＋吹き出し） */}
-            <View style={[styles.card, styles.callBar]}>
+            {/* 校長との1on1：機能カードと同列に見えないよう、カードの器には入れず
+                「部屋に浮かぶチャットメッセージ」として表示する */}
+            <View style={styles.callBar}>
               <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.8} style={{ position: 'relative' }}>
                 <Image source={PRINCIPAL_IMAGE} style={styles.callAvatar} />
                 <View style={styles.callAvatarDot} />
@@ -523,8 +524,8 @@ const styles = StyleSheet.create({
   heroRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   principalAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fde68a' },
   principalAvatarSmall: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fde68a' },
-  // 1on1のチャット風バー（丸アバター＋名前・接続中＋吹き出し）
-  callBar: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12 },
+  // 1on1のチャット風バー（カードの器に入れず、部屋に浮かぶメッセージとして表示）
+  callBar: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 4 },
   callAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: c.border },
   callAvatarDot: {
     position: 'absolute', bottom: 0, right: 0,
@@ -541,7 +542,8 @@ const styles = StyleSheet.create({
   connectedText: { fontSize: 8, fontWeight: '700', color: '#059669' },
   principalBubble: {
     marginTop: 10, alignSelf: 'flex-start',
-    backgroundColor: c.bgSub, borderRadius: 16, borderTopLeftRadius: 4,
+    backgroundColor: 'white', borderWidth: 1, borderColor: c.border,
+    borderRadius: 16, borderTopLeftRadius: 4,
     paddingHorizontal: 14, paddingVertical: 10,
   },
   principalBubbleFull: { marginTop: 0, alignSelf: 'stretch' },
