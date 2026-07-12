@@ -8,6 +8,7 @@ import { BottomTabBar } from '@/components/BottomTabBar'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as ImagePicker from 'expo-image-picker'
 import { Feather } from '@expo/vector-icons'
+import PawGlyph from '@/components/PawGlyph'
 import { useApp, LESSON_PRESETS, MINUTES_PER_TURN } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, getUnlockedTitleCount, normalizeAvatarId } from '@/lib/teacherProfile'
@@ -850,7 +851,7 @@ export default function HomeScreen() {
                     ) : (
                       <>
                         <View style={styles.lessonStudentEmpty}>
-                          <Text style={{ fontSize: 26 }}>🐾</Text>
+                          <PawGlyph size={26} />
                         </View>
                         <Text style={styles.lessonStudentPickText}>生徒を{'\n'}選ぶ</Text>
                         <Text style={styles.lessonStudentPickSub}>タップ →</Text>

@@ -17,6 +17,7 @@ import type { ChatMessage } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import { Feather } from '@expo/vector-icons'
 import BouncyPressable from '@/components/BouncyPressable'
+import PawGlyph from '@/components/PawGlyph'
 import StampText from '@/components/StampText'
 
 // 授業の長さはユーザ選択（AppContextのlessonMaxTurns）。1送信=10分換算
@@ -32,22 +33,6 @@ const NG_PATTERNS = [
 
 function containsNG(text: string): boolean {
   return NG_PATTERNS.some((p) => p.test(text))
-}
-
-// 入力中インジケーターの足あと（犬の肉球）。react-native-svgを使わずViewで描画。
-// Teamsの「入力中」に寄せてグレー
-function PawGlyph() {
-  const color = '#94a3b8'
-  const pad = { position: 'absolute' as const, backgroundColor: color }
-  return (
-    <View style={{ width: 16, height: 16 }}>
-      <View style={[pad, { left: 3.5, top: 7, width: 9, height: 8, borderRadius: 4.5 }]} />
-      <View style={[pad, { left: 0.8, top: 4, width: 3.6, height: 4.8, borderRadius: 2 }]} />
-      <View style={[pad, { left: 4.6, top: 1.4, width: 3.6, height: 4.8, borderRadius: 2 }]} />
-      <View style={[pad, { left: 8, top: 1.4, width: 3.6, height: 4.8, borderRadius: 2 }]} />
-      <View style={[pad, { left: 11.6, top: 4, width: 3.6, height: 4.8, borderRadius: 2 }]} />
-    </View>
-  )
 }
 
 // 添削アニメ: 花丸スタンプ／赤ペンをぽんっと表示する
