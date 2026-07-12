@@ -2,7 +2,7 @@ import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, TextInput, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useState, useEffect } from 'react'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
@@ -14,9 +14,11 @@ import BouncyPressable from '@/components/BouncyPressable'
 
 export default function PreviewScreen() {
   const router = useRouter()
+  const { from } = useLocalSearchParams<{ from?: string }>()
   const { previewContent, selectedStudentId, chatMessages, classEnded, currentHistoryId } = useApp()
   const student = STUDENTS.find(s => s.id === selectedStudentId) ?? null
   const hasActiveChat = chatMessages.length > 0 && !classEnded
+  const fromLibrary = from === 'library'
   const [step, setStep] = useState(0)
   const [revealed, setRevealed] = useState<Set<string>>(new Set())
   const [hiddenMode, setHiddenMode] = useState(false)
@@ -415,28 +417,16 @@ export default function PreviewScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 授業ボタン */}
-        {student ? (
-          <BouncyPressable
-            style={styles.startClassBtn}
-            onPress={() => {
-              if (hasActiveChat) {
-                router.back()
-              } else {
-                router.push('/chat')
-              }
-            }}
-            haptic="medium"
-          >
-            <Text style={styles.startClassBtnText}>
-              {hasActiveChat ? `${student.name}との授業に戻る` : `${student.name}と授業を始める`}
-            </Text>
+        {/* 下部CTA：入り口で出し分ける。授業中→戻る／ライブラリから→選択（授業の開始点はホームCTAのみ）／ホームから→なし */}
+        {hasActiveChat && student ? (
+          <BouncyPressable style={styles.startClassBtn} onPress={() => router.back()} haptic="medium">
+            <Text style={styles.startClassBtnText}>{student.name}との授業に戻る</Text>
           </BouncyPressable>
-        ) : (
-          <View style={styles.startClassBtnDisabled}>
-            <Text style={styles.startClassBtnDisabledText}>生徒を選ぶと授業を始められます</Text>
-          </View>
-        )}
+        ) : fromLibrary ? (
+          <BouncyPressable style={styles.startClassBtn} onPress={() => router.dismissAll()} haptic="medium">
+            <Text style={styles.startClassBtnText}>この教材を選択する</Text>
+          </BouncyPressable>
+        ) : null}
       </View>
     </SafeAreaView>
   )

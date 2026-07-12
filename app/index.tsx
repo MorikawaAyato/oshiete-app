@@ -19,6 +19,7 @@ import {
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
   loadFollowupSent, saveFollowupSent, loadTeacherName,
   loadHomeworks, saveHomeworks, loadHomeworkWindow, saveHomeworkWindow, saveRecapToHistory,
+  loadDrillPending,
 } from '@/lib/storage'
 import type { MailMessage, Homework, HomeworkItem, HomeworkWindow } from '@/lib/storage'
 import type { HistoryItem, Recap } from '@/lib/types'
@@ -81,6 +82,7 @@ export default function HomeScreen() {
   const [textInput, setTextInput] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
   const [history, setHistory] = useState<HistoryItem[]>([])
+  const [drillPendingKeys, setDrillPendingKeys] = useState<Set<string>>(new Set()) // 研修導線の「まだN」用
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<ImageData[]>([])
   const [studentSheet, setStudentSheet] = useState<'profile' | 'picker' | null>(null)
@@ -120,6 +122,8 @@ export default function HomeScreen() {
       loadMail().then(setMailMessages)
       loadHomeworkWindow().then(setHomeworkWindow) // 授業終了後に開くウィンドウを反映
       loadHomeworks().then(setHomeworks) // 宿題の進行状況を反映
+      loadHistory().then(setHistory) // 研修導線の「まだN」等を最新化
+      loadDrillPending().then(setDrillPendingKeys)
       if (pendingAnimRef.current) {
         setPendingMaterialAnimation(false)
         triggerMaterialAnimation()
@@ -814,19 +818,25 @@ export default function HomeScreen() {
               {/* 教材＋生徒 分割カード（脚部に授業の長さ。カード＝授業の設定、下のボタン＝実行） */}
               <View style={styles.lessonCard}>
                 <View style={styles.lessonCardRow}>
-                  {/* 左：教材 */}
-                  <View style={styles.lessonMaterial}>
-                    {thumbnails[0] ? (
-                      <Image source={{ uri: thumbnails[0] }} style={styles.lessonThumb} />
-                    ) : (
-                      <View style={[styles.lessonThumb, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]}>
-                        <View style={{ position: 'absolute', top: -30, left: 0, right: 0, bottom: -70 }}>
-                          <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
+                  {/* 左：教材（タップで教材を見る。生徒側タップ＝生徒詳細と対称の文法） */}
+                  <TouchableOpacity style={styles.lessonMaterial} onPress={() => void handlePreview()} disabled={previewLoading} activeOpacity={0.85}>
+                    <View>
+                      {thumbnails[0] ? (
+                        <Image source={{ uri: thumbnails[0] }} style={styles.lessonThumb} />
+                      ) : (
+                        <View style={[styles.lessonThumb, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]}>
+                          <View style={{ position: 'absolute', top: -30, left: 0, right: 0, bottom: -70 }}>
+                            <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
+                          </View>
                         </View>
+                      )}
+                      {/* さりげないアフォーダンス：タップで開けることを示す */}
+                      <View style={styles.lessonThumbOpenBadge}>
+                        {previewLoading ? <ActivityIndicator color="#fff" size={10} /> : <Text style={styles.lessonThumbOpenText}>開く ›</Text>}
                       </View>
-                    )}
+                    </View>
                     <Text style={styles.lessonMaterialTitle} numberOfLines={2}>{shortTitle}</Text>
-                  </View>
+                  </TouchableOpacity>
 
                   {/* 縦区切り */}
                   <View style={styles.lessonDivider} />
@@ -872,20 +882,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* 教材を確認するボタン */}
-              <TouchableOpacity
-                style={styles.lessonPreviewBtn}
-                onPress={handlePreview}
-                disabled={previewLoading}
-              >
-                {previewLoading ? (
-                  <ActivityIndicator color={c.link} size="small" />
-                ) : (
-                  <Text style={styles.lessonPreviewBtnText}>教材を見る</Text>
-                )}
-              </TouchableOpacity>
-
-              {/* 授業をするボタン（長さの設定は「次の授業」カードの脚部へ） */}
+              {/* 授業をするボタン（長さの設定は「次の授業」カードの脚部へ。教材を見るは教材スペースのタップに吸収） */}
               <BouncyPressable
                 style={[styles.startBtn, !selectedStudentId && styles.startBtnDisabled]}
                 onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
@@ -899,6 +896,24 @@ export default function HomeScreen() {
             </Animated.View>
           )}
         </View>
+
+        {/* じぶんの研鑽・資料棚：状態バッジ付きの1タップ導線（説明ラベルではなく理由で誘導する） */}
+        {history.length > 0 && (() => {
+          const pendingCount = history.flatMap((h) => h.factsheet?.cards ?? []).filter((cd) => drillPendingKeys.has(cd.statement.replace(/[\s　]/g, ''))).length
+          return (
+            <View style={styles.quickRow}>
+              <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/training')} activeOpacity={0.8}>
+                <Text style={styles.quickBtnText}>研修ルームへ</Text>
+                {pendingCount > 0 && (
+                  <View style={styles.quickBadge}><Text style={styles.quickBadgeText}>まだ {pendingCount}</Text></View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/library')} activeOpacity={0.8}>
+                <Text style={styles.quickBtnText}>教材ライブラリへ</Text>
+              </TouchableOpacity>
+            </View>
+          )
+        })()}
 
         {/* 最近の教材 */}
         <View style={styles.recentSection}>
@@ -987,6 +1002,33 @@ export default function HomeScreen() {
                     <Text style={styles.profileTagline}>{selectedStudent.tagline}</Text>
                   </View>
                 </View>
+                {/* この生徒との記録：見ている文脈でだけ出す（ホーム常設にはしない） */}
+                {(() => {
+                  const lastLesson = history.reduce<{ title: string; at: number } | null>((acc, h) => {
+                    const r = h.recaps?.[selectedStudent.id]
+                    return r && r.savedAt > (acc?.at ?? 0) ? { title: h.title.replace(/^この(教材|文書|画像|写真)は[、，]?\s*/u, ''), at: r.savedAt } : acc
+                  }, null)
+                  const hw = homeworks.find((h) => h.studentId === selectedStudent.id && (h.state === 'assigned' || h.state === 'arrived'))
+                  if (!lastLesson && !hw) return null
+                  return (
+                    <View style={styles.profileRecord}>
+                      {lastLesson && (
+                        <View style={styles.profileRecordRow}>
+                          <Text style={styles.profileRecordLabel}>前回の授業</Text>
+                          <Text style={styles.profileRecordValue} numberOfLines={1}>
+                            {new Date(lastLesson.at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}「{lastLesson.title}」
+                          </Text>
+                        </View>
+                      )}
+                      {hw && (
+                        <View style={styles.profileRecordRow}>
+                          <Text style={styles.profileRecordLabel}>いま</Text>
+                          <Text style={styles.profileRecordValue}>{hw.state === 'assigned' ? '宿題の解き直しにとりくみ中' : '答案がとどいています'}</Text>
+                        </View>
+                      )}
+                    </View>
+                  )
+                })()}
                 <TouchableOpacity style={styles.sheetChangeBtn} onPress={() => setStudentSheet('picker')}>
                   <Text style={styles.sheetChangeBtnText}>生徒を変える</Text>
                 </TouchableOpacity>
@@ -1408,16 +1450,12 @@ const styles = StyleSheet.create({
   lessonThumb: { width: '100%', aspectRatio: 1.4, borderRadius: 12 },
   lessonThumbText: { backgroundColor: c.pinkSoft, alignItems: 'center', justifyContent: 'center' },
   lessonMaterialTitle: { fontSize: 13, fontWeight: '700', color: c.textStrong, lineHeight: 18 },
-  lessonPreviewBtn: {
-    backgroundColor: c.skyTint,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: c.skyBorder,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 10,
+  lessonThumbOpenBadge: {
+    position: 'absolute', bottom: 5, right: 5,
+    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 999,
+    paddingHorizontal: 7, paddingVertical: 2, minWidth: 34, alignItems: 'center',
   },
-  lessonPreviewBtnText: { fontSize: 14, fontFamily: font.round, color: c.link },
+  lessonThumbOpenText: { fontSize: 9, fontWeight: '700', color: 'white' },
   lessonDivider: { width: 1, backgroundColor: c.border, marginVertical: 16 },
   lessonStudent: {
     width: 118, padding: 14,
@@ -1463,6 +1501,16 @@ const styles = StyleSheet.create({
   toastText: { color: 'white', fontSize: 14, fontWeight: '600' },
 
   // 最近の授業
+  // じぶんの研鑽・資料棚（研修/ライブラリへの状態付き導線）
+  quickRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  quickBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 14,
+    paddingVertical: 12,
+  },
+  quickBtnText: { fontSize: 12, fontWeight: '700', color: c.textMid },
+  quickBadge: { backgroundColor: '#fef3c7', borderRadius: 999, paddingHorizontal: 7, paddingVertical: 1 },
+  quickBadgeText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
   recentSection: {
     marginHorizontal: -20,
     paddingHorizontal: 20,
@@ -1509,6 +1557,11 @@ const styles = StyleSheet.create({
   profileAvatar: { width: 56, height: 56, borderRadius: 28 },
   profileName: { fontSize: 16, fontFamily: font.round, color: c.textStrong },
   profileTagline: { fontSize: 12, color: c.textSub, marginTop: 3 },
+  // この生徒との記録（前回の授業・宿題状態）
+  profileRecord: { backgroundColor: c.bg, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, gap: 6, marginTop: 12 },
+  profileRecordRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  profileRecordLabel: { fontSize: 11, fontWeight: '700', color: c.faint, flexShrink: 0 },
+  profileRecordValue: { fontSize: 12, color: c.textMid, flex: 1 },
   sheetChangeBtn: {
     backgroundColor: c.bgSub, borderRadius: 14,
     paddingVertical: 14, alignItems: 'center', marginBottom: 8,

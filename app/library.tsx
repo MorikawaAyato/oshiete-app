@@ -20,7 +20,7 @@ import { BottomTabBar } from '@/components/BottomTabBar'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 
-type SheetMode = 'select' | 'main' | 'detail' | 'rename' | 'group' | 'new-group' | 'delete'
+type SheetMode = 'main' | 'detail' | 'rename' | 'group' | 'new-group' | 'delete'
 
 const TITLE_RE = /^この(教材|文書|画像|写真)は[、，]?\s*/u
 // 3カラム固定幅: (画面幅 - グリッドpadding12 - カードmargin合計18) / 3
@@ -115,7 +115,8 @@ export default function LibraryScreen() {
         } catch {}
       })()
     }
-    requestAnimationFrame(() => router.push('/preview'))
+    // from=library: 教材ビュー側で「この教材を選択する」CTAを出すための目印
+    requestAnimationFrame(() => router.push({ pathname: '/preview', params: { from: 'library' } }))
   }
 
   const closeSheet = () => setActionItem(null)
@@ -213,7 +214,7 @@ export default function LibraryScreen() {
     const lastStudent = lastLesson ? STUDENTS.find((s) => s.id === lastLesson.studentId) : null
     return (
       <View style={[styles.card, isActive && styles.cardActive]}>
-        <TouchableOpacity onPress={() => openSheet(item, 'select')} activeOpacity={0.85}>
+        <TouchableOpacity onPress={() => viewItem(item)} activeOpacity={0.85}>
           {item.thumbnails[0] ? (
             <Image source={{ uri: item.thumbnails[0] }} style={styles.cardThumb} />
           ) : (
@@ -413,26 +414,6 @@ export default function LibraryScreen() {
           <View style={styles.sheet}>
             <View style={styles.sheetHandle} />
 
-            {sheetMode === 'select' && actionItem && (
-              <>
-                <Text style={styles.sheetItemTitle} numberOfLines={1}>
-                  {actionItem.title.replace(TITLE_RE, '')}
-                </Text>
-                <View style={styles.selectBtns}>
-                  <TouchableOpacity style={[styles.selectBtnSecondary, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]} onPress={() => viewItem(actionItem)}>
-                    <Feather name="book-open" size={15} color={c.textMid} />
-                    <Text style={styles.selectBtnSecondaryText}>教材を見る</Text>
-                  </TouchableOpacity>
-                  <BouncyPressable style={styles.selectBtnPrimary} onPress={() => selectItem(actionItem)} haptic="medium">
-                    <Text style={styles.selectBtnPrimaryText}>授業をする</Text>
-                  </BouncyPressable>
-                </View>
-                <TouchableOpacity style={styles.cancelBtn} onPress={closeSheet}>
-                  <Text style={styles.cancelBtnText}>キャンセル</Text>
-                </TouchableOpacity>
-              </>
-            )}
-
             {sheetMode === 'main' && actionItem && (
               <>
                 <Text style={styles.sheetItemTitle} numberOfLines={1}>
@@ -487,7 +468,7 @@ export default function LibraryScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity style={styles.primaryBtn} onPress={() => selectItem(actionItem)}>
-                  <Text style={styles.primaryBtnText}>この教材で学習する</Text>
+                  <Text style={styles.primaryBtnText}>この教材を選択する</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.cancelBtn} onPress={() => setSheetMode('main')}>
                   <Text style={styles.cancelBtnText}>戻る</Text>
@@ -806,7 +787,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12, marginBottom: 8,
   },
 
-  selectBtns: { gap: 10, marginTop: 12, marginBottom: 8 },
   selectBtnPrimary: {
     backgroundColor: c.primaryStrong, borderRadius: 16,
     paddingVertical: 18, alignItems: 'center',
