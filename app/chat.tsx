@@ -15,6 +15,7 @@ import type { HomeworkItem } from '@/lib/storage'
 import { applyCardCorrection } from '@/lib/factsheet'
 import type { ChatMessage } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
+import { Feather } from '@expo/vector-icons'
 import BouncyPressable from '@/components/BouncyPressable'
 import StampText from '@/components/StampText'
 
@@ -454,7 +455,7 @@ export default function ChatScreen() {
           <EnteringRoom student={student} />
         ) : (
           <View style={styles.center}>
-            <Text style={styles.errorText}>⚠️ {student.name}のトークルームに接続できませんでした</Text>
+            <Text style={styles.errorText}><Feather name="alert-triangle" size={13} color={c.danger} /> {student.name}のトークルームに接続できませんでした</Text>
             <TouchableOpacity onPress={initChat} style={styles.retryBtn}>
               <Text style={styles.retryBtnText}>もう一度接続する</Text>
             </TouchableOpacity>
@@ -498,8 +499,9 @@ export default function ChatScreen() {
         </View>
 
         {/* 教材を見るボタン */}
-        <TouchableOpacity style={styles.previewBar} onPress={() => router.push('/preview')}>
-          <Text style={styles.previewBarText}>📖 教材を見る</Text>
+        <TouchableOpacity style={[styles.previewBar, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]} onPress={() => router.push('/preview')}>
+          <Feather name="book-open" size={14} color={c.textMid} />
+          <Text style={styles.previewBarText}>教材を見る</Text>
         </TouchableOpacity>
 
         {/* チャット */}
@@ -527,7 +529,7 @@ export default function ChatScreen() {
           ))}
           {sendError && !loading && (
             <View style={styles.sendErrorWrap}>
-              <Text style={styles.sendErrorText}>⚠️ 通信エラーで届きませんでした</Text>
+              <Text style={styles.sendErrorText}><Feather name="alert-triangle" size={13} color={c.danger} /> 通信エラーで届きませんでした</Text>
               <TouchableOpacity onPress={() => performSend(sendError)} style={styles.retryBtn}>
                 <Text style={styles.retryBtnText}>もう一度送る</Text>
               </TouchableOpacity>
@@ -737,7 +739,7 @@ export default function ChatScreen() {
               </BouncyPressable>
             </View>
             {inputBlocked && (
-              <Text style={styles.ngWarning}>⚠️ その内容は送信できません</Text>
+              <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> その内容は送信できません</Text>
             )}
           </View>
         )}

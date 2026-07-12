@@ -12,6 +12,7 @@ import { gradeExam } from '@/lib/api'
 import type { HistoryItem, QACard } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { c, font } from '@/lib/theme'
+import { Feather } from '@expo/vector-icons'
 
 const PRINCIPAL_IMAGE = require('../assets/tora_koutyou.webp')
 const TITLE_RE = /^この(教材|文書|画像|写真)は[、，]?\s*/u
@@ -301,11 +302,13 @@ export default function TrainingScreen() {
               </TouchableOpacity>
             ) : (
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity style={[styles.markBtn, { backgroundColor: '#10b981' }]} onPress={() => void markDrill(true)}>
-                  <Text style={styles.primaryBtnText}>⭕ おぼえた</Text>
+                <TouchableOpacity style={[styles.markBtn, styles.markBtnRow, { backgroundColor: '#10b981' }]} onPress={() => void markDrill(true)}>
+                  <Feather name="check" size={16} color="#fff" />
+                  <Text style={styles.primaryBtnText}>おぼえた</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.markBtn, { backgroundColor: '#fb7185' }]} onPress={() => void markDrill(false)}>
-                  <Text style={styles.primaryBtnText}>🔺 まだ</Text>
+                <TouchableOpacity style={[styles.markBtn, styles.markBtnRow, { backgroundColor: '#fb7185' }]} onPress={() => void markDrill(false)}>
+                  <Feather name="rotate-ccw" size={16} color="#fff" />
+                  <Text style={styles.primaryBtnText}>まだ</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -445,8 +448,9 @@ export default function TrainingScreen() {
                         <Text style={styles.primaryBtnText}>次の問題 →</Text>
                       </TouchableOpacity>
                     ) : (
-                      <TouchableOpacity style={styles.examNextBtn} onPress={() => void submitExam()}>
-                        <Text style={styles.primaryBtnText}>📝 答案を提出する</Text>
+                      <TouchableOpacity style={[styles.examNextBtn, styles.markBtnRow]} onPress={() => void submitExam()}>
+                        <Feather name="send" size={14} color="#fff" />
+                        <Text style={styles.primaryBtnText}>答案を提出する</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -542,6 +546,7 @@ const styles = StyleSheet.create({
   drillAnswer: { fontSize: 14, color: c.textMid, lineHeight: 21 },
   revealBtn: { backgroundColor: c.text, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   markBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  markBtnRow: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
 
   doneTitle: { fontSize: 20, fontWeight: '900', color: c.text, marginBottom: 4 },
   doneScore: { fontSize: 13, color: c.textMid, marginBottom: 14 },

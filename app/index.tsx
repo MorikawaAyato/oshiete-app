@@ -634,7 +634,7 @@ export default function HomeScreen() {
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.mailIconBtn} onPress={() => setShowInbox(true)}>
               <View style={styles.mailIconCircle}>
-                <Text style={styles.mailIconEmoji}>✉️</Text>
+                <Feather name="mail" size={18} color={c.sky} />
               </View>
               <Text style={styles.teacherIconLabel}>メール</Text>
               {unreadCount > 0 && (
@@ -718,11 +718,13 @@ export default function HomeScreen() {
           {/* 入力モード タブ */}
           {!hasContent && (
             <View style={styles.inputModeTabs}>
-              <TouchableOpacity style={[styles.inputModeTab, inputMode === 'photo' && styles.inputModeTabActive]} onPress={() => { setInputMode('photo'); setTextInput('') }}>
-                <Text style={[styles.inputModeTabText, inputMode === 'photo' && styles.inputModeTabTextActive]}>📷 写真</Text>
+              <TouchableOpacity style={[styles.inputModeTab, styles.inputModeTabInner, inputMode === 'photo' && styles.inputModeTabActive]} onPress={() => { setInputMode('photo'); setTextInput('') }}>
+                <Feather name="camera" size={15} color={inputMode === 'photo' ? 'white' : c.textSub} />
+                <Text style={[styles.inputModeTabText, inputMode === 'photo' && styles.inputModeTabTextActive]}>写真</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.inputModeTab, inputMode === 'text' && styles.inputModeTabActive]} onPress={() => { setInputMode('text'); setPendingImages([]); setThumbnails([]) }}>
-                <Text style={[styles.inputModeTabText, inputMode === 'text' && styles.inputModeTabTextActive]}>📝 テキスト</Text>
+              <TouchableOpacity style={[styles.inputModeTab, styles.inputModeTabInner, inputMode === 'text' && styles.inputModeTabActive]} onPress={() => { setInputMode('text'); setPendingImages([]); setThumbnails([]) }}>
+                <Feather name="file-text" size={15} color={inputMode === 'text' ? 'white' : c.textSub} />
+                <Text style={[styles.inputModeTabText, inputMode === 'text' && styles.inputModeTabTextActive]}>テキスト</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -730,7 +732,7 @@ export default function HomeScreen() {
           {/* 状態1a: 写真 */}
           {!hasPending && !hasContent && inputMode === 'photo' && (
             <TouchableOpacity style={styles.uploadCard} onPress={() => openPicker('replace')}>
-              <Text style={styles.uploadCardIcon}>📷</Text>
+              <Feather name="camera" size={30} color={c.faint} style={{ marginBottom: 6 }} />
               <Text style={styles.uploadCardText}>教材の写真を選ぶ</Text>
               <Text style={styles.uploadCardSub}>PNG / JPG・最大{MAX_IMAGES}枚</Text>
             </TouchableOpacity>
@@ -1043,7 +1045,10 @@ export default function HomeScreen() {
           <Pressable style={styles.studentSheetOverlay} onPress={() => { setShowInbox(false); setExpandedMailId(null); }} />
           <View style={[styles.studentSheetBottom, { maxHeight: '75%', paddingHorizontal: 0, paddingBottom: 32 }]}>
             <View style={styles.inboxHeader}>
-              <Text style={styles.inboxTitle}>✉️ メールボックス</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Feather name="mail" size={17} color={c.textSub} />
+                <Text style={styles.inboxTitle}>メールボックス</Text>
+              </View>
               <TouchableOpacity onPress={() => { setShowInbox(false); setExpandedMailId(null); }}>
                 <Text style={styles.inboxClose}>✕</Text>
               </TouchableOpacity>
@@ -1069,7 +1074,7 @@ export default function HomeScreen() {
                       ) : msg.from === '校長先生' ? (
                         <Image source={require('../assets/tora_koutyou.webp')} style={styles.inboxAvatarImg} />
                       ) : (
-                        <Text style={{ fontSize: 18 }}>📢</Text>
+                        <Feather name="bell" size={18} color={c.sky} />
                       )}
                     </View>
                     <View style={styles.inboxBody}>
@@ -1093,9 +1098,10 @@ export default function HomeScreen() {
                             setExpandedMailId(null)
                             selectHistory(item)
                           }}
-                          style={styles.inboxOpenBtn}
+                          style={[styles.inboxOpenBtn, styles.inboxOpenBtnRow]}
                         >
-                          <Text style={styles.inboxOpenBtnText}>📖 この教材をひらいて教えてあげる</Text>
+                          <Feather name="book-open" size={14} color="#fff" />
+                          <Text style={styles.inboxOpenBtnText}>この教材をひらいて教えてあげる</Text>
                         </TouchableOpacity>
                       )}
                       {isExpanded && msg.examInvite && examCardPool().length >= EXAM_QUESTION_COUNT && !!TEACHER_TITLES[getUnlockedTitleCount(teacherProfile)] && (
@@ -1106,8 +1112,9 @@ export default function HomeScreen() {
                       {isExpanded && msg.homework && (() => {
                         const hw = homeworks.find((h) => h.studentId === msg.studentId && h.state === 'arrived')
                         return hw ? (
-                          <TouchableOpacity onPress={() => openHomeworkGrading(hw)} style={[styles.inboxOpenBtn, { backgroundColor: '#d97706' }]}>
-                            <Text style={styles.inboxOpenBtnText}>📝 答案を添削する</Text>
+                          <TouchableOpacity onPress={() => openHomeworkGrading(hw)} style={[styles.inboxOpenBtn, styles.inboxOpenBtnRow, { backgroundColor: '#d97706' }]}>
+                            <Feather name="edit-3" size={14} color="#fff" />
+                            <Text style={styles.inboxOpenBtnText}>答案を添削する</Text>
                           </TouchableOpacity>
                         ) : null
                       })()}
@@ -1323,6 +1330,7 @@ const styles = StyleSheet.create({
   inputModeTabs: { flexDirection: 'row', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: c.border, marginBottom: 12 },
   inputModeTab: { flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: 'white' },
   inputModeTabActive: { backgroundColor: c.primaryStrong },
+  inputModeTabInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   inputModeTabText: { fontSize: 13, fontWeight: '600', color: c.textSub },
   inputModeTabTextActive: { color: 'white' },
   textInputCard: { backgroundColor: 'white', borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: c.skySoft, padding: 16, gap: 10 },
@@ -1548,6 +1556,7 @@ const styles = StyleSheet.create({
   inboxContent: { fontSize: 13, color: c.textMid, lineHeight: 19, marginTop: 6 },
   inboxOpenBtn: { alignSelf: 'flex-start', backgroundColor: c.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, marginTop: 10 },
   inboxOpenBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  inboxOpenBtnRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
 
   // 昇進試験
   titleChipLocked: { backgroundColor: c.bg },

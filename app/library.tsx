@@ -267,7 +267,7 @@ export default function LibraryScreen() {
       {/* ボディ */}
       {history.length === 0 && savedGroups.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>📷</Text>
+          <Feather name="camera" size={44} color={c.border} />
           <Text style={styles.emptyText}>教材がまだありません</Text>
           <TouchableOpacity onPress={() => router.back()}>
             <Text style={styles.emptyLink}>教材を追加する →</Text>
@@ -419,8 +419,9 @@ export default function LibraryScreen() {
                   {actionItem.title.replace(TITLE_RE, '')}
                 </Text>
                 <View style={styles.selectBtns}>
-                  <TouchableOpacity style={styles.selectBtnSecondary} onPress={() => viewItem(actionItem)}>
-                    <Text style={styles.selectBtnSecondaryText}>📖 教材を見る</Text>
+                  <TouchableOpacity style={[styles.selectBtnSecondary, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]} onPress={() => viewItem(actionItem)}>
+                    <Feather name="book-open" size={15} color={c.textMid} />
+                    <Text style={styles.selectBtnSecondaryText}>教材を見る</Text>
                   </TouchableOpacity>
                   <BouncyPressable style={styles.selectBtnPrimary} onPress={() => selectItem(actionItem)} haptic="medium">
                     <Text style={styles.selectBtnPrimaryText}>授業をする</Text>
