@@ -649,7 +649,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
               <View style={styles.teacherIconCircle}>
-                <Image source={require('../assets/senseishou.jpg')} style={styles.teacherIconImage} />
+                <Image source={require('../assets/senseishou.webp')} style={styles.teacherIconImage} />
               </View>
               <Text style={styles.teacherIconLabel}>先生証</Text>
             </TouchableOpacity>
@@ -1322,8 +1322,9 @@ const styles = StyleSheet.create({
   teacherIconCircle: {
     width: 40, height: 40, borderRadius: 20, overflow: 'hidden',
     backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder,
+    alignItems: 'center', justifyContent: 'center',
   },
-  teacherIconImage: { width: 40, height: 40 },
+  teacherIconImage: { width: 24, height: 32, borderRadius: 4 },
   teacherIconLabel: { fontSize: 9, fontWeight: '700', color: c.link, letterSpacing: 0.5 },
 
   // セクション共通
