@@ -1230,7 +1230,10 @@ export default function HomeScreen() {
               return (
                 <>
                   <View style={styles.inboxHeader}>
-                    <Text style={styles.inboxTitle}>📝 {st?.name ?? '生徒'}の宿題</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Image source={require('../assets/print.webp')} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                      <Text style={styles.inboxTitle}>{st?.name ?? '生徒'}の宿題</Text>
+                    </View>
                     <TouchableOpacity onPress={() => setHwGradeOpen(false)}>
                       <Text style={styles.inboxClose}>✕</Text>
                     </TouchableOpacity>
@@ -1592,7 +1595,7 @@ const styles = StyleSheet.create({
   // 宿題
   hwBadge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, marginHorizontal: 16, marginTop: 12 },
   hwBadgeIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'white', borderWidth: 1, borderColor: '#fde68a', alignItems: 'center', justifyContent: 'center' },
-  hwBadgeIcon: { width: 30, height: 30 },
+  hwBadgeIcon: { width: 26, height: 26 },
   hwBadgeTitle: { fontSize: 12, fontWeight: '700', color: '#92400e' },
   hwBadgeSub: { fontSize: 11, color: '#b45309', marginTop: 1 },
   hwBadgeChevron: { fontSize: 20, color: '#d97706', fontWeight: '400' },
