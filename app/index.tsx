@@ -1235,7 +1235,7 @@ export default function HomeScreen() {
                     <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
                       <Text style={styles.hwHint}>
                         前回うまく説明できなかったところを{st?.name ?? '生徒'}が解いてきました。
-                        前回つまずいた項目の解き直しです。赤い<Text style={styles.hwModelWord}>答</Text>と見くらべて ⭕ / ❌（❌は次の授業で復習します）。
+                        前回つまずいた項目の解き直しです。赤い<Text style={styles.hwModelWord}>答</Text>と見くらべて、直せていたら <Text style={styles.hwMarkO}>○</Text>、まだなら <Text style={styles.hwMarkX}>✕</Text>（<Text style={styles.hwMarkX}>✕</Text>は次の授業で復習します）。
                       </Text>
                       {hw.items.map((it, i) => (
                         <View key={i} style={styles.hwAnswerCard}>
@@ -1263,7 +1263,7 @@ export default function HomeScreen() {
                         <Text style={styles.hwThanksText}>{allGraded ? 'みてくれてありがとうございます！なおすところ、しっかり覚え直します！' : '先生、宿題どうでしたか…？'}</Text>
                       </View>
                       <TouchableOpacity style={[styles.examCloseBtn, !allGraded && styles.hwAssignBtnDisabled]} disabled={!allGraded} onPress={finishHomework}>
-                        <Text style={styles.examCloseBtnText}>{allGraded ? '採点して返す' : 'すべてに ○ か ✕ をつけてね'}</Text>
+                        <Text style={styles.examCloseBtnText}>{allGraded ? '採点して返す' : <>すべてに <Text style={styles.hwMarkO}>○</Text> か <Text style={styles.hwMarkX}>✕</Text> をつけてね</>}</Text>
                       </TouchableOpacity>
                     </View>
                   </ScrollView>
@@ -1611,6 +1611,8 @@ const styles = StyleSheet.create({
   hwModelText: { fontSize: 11, color: '#e11d48', lineHeight: 17, marginTop: 3 },
   hwModelMark: { fontWeight: '700' },
   hwModelWord: { fontWeight: '700', color: '#e11d48' },
+  hwMarkO: { fontWeight: '700', color: '#10b981' },
+  hwMarkX: { fontWeight: '700', color: '#f43f5e' },
   hwMarkBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   hwMarkBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
   hwMarkBtnWrong: { backgroundColor: '#f43f5e', borderColor: '#f43f5e' },

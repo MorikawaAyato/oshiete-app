@@ -403,7 +403,7 @@ export default function TrainingScreen() {
                         </Text>
                         {examResults.map((r, i) => (
                           <View key={i} style={styles.examResultCard}>
-                            <Text style={styles.examResultQ}>{r.correct ? '⭕' : '❌'} 問{i + 1}: {examQuestions[i]?.q}</Text>
+                            <Text style={styles.examResultQ}>{r.correct ? <Text style={styles.markO}>○</Text> : <Text style={styles.markX}>✕</Text>} 問{i + 1}: {examQuestions[i]?.q}</Text>
                             <Text style={styles.examResultA}>あなたの答え: {(examAnswers[i] ?? '').trim() || '（空欄）'}</Text>
                             {!r.correct && <Text style={styles.examResultModel}>模範解答: {examQuestions[i]?.a}</Text>}
                             {!!r.comment && <Text style={styles.examResultComment}>{r.comment}</Text>}
@@ -547,6 +547,8 @@ const styles = StyleSheet.create({
   revealBtn: { backgroundColor: c.text, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   markBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   markBtnRow: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  markO: { color: '#10b981', fontWeight: '700' },
+  markX: { color: '#f43f5e', fontWeight: '700' },
 
   doneTitle: { fontSize: 20, fontWeight: '900', color: c.text, marginBottom: 4 },
   doneScore: { fontSize: 13, color: c.textMid, marginBottom: 14 },
