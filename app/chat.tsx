@@ -695,12 +695,13 @@ export default function ChatScreen() {
                 <TouchableOpacity
                   onPress={openHints}
                   disabled={HINT_LIMIT_ENABLED && !showHints && !hintCharged && hintUsesLeft <= 0}
-                  style={styles.hintToggle}
+                  style={[styles.hintToggle, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}
                 >
+                  <Image source={require('../assets/toranomaki.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
                   <Text style={[styles.hintToggleText, HINT_LIMIT_ENABLED && hintUsesLeft <= 0 && !hintCharged && styles.hintToggleTextDisabled]}>
                     {HINT_LIMIT_ENABLED && hintUsesLeft <= 0 && !hintCharged
-                      ? '📜 虎の巻は使い切りました'
-                      : `📜 虎の巻を開く${HINT_LIMIT_ENABLED ? `（残り${hintUsesLeft}回）` : ''} ${showHints ? '▲' : '▼'}`}
+                      ? '虎の巻は使い切りました'
+                      : `虎の巻を開く${HINT_LIMIT_ENABLED ? `（残り${hintUsesLeft}回）` : ''} ${showHints ? '▲' : '▼'}`}
                   </Text>
                 </TouchableOpacity>
                 {showHints && (
@@ -716,8 +717,9 @@ export default function ChatScreen() {
               </View>
             ) : (
               // 虎の巻が出ないターンも枠を残し、消えて不具合に見えないようにする（深掘りの質問等では出ないのが正常）
-              <View style={styles.hintsWrap}>
-                <Text style={styles.hintRestNote}>📜 今回は虎の巻はお休み。自分の言葉で説明してみよう！</Text>
+              <View style={[styles.hintsWrap, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                <Image source={require('../assets/toranomaki.webp')} style={{ width: 16, height: 16, opacity: 0.6 }} resizeMode="contain" />
+                <Text style={[styles.hintRestNote, { flex: 1 }]}>今回は虎の巻はお休み。自分の言葉で説明してみよう！</Text>
               </View>
             )}
             <View style={styles.inputArea}>

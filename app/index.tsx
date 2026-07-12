@@ -665,7 +665,7 @@ export default function HomeScreen() {
             const st = STUDENTS.find((s) => s.id === arrived.studentId)
             return (
               <TouchableOpacity style={styles.hwBadge} onPress={() => openHomeworkGrading(arrived)} activeOpacity={0.85}>
-                <View style={styles.hwBadgeIconWrap}><Text style={styles.hwBadgeClock}>📝</Text></View>
+                <View style={styles.hwBadgeIconWrap}><Image source={require('../assets/print.webp')} style={styles.hwBadgeIcon} resizeMode="contain" /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.hwBadgeTitle}>{st?.name ?? '生徒'}から答案が届きました</Text>
                   <Text style={styles.hwBadgeSub} numberOfLines={1}>タップして添削してあげましょう</Text>
@@ -680,7 +680,7 @@ export default function HomeScreen() {
             const st = STUDENTS.find((s) => s.id === w.studentId)
             return (
               <TouchableOpacity style={styles.hwBadge} onPress={() => void sendHomework(w)} disabled={hwSending} activeOpacity={0.85}>
-                <View style={styles.hwBadgeIconWrap}><Text style={styles.hwBadgeClock}>⏰</Text></View>
+                <View style={styles.hwBadgeIconWrap}><Image source={require('../assets/tokei.webp')} style={styles.hwBadgeIcon} resizeMode="contain" /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.hwBadgeTitle}>{hwSending ? '宿題を用意しています…' : '復習の宿題を送れます'}</Text>
                   <Text style={styles.hwBadgeSub} numberOfLines={1}>{st?.name ?? '生徒'}がつまずいた{(w.items?.length ?? 0) + (w.wrongLines?.length ?? 0)}個を宿題にします</Text>
@@ -695,7 +695,7 @@ export default function HomeScreen() {
             const names = waiting.map((h) => STUDENTS.find((s) => s.id === h.studentId)?.name ?? '生徒').join('、')
             return (
               <View style={[styles.hwBadge, styles.hwBadgeMuted]}>
-                <View style={[styles.hwBadgeIconWrap, styles.hwBadgeIconMuted]}><Text style={styles.hwBadgeClock}>⏳</Text></View>
+                <View style={[styles.hwBadgeIconWrap, styles.hwBadgeIconMuted]}><Image source={require('../assets/sunadokei.webp')} style={styles.hwBadgeIcon} resizeMode="contain" /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.hwBadgeTitleMuted}>宿題を出しました</Text>
                   <Text style={styles.hwBadgeSubMuted} numberOfLines={1}>{names}の答案を待っています</Text>
@@ -1591,13 +1591,13 @@ const styles = StyleSheet.create({
 
   // 宿題
   hwBadge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, marginHorizontal: 16, marginTop: 12 },
-  hwBadgeIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#fcd34d', alignItems: 'center', justifyContent: 'center' },
-  hwBadgeClock: { fontSize: 20 },
+  hwBadgeIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'white', borderWidth: 1, borderColor: '#fde68a', alignItems: 'center', justifyContent: 'center' },
+  hwBadgeIcon: { width: 30, height: 30 },
   hwBadgeTitle: { fontSize: 12, fontWeight: '700', color: '#92400e' },
   hwBadgeSub: { fontSize: 11, color: '#b45309', marginTop: 1 },
   hwBadgeChevron: { fontSize: 20, color: '#d97706', fontWeight: '400' },
   hwBadgeMuted: { backgroundColor: c.bgSub, borderColor: c.border },
-  hwBadgeIconMuted: { backgroundColor: c.bg, borderColor: c.border },
+  hwBadgeIconMuted: { backgroundColor: 'white', borderColor: c.border },
   hwBadgeTitleMuted: { fontSize: 12, fontWeight: '700', color: c.textMid },
   hwBadgeSubMuted: { fontSize: 11, color: c.faint, marginTop: 1 },
   hwHint: { fontSize: 12, color: c.textSub, marginBottom: 10, lineHeight: 18 },
