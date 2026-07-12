@@ -81,7 +81,7 @@ function TypingPaws() {
       {[paw0, paw1, paw2].map((paw, i) => (
         <Animated.View
           key={i}
-          style={{ opacity: paw, transform: [{ translateY: i % 2 === 0 ? 2 : -2 }, { rotate: '-20deg' }] }}
+          style={{ opacity: paw, transform: [{ translateY: i % 2 === 0 ? 3 : -3 }, { rotate: i % 2 === 0 ? '72deg' : '90deg' }] }}
         >
           <PawGlyph />
         </Animated.View>
