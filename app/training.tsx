@@ -189,7 +189,7 @@ export default function TrainingScreen() {
       : allPending > 0
       ? `${teacherCall}、よく来たね。「まだ」のカードが${allPending}枚残っておるぞ。逃げずに、一枚ずつ潰していきなさい。`
       : canExam
-      ? `${teacherCall}、よく来たね。研修は嘘をつかん。カードで鍛えたら、次の昇進試験に挑みなさい。待っておるぞ。`
+      ? `${teacherCall}、よく来たね。研修は嘘をつかん。研修で鍛えたら、次の昇進試験に挑みなさい。待っておるぞ。`
       : `${teacherCall}、よく来たね。教えるとは、二度学ぶことだ。カードをめくって、教えの引き出しを増やしなさい。`
   const drillActive = drillCards.length > 0
 
@@ -272,7 +272,7 @@ export default function TrainingScreen() {
             </View>
 
             {/* 研修→試験の順序性（薄く） */}
-            <Text style={styles.connector}>カードで鍛えたら、いざ大一番へ</Text>
+            <Text style={styles.connector}>研修で鍛えたら、いざ大一番へ</Text>
 
             {/* 昇進試験：大一番（重い側）。証書ふうのダークカードで研修と格を分ける */}
             <View style={styles.examCard}>
