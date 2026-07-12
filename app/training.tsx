@@ -272,10 +272,8 @@ export default function TrainingScreen() {
               )}
             </View>
 
-            {/* 研修→試験の順序性（薄く） */}
-            <Text style={styles.connector}>研修で鍛えたら、いざ大一番へ</Text>
-
-            {/* 昇進試験：大一番（重い側）。証書ふうのダークカードで研修と格を分ける */}
+            {/* 昇進試験：大一番（重い側）。証書ふうのダークカードで研修と格を分ける。
+                研修→試験の順序は校長のセリフとアイブロウが語るので、接続テキストは置かない */}
             <View style={styles.examCard}>
               <Text style={styles.eyebrowDark}>大一番</Text>
               <Text style={styles.examTitle}>昇進試験</Text>
@@ -555,7 +553,6 @@ const styles = StyleSheet.create({
   // 「ふだんの練習」/「大一番」のアイブロウと、研修→試験の接続テキスト
   eyebrowLight: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: '#d97706', marginBottom: 2 },
   eyebrowDark: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: '#fcd34d', marginBottom: 2 },
-  connector: { textAlign: 'center', fontSize: 11, fontWeight: '600', color: c.faint, marginVertical: -4 },
   // 昇進試験カード（証書ふうのダーク）
   examCard: { backgroundColor: '#1e293b', borderRadius: 16, borderWidth: 1, borderColor: '#334155', padding: 16 },
   examTitle: { fontSize: 14, fontWeight: '900', color: 'white', marginBottom: 4 },
