@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as ImagePicker from 'expo-image-picker'
-import { Feather } from '@expo/vector-icons'
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons'
 import PawGlyph from '@/components/PawGlyph'
 import { useApp, LESSON_PRESETS, MINUTES_PER_TURN } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
@@ -649,7 +649,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
               <View style={styles.teacherIconCircle}>
-                <Image source={require('../assets/senseishou.webp')} style={styles.teacherIconImage} />
+                <MaterialCommunityIcons name="card-account-details-outline" size={19} color={c.sky} />
               </View>
               <Text style={styles.teacherIconLabel}>先生証</Text>
             </TouchableOpacity>
@@ -1320,11 +1320,10 @@ const styles = StyleSheet.create({
   mailBadgeText: { color: 'white', fontSize: 9, fontWeight: '900' },
   teacherIconBtn: { alignItems: 'center', gap: 2 },
   teacherIconCircle: {
-    width: 40, height: 40, borderRadius: 20, overflow: 'hidden',
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder,
     alignItems: 'center', justifyContent: 'center',
   },
-  teacherIconImage: { width: 24, height: 32, borderRadius: 4 },
   teacherIconLabel: { fontSize: 9, fontWeight: '700', color: c.link, letterSpacing: 0.5 },
 
   // セクション共通
