@@ -34,8 +34,24 @@ function containsNG(text: string): boolean {
   return NG_PATTERNS.some((p) => p.test(text))
 }
 
+// 入力中インジケーターの足あと（犬の肉球）。react-native-svgを使わずViewで描画。
+// Teamsの「入力中」に寄せてグレー
+function PawGlyph() {
+  const color = '#94a3b8'
+  const pad = { position: 'absolute' as const, backgroundColor: color }
+  return (
+    <View style={{ width: 16, height: 16 }}>
+      <View style={[pad, { left: 3.5, top: 7, width: 9, height: 8, borderRadius: 4.5 }]} />
+      <View style={[pad, { left: 0.8, top: 4, width: 3.6, height: 4.8, borderRadius: 2 }]} />
+      <View style={[pad, { left: 4.6, top: 1.4, width: 3.6, height: 4.8, borderRadius: 2 }]} />
+      <View style={[pad, { left: 8, top: 1.4, width: 3.6, height: 4.8, borderRadius: 2 }]} />
+      <View style={[pad, { left: 11.6, top: 4, width: 3.6, height: 4.8, borderRadius: 2 }]} />
+    </View>
+  )
+}
+
 // 添削アニメ: 花丸スタンプ／赤ペンをぽんっと表示する
-// 🐾 タイピング演出: 足あとがとことこ現れて消える
+// タイピング演出: 足あとがとことこ現れて消える
 function TypingPaws() {
   const paw0 = useRef(new Animated.Value(0)).current
   const paw1 = useRef(new Animated.Value(0)).current
@@ -63,12 +79,12 @@ function TypingPaws() {
   return (
     <View style={{ backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', gap: 4, alignItems: 'center' }}>
       {[paw0, paw1, paw2].map((paw, i) => (
-        <Animated.Text
+        <Animated.View
           key={i}
-          style={{ fontSize: 12, opacity: paw, transform: [{ translateY: i % 2 === 0 ? 2 : -2 }, { rotate: '-20deg' }] }}
+          style={{ opacity: paw, transform: [{ translateY: i % 2 === 0 ? 2 : -2 }, { rotate: '-20deg' }] }}
         >
-          🐾
-        </Animated.Text>
+          <PawGlyph />
+        </Animated.View>
       ))}
     </View>
   )
