@@ -229,7 +229,7 @@ export default function LibraryScreen() {
             </Text>
             {lastStudent && lastLesson ? (
               <View style={styles.cardLessonRow}>
-                <Image source={{ uri: lastStudent.avatar }} style={styles.cardLessonAvatar} />
+                <Image source={lastStudent.avatar} style={styles.cardLessonAvatar} />
                 <Text style={styles.cardLessonText} numberOfLines={1}>
                   {new Date(lastLesson.at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
                 </Text>

@@ -1,10 +1,8 @@
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? ''
-
 export type Student = {
   id: string
   name: string
   tagline: string
-  avatar: string
+  avatar: ReturnType<typeof require> // 同梱画像（require）。ネットワーク取得しない
   color: string
   colorStrong: string // 白文字を載せるボタン用の濃い色
   systemPrompt: string
@@ -51,7 +49,7 @@ export const STUDENTS: Student[] = [
     id: 'siete',
     name: 'シエテちゃん',
     tagline: 'ふわふわ元気なイヌの女の子',
-    avatar: `${API_BASE}/samoedo-girl_v2.webp`,
+    avatar: require('../assets/samoedo-girl.webp'),
     color: '#ec4899',
     colorStrong: '#db2777',
     endMessage: '⏰ あっ、もう時間！先生、今日もありがとうございました！✨',
@@ -72,7 +70,7 @@ ${TEACHING_ROLE}`,
     id: 'sowal',
     name: 'ソワルくん',
     tagline: 'おっとりのんびりなイヌの男の子',
-    avatar: `${API_BASE}/samoedo-boy_v2.webp`,
+    avatar: require('../assets/samoedo-boy.webp'),
     color: '#3b82f6',
     colorStrong: '#2563eb',
     endMessage: '⏰ あ...もう時間なんですね。今日もありがとうございました🐾',

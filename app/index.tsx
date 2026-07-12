@@ -839,7 +839,7 @@ export default function HomeScreen() {
                   >
                     {selectedStudent ? (
                       <>
-                        <Image source={{ uri: selectedStudent.avatar }} style={[styles.lessonStudentAvatar, { borderColor: c.border }]} />
+                        <Image source={selectedStudent.avatar} style={[styles.lessonStudentAvatar, { borderColor: c.border }]} />
                         <View style={{ gap: 1, alignItems: 'center' }}>
                           <Text style={styles.lessonStudentName}>{selectedStudent.name}</Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
@@ -980,7 +980,7 @@ export default function HomeScreen() {
               <>
                 <View style={styles.profileRow}>
                   <TouchableOpacity onPress={() => setShowStudentAvatar(true)} activeOpacity={0.75}>
-                    <Image source={{ uri: selectedStudent.avatar }} style={styles.profileAvatar} />
+                    <Image source={selectedStudent.avatar} style={styles.profileAvatar} />
                   </TouchableOpacity>
                   <View>
                     <Text style={styles.profileName}>{selectedStudent.name}</Text>
@@ -1007,7 +1007,7 @@ export default function HomeScreen() {
                       style={[styles.pickerItem, isSel && styles.pickerItemSel]}
                       onPress={() => { setSelectedStudentId(s.id); setStudentSheet(null) }}
                     >
-                      <Image source={{ uri: s.avatar }} style={styles.pickerItemAvatar} />
+                      <Image source={s.avatar} style={styles.pickerItemAvatar} />
                       <View style={styles.pickerItemInfo}>
                         <Text style={[styles.pickerItemName, isSel && styles.pickerItemNameSel]}>{s.name}</Text>
                         <Text style={styles.pickerItemTagline}>{s.tagline}</Text>
@@ -1027,7 +1027,7 @@ export default function HomeScreen() {
           <Modal visible={showStudentAvatar} transparent animationType="fade" onRequestClose={() => setShowStudentAvatar(false)}>
             <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowStudentAvatar(false)}>
               <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white' }}>
-                {selectedStudent && <Image source={{ uri: selectedStudent.avatar }} style={{ width: '100%', height: '100%' }} />}
+                {selectedStudent && <Image source={selectedStudent.avatar} style={{ width: '100%', height: '100%' }} />}
               </View>
             </Pressable>
           </Modal>
@@ -1074,7 +1074,7 @@ export default function HomeScreen() {
                   >
                     <View style={styles.inboxAvatar}>
                       {student ? (
-                        <Image source={{ uri: student.avatar }} style={styles.inboxAvatarImg} />
+                        <Image source={student.avatar} style={styles.inboxAvatarImg} />
                       ) : msg.from === '校長先生' ? (
                         <Image source={require('../assets/tora_koutyou.webp')} style={styles.inboxAvatarImg} />
                       ) : (
@@ -1266,7 +1266,7 @@ export default function HomeScreen() {
                         </View>
                       ))}
                       <View style={styles.hwThanksRow}>
-                        {st ? <Image source={{ uri: st.avatar }} style={styles.hwThanksAvatar} /> : null}
+                        {st ? <Image source={st.avatar} style={styles.hwThanksAvatar} /> : null}
                         <Text style={styles.hwThanksText}>{allGraded ? 'みてくれてありがとうございます！なおすところ、しっかり覚え直します！' : '先生、宿題どうでしたか…？'}</Text>
                       </View>
                       <TouchableOpacity style={[styles.examCloseBtn, !allGraded && styles.hwAssignBtnDisabled]} disabled={!allGraded} onPress={finishHomework}>

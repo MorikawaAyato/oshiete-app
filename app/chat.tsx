@@ -75,7 +75,7 @@ function TypingPaws() {
   )
 }
 
-function EnteringRoom({ student }: { student: { name: string; avatar: string; color: string } }) {
+function EnteringRoom({ student }: { student: { name: string; avatar: ReturnType<typeof require>; color: string } }) {
   const msgs = [
     `${student.name}のトークルームに接続中...`,
     '教材を送信しています...',
@@ -98,7 +98,7 @@ function EnteringRoom({ student }: { student: { name: string; avatar: string; co
   return (
     <View style={styles.entering}>
       <View style={styles.enteringAvatarWrap}>
-        <Image source={{ uri: student.avatar }} style={styles.enteringAvatar} />
+        <Image source={student.avatar} style={styles.enteringAvatar} />
         <View style={styles.enteringOnline} />
       </View>
       <Animated.Text style={[styles.enteringMsg, { opacity }]}>
@@ -479,7 +479,7 @@ export default function ChatScreen() {
             <Text style={styles.backText}>← 戻る</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Image source={{ uri: student.avatar }} style={styles.headerAvatar} />
+            <Image source={student.avatar} style={styles.headerAvatar} />
             <View>
               <Text style={styles.headerName}>{student.name}</Text>
               <Text style={[styles.timerText, { color: timerColor }]}>
@@ -515,7 +515,7 @@ export default function ChatScreen() {
           {chatMessages.map((msg, i) => (
             <View key={i} style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleMana]}>
               {msg.role === 'mana' && (
-                <Image source={{ uri: student.avatar }} style={styles.bubbleAvatar} />
+                <Image source={student.avatar} style={styles.bubbleAvatar} />
               )}
               <View style={[
                 styles.bubbleText,
@@ -538,14 +538,14 @@ export default function ChatScreen() {
           )}
           {(loading || studentTyping) && (
             <View style={[styles.bubble, styles.bubbleMana]}>
-              <Image source={{ uri: student.avatar }} style={styles.bubbleAvatar} />
+              <Image source={student.avatar} style={styles.bubbleAvatar} />
               <TypingPaws />
             </View>
           )}
           {/* ノート写真カード（授業終了後に生徒から届く） */}
           {notebook && notebookState && (
             <View style={[styles.bubble, styles.bubbleMana]}>
-              <Image source={{ uri: student.avatar }} style={styles.bubbleAvatar} />
+              <Image source={student.avatar} style={styles.bubbleAvatar} />
               <TouchableOpacity onPress={() => setShowNotebook(true)} style={styles.notebookCard}>
                 <View style={styles.notebookCardPaper}>
                   <Text style={styles.notebookCardTitle} numberOfLines={1}>{notebook.title}</Text>
