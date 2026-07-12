@@ -39,7 +39,7 @@ const EXAM_QUESTION_COUNT = 5
 
 // 先生アバターを円で表示すると耳の高いキャラ（うさぎ・きつね）は耳が見切れるため、
 // そのキャラだけ画像をごくわずかに下げて耳を収める（表示サイズに対する縦オフセット比）
-const AVATAR_NUDGE: Record<string, number> = { usagi: 0.07, kitsune: 0.05 }
+const AVATAR_NUDGE: Record<string, number> = { usagi: 0.07, kitsune: 0.05, neko: 0.03 }
 const avatarNudgeY = (avatarId: string, size: number) => (AVATAR_NUDGE[normalizeAvatarId(avatarId)] ?? 0) * size
 
 // 宿題：ノート採点で❌にした項目から生成。半日後以降の起動で「届いた」状態になる
@@ -620,7 +620,9 @@ export default function HomeScreen() {
             <Text style={styles.appSubtitle}>せんせいごっこ</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
               <TouchableOpacity onPress={() => setShowTeacherAvatar(true)} activeOpacity={0.75}>
-                <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: 36, height: 36, borderRadius: 18 }} />
+                <View style={{ width: 36, height: 36, borderRadius: 18, overflow: 'hidden', backgroundColor: 'white' }}>
+                  <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: 36, height: 36, transform: [{ translateY: avatarNudgeY(teacherProfile.avatarId, 36) }] }} />
+                </View>
               </TouchableOpacity>
               <View style={{ gap: 1 }}>
                 <Text style={styles.appTitle}>
