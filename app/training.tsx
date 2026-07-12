@@ -181,18 +181,23 @@ export default function TrainingScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
         {!drillActive ? (
           <>
-            {/* 校長との1on1：コンパクトな通話バー（小さなタイル＋吹き出し）。
-                大きなタイルは研修・試験を下に押し出し、濃紺面が試験カードと競合するため縮小 */}
+            {/* 校長との1on1：チャット風のコンパクトなバー（丸アバター＋名前・接続中＋吹き出し） */}
             <View style={[styles.card, styles.callBar]}>
-              <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.85} style={styles.callMini}>
-                <View style={styles.callMiniTile}>
-                  <Image source={PRINCIPAL_IMAGE} style={styles.callMiniAvatar} />
-                  <View style={styles.callMiniDot} />
-                </View>
-                <Text style={styles.callMiniName}>校長先生</Text>
+              <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.8} style={{ position: 'relative' }}>
+                <Image source={PRINCIPAL_IMAGE} style={styles.callAvatar} />
+                <View style={styles.callAvatarDot} />
               </TouchableOpacity>
-              <View style={[styles.principalBubble, styles.principalBubbleFlex]}>
-                <Text style={styles.principalLine}>{principalLine}</Text>
+              <View style={{ flex: 1 }}>
+                <View style={styles.callNameRow}>
+                  <Text style={styles.callName}>校長先生</Text>
+                  <View style={styles.connectedPill}>
+                    <View style={styles.connectedDot} />
+                    <Text style={styles.connectedText}>接続中</Text>
+                  </View>
+                </View>
+                <View style={[styles.principalBubble, styles.principalBubbleFull]}>
+                  <Text style={styles.principalLine}>{principalLine}</Text>
+                </View>
               </View>
             </View>
 
@@ -492,23 +497,29 @@ const styles = StyleSheet.create({
   heroRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   principalAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fde68a' },
   principalAvatarSmall: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fde68a' },
-  // 1on1のコンパクトな通話バー（小さなタイル＋吹き出し）
+  // 1on1のチャット風バー（丸アバター＋名前・接続中＋吹き出し）
   callBar: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12 },
-  callMini: { alignItems: 'center', gap: 2 },
-  callMiniTile: { backgroundColor: '#1e293b', borderRadius: 12, padding: 6 },
-  callMiniAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: 'rgba(52,211,153,0.7)' },
-  callMiniDot: {
-    position: 'absolute', bottom: 4, right: 4,
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: '#34d399', borderWidth: 2, borderColor: '#1e293b',
+  callAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: c.border },
+  callAvatarDot: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 11, height: 11, borderRadius: 6,
+    backgroundColor: '#34d399', borderWidth: 2, borderColor: 'white',
   },
-  callMiniName: { fontSize: 9, fontWeight: '700', color: c.textSub },
+  callNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  callName: { fontSize: 11, fontWeight: '700', color: c.textMid },
+  connectedPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0',
+    borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1,
+  },
+  connectedDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#34d399' },
+  connectedText: { fontSize: 8, fontWeight: '700', color: '#059669' },
   principalBubble: {
     marginTop: 10, alignSelf: 'flex-start',
     backgroundColor: c.bgSub, borderRadius: 16, borderTopLeftRadius: 4,
     paddingHorizontal: 14, paddingVertical: 10,
   },
-  principalBubbleFlex: { flex: 1, marginTop: 0, alignSelf: 'auto' },
+  principalBubbleFull: { marginTop: 0, alignSelf: 'stretch' },
   principalLine: { fontSize: 13, color: c.textMid, lineHeight: 20 },
   principalComment: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19, backgroundColor: c.bgSub, borderRadius: 12, padding: 10 },
 
