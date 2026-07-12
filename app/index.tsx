@@ -649,7 +649,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
               <View style={styles.teacherIconCircle}>
-                <MaterialCommunityIcons name="card-account-details-outline" size={19} color={c.sky} />
+                <MaterialCommunityIcons name="badge-account-outline" size={20} color={c.sky} />
               </View>
               <Text style={styles.teacherIconLabel}>先生証</Text>
             </TouchableOpacity>
