@@ -192,7 +192,7 @@ export default function PreviewScreen() {
           </View>
           {!!section.memo && (
             <View style={styles.summaryBox}>
-              <Text style={styles.summaryText}>🖊 {section.memo}</Text>
+              <Text style={styles.summaryText}>{section.memo}</Text>
             </View>
           )}
           <View style={styles.detailsBox}>
@@ -429,7 +429,7 @@ export default function PreviewScreen() {
             haptic="medium"
           >
             <Text style={styles.startClassBtnText}>
-              {hasActiveChat ? `🎓　${student.name}との授業に戻る` : `🎓　${student.name}と授業を始める`}
+              {hasActiveChat ? `${student.name}との授業に戻る` : `${student.name}と授業を始める`}
             </Text>
           </BouncyPressable>
         ) : (

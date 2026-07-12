@@ -423,7 +423,7 @@ export default function LibraryScreen() {
                     <Text style={styles.selectBtnSecondaryText}>📖 教材を見る</Text>
                   </TouchableOpacity>
                   <BouncyPressable style={styles.selectBtnPrimary} onPress={() => selectItem(actionItem)} haptic="medium">
-                    <Text style={styles.selectBtnPrimaryText}>🎓　授業をする</Text>
+                    <Text style={styles.selectBtnPrimaryText}>授業をする</Text>
                   </BouncyPressable>
                 </View>
                 <TouchableOpacity style={styles.cancelBtn} onPress={closeSheet}>

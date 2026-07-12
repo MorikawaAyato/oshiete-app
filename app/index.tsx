@@ -1100,7 +1100,7 @@ export default function HomeScreen() {
                       )}
                       {isExpanded && msg.examInvite && examCardPool().length >= EXAM_QUESTION_COUNT && !!TEACHER_TITLES[getUnlockedTitleCount(teacherProfile)] && (
                         <TouchableOpacity onPress={goToTraining} style={[styles.inboxOpenBtn, { backgroundColor: '#d97706' }]}>
-                          <Text style={styles.inboxOpenBtnText}>🎓 昇進試験を受ける</Text>
+                          <Text style={styles.inboxOpenBtnText}>昇進試験を受ける</Text>
                         </TouchableOpacity>
                       )}
                       {isExpanded && msg.homework && (() => {
@@ -1138,7 +1138,6 @@ export default function HomeScreen() {
                       <Text style={styles.tcAppLabel}></Text>
                       <Text style={styles.tcCardLabel}>先生証</Text>
                     </View>
-                    <Text style={styles.tcStar}>✦</Text>
                   </View>
                   <View style={styles.tcAvatarWrap}>
                     <View style={styles.tcAvatarCircle}>
@@ -1254,7 +1253,7 @@ export default function HomeScreen() {
                       ))}
                       <View style={styles.hwThanksRow}>
                         {st ? <Image source={{ uri: st.avatar }} style={styles.hwThanksAvatar} /> : null}
-                        <Text style={styles.hwThanksText}>{allGraded ? 'みてくれてありがとうございます！なおすところ、しっかり覚え直します！📝✨' : '先生、宿題どうでしたか…？'}</Text>
+                        <Text style={styles.hwThanksText}>{allGraded ? 'みてくれてありがとうございます！なおすところ、しっかり覚え直します！' : '先生、宿題どうでしたか…？'}</Text>
                       </View>
                       <TouchableOpacity style={[styles.examCloseBtn, !allGraded && styles.hwAssignBtnDisabled]} disabled={!allGraded} onPress={finishHomework}>
                         <Text style={styles.examCloseBtnText}>{allGraded ? '採点して返す' : 'すべてに ○ か ✕ をつけてね'}</Text>

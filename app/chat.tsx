@@ -545,19 +545,16 @@ export default function ChatScreen() {
               <Image source={{ uri: student.avatar }} style={styles.bubbleAvatar} />
               <TouchableOpacity onPress={() => setShowNotebook(true)} style={styles.notebookCard}>
                 <View style={styles.notebookCardPaper}>
-                  <Text style={styles.notebookCardTitle} numberOfLines={1}>📓 {notebook.title}</Text>
+                  <Text style={styles.notebookCardTitle} numberOfLines={1}>{notebook.title}</Text>
                   {notebook.lines.slice(0, 3).map((l, i) => (
                     <Text key={i} style={styles.notebookCardLine} numberOfLines={1}>
                       {l.status === 'blank' ? '　' : l.text}
                     </Text>
                   ))}
                   <Text style={styles.notebookCardLine}>…</Text>
-                  {notebookState === 'returned' && (
-                    <Text style={styles.notebookCardStamp}>💮</Text>
-                  )}
                 </View>
                 <Text style={styles.notebookCardAction}>
-                  {notebookState === 'returned' ? '添削済みのノートを見る ✨' : 'タップして添削する 🖊️'}
+                  {notebookState === 'returned' ? '添削済みのノートを見る' : 'タップして添削する'}
                 </Text>
               </TouchableOpacity>
             </View>

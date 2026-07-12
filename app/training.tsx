@@ -264,7 +264,7 @@ export default function TrainingScreen() {
         ) : drillDone ? (
           <>
             <View style={[styles.card, { alignItems: 'center' }]}>
-              <Text style={styles.doneTitle}>{drillOkCount === drillCards.length ? '🎉 全部おぼえた！' : 'おつかれさま！'}</Text>
+              <Text style={styles.doneTitle}>{drillOkCount === drillCards.length ? '全部おぼえた！' : 'おつかれさま！'}</Text>
               <Text style={styles.doneScore}>{drillOkCount} / {drillCards.length} 枚おぼえた</Text>
               <View style={styles.heroRow}>
                 <Image source={PRINCIPAL_IMAGE} style={styles.principalAvatarSmall} />
@@ -393,7 +393,7 @@ export default function TrainingScreen() {
                     const passed = correctCount >= EXAM_PASS_COUNT
                     return (
                       <>
-                        <Text style={styles.examVerdict}>{passed ? '🎉 合格！' : 'もう一歩...！'}</Text>
+                        <Text style={styles.examVerdict}>{passed ? '合格！' : 'もう一歩...！'}</Text>
                         <Text style={styles.examScore}>
                           {correctCount} / {examResults.length} 問正解
                           {passed ? ` — 「${teacherProfile.title}」に昇進しました！` : `（合格は${EXAM_PASS_COUNT}問）。また挑戦してくださいね。`}
@@ -403,7 +403,7 @@ export default function TrainingScreen() {
                             <Text style={styles.examResultQ}>{r.correct ? '⭕' : '❌'} 問{i + 1}: {examQuestions[i]?.q}</Text>
                             <Text style={styles.examResultA}>あなたの答え: {(examAnswers[i] ?? '').trim() || '（空欄）'}</Text>
                             {!r.correct && <Text style={styles.examResultModel}>模範解答: {examQuestions[i]?.a}</Text>}
-                            {!!r.comment && <Text style={styles.examResultComment}>🎓 {r.comment}</Text>}
+                            {!!r.comment && <Text style={styles.examResultComment}>{r.comment}</Text>}
                           </View>
                         ))}
                         <TouchableOpacity style={styles.examCloseBtn} onPress={() => setExamOpen(false)}>
