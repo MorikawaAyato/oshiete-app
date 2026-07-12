@@ -1,9 +1,9 @@
 import {
   View, Text, TouchableOpacity, ScrollView, Image, StyleSheet,
-  Modal, TextInput, KeyboardAvoidingView, Platform, Pressable,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Animated,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useApp } from '@/lib/AppContext'
 import { TEACHER_TITLES, getUnlockedTitleCount } from '@/lib/teacherProfile'
@@ -26,6 +26,32 @@ const DRILL_SESSION_SIZE = 10
 
 function drillKey(card: QACard): string {
   return card.statement.replace(/[\s　]/g, '')
+}
+
+// 「接続中」の声イコライザー：3本のバーが時差でゆらぐ（＝いま会話が流れている）。
+// 静的な緑ドット（オンライン＝居る）との違いを形で示す
+function EqBars() {
+  const bars = [useRef(new Animated.Value(0.35)).current, useRef(new Animated.Value(0.35)).current, useRef(new Animated.Value(0.35)).current]
+  useEffect(() => {
+    const loops = bars.map((v, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 200),
+          Animated.timing(v, { toValue: 1, duration: 500, useNativeDriver: true }),
+          Animated.timing(v, { toValue: 0.35, duration: 500, useNativeDriver: true }),
+        ])
+      )
+    )
+    loops.forEach((l) => l.start())
+    return () => loops.forEach((l) => l.stop())
+  }, [])
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 1.5, height: 8 }}>
+      {bars.map((v, i) => (
+        <Animated.View key={i} style={{ width: 2, height: 8, borderRadius: 1, backgroundColor: '#34d399', transform: [{ scaleY: v }] }} />
+      ))}
+    </View>
+  )
 }
 
 function shuffleCards<T>(arr: T[]): T[] {
@@ -191,7 +217,7 @@ export default function TrainingScreen() {
                 <View style={styles.callNameRow}>
                   <Text style={styles.callName}>校長先生</Text>
                   <View style={styles.connectedPill}>
-                    <View style={styles.connectedDot} />
+                    <EqBars />
                     <Text style={styles.connectedText}>接続中</Text>
                   </View>
                 </View>
@@ -512,7 +538,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0',
     borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1,
   },
-  connectedDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#34d399' },
   connectedText: { fontSize: 8, fontWeight: '700', color: '#059669' },
   principalBubble: {
     marginTop: 10, alignSelf: 'flex-start',
