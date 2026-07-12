@@ -37,9 +37,10 @@ const FOLLOWUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 // 昇進試験：校長先生が一問一答バンクから出題する短答記述式テスト。合格で次の称号が解放される
 const EXAM_QUESTION_COUNT = 5
 
-// 先生アバターを円で大きく表示すると耳の高いキャラ（うさぎ・きつね）は耳が見切れるため、
-// そのキャラだけ画像をごくわずかに下げて耳を収める（縦オフセットpx）
-const AVATAR_ZOOM_NUDGE: Record<string, number> = { usagi: 15, kitsune: 11 }
+// 先生アバターを円で表示すると耳の高いキャラ（うさぎ・きつね）は耳が見切れるため、
+// そのキャラだけ画像をごくわずかに下げて耳を収める（表示サイズに対する縦オフセット比）
+const AVATAR_NUDGE: Record<string, number> = { usagi: 0.07, kitsune: 0.05 }
+const avatarNudgeY = (avatarId: string, size: number) => (AVATAR_NUDGE[normalizeAvatarId(avatarId)] ?? 0) * size
 
 // 宿題：ノート採点で❌にした項目から生成。半日後以降の起動で「届いた」状態になる
 const HOMEWORK_ARRIVE_MS = 12 * 60 * 60 * 1000
@@ -1035,7 +1036,7 @@ export default function HomeScreen() {
       <Modal visible={showTeacherAvatar} transparent animationType="fade" onRequestClose={() => setShowTeacherAvatar(false)}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowTeacherAvatar(false)}>
           <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white', backgroundColor: 'white' }}>
-            <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: '100%', height: '100%', transform: [{ translateY: AVATAR_ZOOM_NUDGE[normalizeAvatarId(teacherProfile.avatarId)] ?? 0 }] }} />
+            <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: '100%', height: '100%', transform: [{ translateY: avatarNudgeY(teacherProfile.avatarId, 208) }] }} />
           </View>
         </Pressable>
       </Modal>
@@ -1149,7 +1150,7 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.tcAvatarWrap}>
                     <View style={styles.tcAvatarCircle}>
-                      <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={styles.tcAvatarImage} />
+                      <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={[styles.tcAvatarImage, { transform: [{ translateY: avatarNudgeY(teacherProfile.avatarId, 82) }] }]} />
                     </View>
                   </View>
                   <View style={styles.tcNameArea}>
@@ -1646,11 +1647,11 @@ const styles = StyleSheet.create({
   tcAvatarWrap: { alignItems: 'center' },
   tcAvatarCircle: {
     width: 88, height: 88, borderRadius: 44,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'white', overflow: 'hidden',
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.65)',
     alignItems: 'center', justifyContent: 'center',
   },
-  tcAvatarImage: { width: 82, height: 82, borderRadius: 41 },
+  tcAvatarImage: { width: 82, height: 82 },
   tcNameArea: { alignItems: 'center', gap: 8 },
   tcName: { fontSize: 22, fontFamily: font.roundHeavy, color: 'white', letterSpacing: 0.5 },
   tcNameSuffix: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.7)' },
