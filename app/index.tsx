@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { Feather } from '@expo/vector-icons'
 import { useApp, LESSON_PRESETS, MINUTES_PER_TURN } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
-import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, getUnlockedTitleCount } from '@/lib/teacherProfile'
+import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, getUnlockedTitleCount, normalizeAvatarId } from '@/lib/teacherProfile'
 import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail, fetchHomework, fetchHomeworkAnswers } from '@/lib/api'
 import { needsFactsheetUpgrade } from '@/lib/factsheet'
 import {
@@ -36,6 +36,10 @@ const FOLLOWUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 // 昇進試験：校長先生が一問一答バンクから出題する短答記述式テスト。合格で次の称号が解放される
 const EXAM_QUESTION_COUNT = 5
 
+// 先生アバターを円で大きく表示すると耳の高いキャラ（うさぎ・きつね）は耳が見切れるため、
+// そのキャラだけ画像をごくわずかに下げて耳を収める（縦オフセットpx）
+const AVATAR_ZOOM_NUDGE: Record<string, number> = { usagi: 15, kitsune: 11 }
+
 // 宿題：ノート採点で❌にした項目から生成。半日後以降の起動で「届いた」状態になる
 const HOMEWORK_ARRIVE_MS = 12 * 60 * 60 * 1000
 const HOMEWORK_WINDOW_MS = 24 * 60 * 60 * 1000 // ノート採点から宿題を出せる猶予
@@ -58,7 +62,7 @@ export default function HomeScreen() {
   // 授業の長さ選択（かっこ表記つき3択・選択は記憶される）
   const openTurnsPicker = () => {
     Alert.alert(
-      '⏱ 授業の長さ',
+      '授業の長さ',
       '',
       [
         ...LESSON_PRESETS.map((p) => ({
@@ -1028,7 +1032,7 @@ export default function HomeScreen() {
       <Modal visible={showTeacherAvatar} transparent animationType="fade" onRequestClose={() => setShowTeacherAvatar(false)}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowTeacherAvatar(false)}>
           <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white', backgroundColor: 'white' }}>
-            <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: '100%', height: '100%' }} />
+            <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: '100%', height: '100%', transform: [{ translateY: AVATAR_ZOOM_NUDGE[normalizeAvatarId(teacherProfile.avatarId)] ?? 0 }] }} />
           </View>
         </Pressable>
       </Modal>

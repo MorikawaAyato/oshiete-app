@@ -250,7 +250,7 @@ export default function TrainingScreen() {
                   </Text>
                   {canExam ? (
                     <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#1e293b' }]} onPress={startExam}>
-                      <Text style={styles.primaryBtnText}>🎓 校長先生の試験を受ける</Text>
+                      <Text style={styles.primaryBtnText}>校長先生の試験を受ける</Text>
                     </TouchableOpacity>
                   ) : (
                     <Text style={styles.emptyText}>教材を取り込んで授業をすると受験できます（カード{EXAM_QUESTION_COUNT}枚以上）</Text>

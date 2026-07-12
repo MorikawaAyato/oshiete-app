@@ -17,8 +17,9 @@ export default function StampText({
 
   useEffect(() => {
     if (active && !prev.current) {
-      scale.setValue(2.1)
-      Animated.spring(scale, { toValue: 1, friction: 5, tension: 160, useNativeDriver: true }).start()
+      // 大きめ・ゆっくり弾ませる（初期倍率を上げ、tensionを下げてゆっくり収束）
+      scale.setValue(3.6)
+      Animated.spring(scale, { toValue: 1, friction: 5, tension: 55, useNativeDriver: true }).start()
     }
     prev.current = active
   }, [active])

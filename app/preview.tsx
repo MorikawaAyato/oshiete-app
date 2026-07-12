@@ -367,7 +367,7 @@ export default function PreviewScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Text style={styles.backText}>← 戻る</Text>
           </TouchableOpacity>
-          <Text style={styles.navTitle}>📖 教材を見る</Text>
+          <Text style={styles.navTitle}>教材を見る</Text>
           <Text style={styles.navStep}>{step + 1} / {totalSteps}</Text>
         </View>
 

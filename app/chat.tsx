@@ -582,7 +582,7 @@ export default function ChatScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.notebookModal}>
               <View style={styles.notebookModalHeader}>
-                <Text style={styles.notebookModalTitle}>📓 {student.name}のノート</Text>
+                <Text style={styles.notebookModalTitle}>{student.name}のノート</Text>
                 <TouchableOpacity onPress={() => setShowNotebook(false)} hitSlop={8}>
                   <Text style={styles.notebookModalClose}>✕</Text>
                 </TouchableOpacity>
@@ -667,7 +667,7 @@ export default function ChatScreen() {
                   return (
                     <BouncyPressable onPress={() => { if (allGraded) handleReturnNotebook() }} style={[styles.returnBtn, !allGraded && styles.returnBtnDisabled]} haptic="success">
                       <Text style={[styles.gradeBtnText, !allGraded && styles.gradeBtnTextDisabled]}>
-                        {allGraded ? '📮 採点してノートを返す' : 'すべての行に ○ か ✕ をつけてね'}
+                        {allGraded ? '採点してノートを返す' : <>すべての行に <Text style={styles.gradeMarkO}>○</Text> か <Text style={styles.gradeMarkX}>✕</Text> をつけてね</>}
                       </Text>
                     </BouncyPressable>
                   )
