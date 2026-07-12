@@ -181,19 +181,17 @@ export default function TrainingScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
         {!drillActive ? (
           <>
-            {/* 校長との1on1ルーム：ビデオ通話のアバタータイル風 */}
-            <View style={styles.card}>
-              <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.85} style={styles.callTile}>
-                <Image source={PRINCIPAL_IMAGE} style={styles.callTileAvatar} />
-                <View style={styles.callTileStatus}>
-                  <View style={styles.onlineDot} />
-                  <Text style={styles.callTileStatusText}>接続中</Text>
+            {/* 校長との1on1：コンパクトな通話バー（小さなタイル＋吹き出し）。
+                大きなタイルは研修・試験を下に押し出し、濃紺面が試験カードと競合するため縮小 */}
+            <View style={[styles.card, styles.callBar]}>
+              <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.85} style={styles.callMini}>
+                <View style={styles.callMiniTile}>
+                  <Image source={PRINCIPAL_IMAGE} style={styles.callMiniAvatar} />
+                  <View style={styles.callMiniDot} />
                 </View>
-                <View style={styles.callTileName}>
-                  <Text style={styles.callTileNameText}>校長先生</Text>
-                </View>
+                <Text style={styles.callMiniName}>校長先生</Text>
               </TouchableOpacity>
-              <View style={styles.principalBubble}>
+              <View style={[styles.principalBubble, styles.principalBubbleFlex]}>
                 <Text style={styles.principalLine}>{principalLine}</Text>
               </View>
             </View>
@@ -494,26 +492,23 @@ const styles = StyleSheet.create({
   heroRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   principalAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fde68a' },
   principalAvatarSmall: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fde68a' },
-  // 1on1コールのアバタータイル（ビデオ通話でカメラオフのときの表示風）
-  callTile: { backgroundColor: '#1e293b', borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingVertical: 22 },
-  callTileAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: 'rgba(52,211,153,0.7)' },
-  callTileStatus: {
-    position: 'absolute', top: 8, right: 8,
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2,
+  // 1on1のコンパクトな通話バー（小さなタイル＋吹き出し）
+  callBar: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12 },
+  callMini: { alignItems: 'center', gap: 2 },
+  callMiniTile: { backgroundColor: '#1e293b', borderRadius: 12, padding: 6 },
+  callMiniAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: 'rgba(52,211,153,0.7)' },
+  callMiniDot: {
+    position: 'absolute', bottom: 4, right: 4,
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: '#34d399', borderWidth: 2, borderColor: '#1e293b',
   },
-  onlineDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34d399' },
-  callTileStatusText: { color: '#6ee7b7', fontSize: 9, fontWeight: '600' },
-  callTileName: {
-    position: 'absolute', bottom: 6, left: 8,
-    backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2,
-  },
-  callTileNameText: { color: 'rgba(255,255,255,0.92)', fontSize: 10, fontWeight: '600' },
+  callMiniName: { fontSize: 9, fontWeight: '700', color: c.textSub },
   principalBubble: {
     marginTop: 10, alignSelf: 'flex-start',
     backgroundColor: c.bgSub, borderRadius: 16, borderTopLeftRadius: 4,
     paddingHorizontal: 14, paddingVertical: 10,
   },
+  principalBubbleFlex: { flex: 1, marginTop: 0, alignSelf: 'auto' },
   principalLine: { fontSize: 13, color: c.textMid, lineHeight: 20 },
   principalComment: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19, backgroundColor: c.bgSub, borderRadius: 12, padding: 10 },
 
