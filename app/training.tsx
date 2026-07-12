@@ -198,8 +198,9 @@ export default function TrainingScreen() {
               </View>
             </View>
 
-            {/* 一問一答研修 */}
+            {/* 一問一答研修：ふだんの練習（軽い側） */}
             <View style={styles.card}>
+              <Text style={styles.eyebrowLight}>ふだんの練習</Text>
               <View style={styles.sectionTitleRow}>
                 <Text style={styles.sectionTitle}>一問一答研修</Text>
                 {allPending > 0 && (
@@ -208,7 +209,7 @@ export default function TrainingScreen() {
                   </View>
                 )}
               </View>
-              <Text style={styles.sectionDesc}>カードをめくって自分の言葉で答え、「おぼえた／まだ」をつけていく研修です。「まだ」のカードは次回優先で出ます。</Text>
+              <Text style={styles.sectionDesc}>何度でも・自己採点・3分から。カードをめくって自分の言葉で答え、「おぼえた／まだ」をつけていきます。「まだ」のカードは次回優先で出ます。</Text>
               {allCards.length === 0 ? (
                 <Text style={styles.emptyText}>教材を取り込むと、その内容からカードが用意されます</Text>
               ) : (
@@ -241,24 +242,35 @@ export default function TrainingScreen() {
               )}
             </View>
 
-            {/* 昇進試験 */}
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>昇進試験</Text>
+            {/* 研修→試験の順序性（薄く） */}
+            <Text style={styles.connector}>カードで鍛えたら、いざ大一番へ</Text>
+
+            {/* 昇進試験：大一番（重い側）。証書ふうのダークカードで研修と格を分ける */}
+            <View style={styles.examCard}>
+              <Text style={styles.eyebrowDark}>大一番</Text>
+              <Text style={styles.examTitle}>昇進試験</Text>
               {nextTitle ? (
                 <>
-                  <Text style={styles.sectionDesc}>
-                    校長先生が{EXAM_QUESTION_COUNT}問出題し、{EXAM_PASS_COUNT}問正解で合格。次の称号が解放されます（何がもらえるかは、受かってからのお楽しみ）。
+                  <Text style={styles.examDesc}>
+                    全教材から校長先生が{EXAM_QUESTION_COUNT}問出題。{EXAM_PASS_COUNT}問正解で合格・昇進です。
                   </Text>
+                  {/* 賭け金：何が懸かっているかを常設（次の称号名は伏せたまま） */}
+                  <View style={styles.stakeRow}>
+                    <Text style={styles.stakeLabel}>現在の称号</Text>
+                    <Text style={styles.stakeCurrent} numberOfLines={1}>{teacherProfile.title}</Text>
+                    <Text style={styles.stakeArrow}>→</Text>
+                    <Text style={styles.stakeNext}>？？？</Text>
+                  </View>
                   {canExam ? (
-                    <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#1e293b' }]} onPress={startExam}>
-                      <Text style={styles.primaryBtnText}>校長先生の試験を受ける</Text>
+                    <TouchableOpacity style={styles.examGoldBtn} onPress={startExam}>
+                      <Text style={styles.examGoldBtnText}>校長先生の試験を受ける</Text>
                     </TouchableOpacity>
                   ) : (
-                    <Text style={styles.emptyText}>教材を取り込んで授業をすると受験できます（カード{EXAM_QUESTION_COUNT}枚以上）</Text>
+                    <Text style={styles.examLockedText}>教材を取り込んで授業をすると受験できます（カード{EXAM_QUESTION_COUNT}枚以上）</Text>
                   )}
                 </>
               ) : (
-                <Text style={styles.sectionDesc}>「{teacherProfile.title}」は最高位です。これからも生徒たちをよろしく頼むよ。</Text>
+                <Text style={styles.examDesc}>「{teacherProfile.title}」は最高位です。これからも生徒たちをよろしく頼むよ。</Text>
               )}
             </View>
           </>
@@ -507,6 +519,26 @@ const styles = StyleSheet.create({
 
   sectionTitle: { fontSize: 14, fontWeight: '900', color: c.text, marginBottom: 4 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // 「ふだんの練習」/「大一番」のアイブロウと、研修→試験の接続テキスト
+  eyebrowLight: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: '#d97706', marginBottom: 2 },
+  eyebrowDark: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: '#fcd34d', marginBottom: 2 },
+  connector: { textAlign: 'center', fontSize: 11, fontWeight: '600', color: c.faint, marginVertical: -4 },
+  // 昇進試験カード（証書ふうのダーク）
+  examCard: { backgroundColor: '#1e293b', borderRadius: 16, borderWidth: 1, borderColor: '#334155', padding: 16 },
+  examTitle: { fontSize: 14, fontWeight: '900', color: 'white', marginBottom: 4 },
+  examDesc: { fontSize: 12, color: '#cbd5e1', lineHeight: 18, marginBottom: 12 },
+  stakeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12,
+  },
+  stakeLabel: { fontSize: 11, color: '#94a3b8' },
+  stakeCurrent: { fontSize: 12, fontWeight: '700', color: 'white', flexShrink: 1 },
+  stakeArrow: { fontSize: 12, color: '#64748b' },
+  stakeNext: { fontSize: 12, fontWeight: '900', letterSpacing: 3, color: '#fcd34d' },
+  examGoldBtn: { backgroundColor: '#fbbf24', borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
+  examGoldBtnText: { fontSize: 13, fontWeight: '900', color: '#1e293b' },
+  examLockedText: { fontSize: 12, color: '#94a3b8', lineHeight: 18 },
   pendingBadge: { backgroundColor: '#fef3c7', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 4 },
   pendingBadgeText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
   sectionDesc: { fontSize: 12, color: c.textSub, lineHeight: 18, marginBottom: 12 },
