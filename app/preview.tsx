@@ -6,7 +6,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useState, useEffect } from 'react'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
-import type { Section, Factsheet, FactsheetSection, QACard } from '@/lib/types'
+import type { Section, Factsheet, FactsheetSection, QACard, HistoryItem } from '@/lib/types'
 import { loadFactsheet, loadHistory, updateHistoryFactsheet } from '@/lib/storage'
 import { applyCardCorrection, undoCardCorrection } from '@/lib/factsheet'
 import { c, font } from '@/lib/theme'
@@ -14,11 +14,18 @@ import BouncyPressable from '@/components/BouncyPressable'
 
 export default function PreviewScreen() {
   const router = useRouter()
-  const { from } = useLocalSearchParams<{ from?: string }>()
-  const { previewContent, selectedStudentId, chatMessages, classEnded, currentHistoryId } = useApp()
+  const { from, id } = useLocalSearchParams<{ from?: string; id?: string }>()
+  const {
+    previewContent, selectedStudentId, chatMessages, classEnded, currentHistoryId,
+    setImageDescription, setNotes, setThumbnails, setCurrentHistoryId, setPreviewContent,
+    setPendingMaterialAnimation, resetChatSession,
+  } = useApp()
   const student = STUDENTS.find(s => s.id === selectedStudentId) ?? null
   const hasActiveChat = chatMessages.length > 0 && !classEnded
   const fromLibrary = from === 'library'
+  // 表示対象の教材ID：ライブラリから「見るだけ」で開いた場合はidパラメータ。
+  // 選択中の教材とは独立させ、選択は「この教材を選択する」でのみ行う
+  const viewId = typeof id === 'string' && id ? id : currentHistoryId
   const [step, setStep] = useState(0)
   const [revealed, setRevealed] = useState<Set<string>>(new Set())
   const [hiddenMode, setHiddenMode] = useState(false)
@@ -27,6 +34,7 @@ export default function PreviewScreen() {
   // 表示＝台帳そのものなので、✎でカードを直せばこの画面も判定も一斉に変わる（旧プレビューはフォールバック）
   const [bankFs, setBankFs] = useState<Factsheet | null>(null)
   const [materialTitle, setMaterialTitle] = useState('教材')
+  const [viewItemData, setViewItemData] = useState<HistoryItem | null>(null)
   const [fsLoaded, setFsLoaded] = useState(false)
   const [editingCardIdx, setEditingCardIdx] = useState<number | null>(null)
   const [editCardValue, setEditCardValue] = useState('')
@@ -34,15 +42,19 @@ export default function PreviewScreen() {
 
   useEffect(() => {
     ;(async () => {
-      if (currentHistoryId) {
-        const fs = await loadFactsheet(currentHistoryId)
+      if (viewId) {
+        const fs = await loadFactsheet(viewId)
         if (fs?.cards?.length && fs.sections?.length) setBankFs(fs)
-        const item = (await loadHistory()).find((h) => h.id === currentHistoryId)
+        const item = (await loadHistory()).find((h) => h.id === viewId)
+        if (item) setViewItemData(item)
         if (item?.title) setMaterialTitle(item.title)
       }
       setFsLoaded(true)
     })()
-  }, [currentHistoryId])
+  }, [viewId])
+
+  // 旧プレビューのフォールバック：見るだけで開いた教材は保存済みのものを、選択中教材はコンテキストを使う
+  const doc = typeof id === 'string' && id ? (viewItemData?.previewContent ?? null) : previewContent
 
   const bankSections: FactsheetSection[] | null = (() => {
     if (!bankFs?.cards?.length || !bankFs.sections?.length) return null
@@ -58,11 +70,11 @@ export default function PreviewScreen() {
   const saveCardCorrectionFromView = async (cardIdx: number) => {
     const newAnswer = editCardValue.trim()
     setEditingCardIdx(null)
-    if (!currentHistoryId || !newAnswer || !bankFs?.cards) return
+    if (!viewId || !newAnswer || !bankFs?.cards) return
     const res = applyCardCorrection(bankFs.cards, bankFs.errata, cardIdx, newAnswer)
     if (res) {
       const nextFs = { ...bankFs, cards: res.cards, facts: res.facts, errata: res.errata }
-      await updateHistoryFactsheet(currentHistoryId, nextFs)
+      await updateHistoryFactsheet(viewId, nextFs)
       setBankFs(nextFs)
       setPrincipalToast('校長先生に伝えました。教材に反映しておきますね')
       setTimeout(() => setPrincipalToast(null), 3200)
@@ -83,18 +95,18 @@ export default function PreviewScreen() {
 
   // ✎修正を取り消して原文に戻す
   const undoCorrectionFromView = async (source: string) => {
-    if (!currentHistoryId || !bankFs?.cards) return
+    if (!viewId || !bankFs?.cards) return
     const res = undoCardCorrection(bankFs.cards, bankFs.errata, source)
     if (res) {
       const nextFs = { ...bankFs, cards: res.cards, facts: res.facts, errata: res.errata }
-      await updateHistoryFactsheet(currentHistoryId, nextFs)
+      await updateHistoryFactsheet(viewId, nextFs)
       setBankFs(nextFs)
       setPrincipalToast('元に戻しました')
       setTimeout(() => setPrincipalToast(null), 2400)
     }
   }
 
-  if (!fsLoaded || (!bankSections && !previewContent)) {
+  if (!fsLoaded || (!bankSections && !doc)) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
@@ -108,7 +120,7 @@ export default function PreviewScreen() {
     )
   }
 
-  const totalSteps = bankSections ? 2 + bankSections.length : 2 + (previewContent?.sections.length ?? 0)
+  const totalSteps = bankSections ? 2 + bankSections.length : 2 + (doc?.sections.length ?? 0)
   const isFirst = step === 0
   const isLast = step === totalSteps - 1
 
@@ -147,7 +159,7 @@ export default function PreviewScreen() {
   )
 
   let content: React.ReactNode
-  const currentSection: Section | null = !bankSections && step >= 2 ? previewContent!.sections[step - 2] : null
+  const currentSection: Section | null = !bankSections && step >= 2 ? doc!.sections[step - 2] : null
   const showHiddenToggle = bankSections ? step >= 2 : !!currentSection && currentSection.keywords.length > 0
 
   if (bankSections && bankFs?.cards) {
@@ -257,7 +269,7 @@ export default function PreviewScreen() {
     content = (
       <View style={styles.centerContent}>
         <Text style={styles.stepLabel}>この教材のテーマ</Text>
-        <Text style={styles.themeText}>{previewContent!.theme}</Text>
+        <Text style={styles.themeText}>{doc!.theme}</Text>
         <Text style={styles.hint}>次へ進んで各項目の詳細を確認しよう →</Text>
       </View>
     )
@@ -265,7 +277,7 @@ export default function PreviewScreen() {
     content = (
       <View>
         <Text style={styles.stepLabel}>全体の概要</Text>
-        {previewContent!.sections.map((s, i) => (
+        {doc!.sections.map((s, i) => (
           <View key={i} style={styles.flowItem}>
             <View style={styles.flowNum}>
               <Text style={styles.flowNumText}>{i + 1}</Text>
@@ -423,7 +435,23 @@ export default function PreviewScreen() {
             <Text style={styles.startClassBtnText}>{student.name}との授業に戻る</Text>
           </BouncyPressable>
         ) : fromLibrary ? (
-          <BouncyPressable style={styles.startClassBtn} onPress={() => router.dismissAll()} haptic="medium">
+          <BouncyPressable
+            style={styles.startClassBtn}
+            onPress={() => {
+              // ここで初めて選択が発生する（見るだけでは選択状態を変えない）
+              if (viewItemData && currentHistoryId !== viewItemData.id) {
+                setImageDescription(viewItemData.imageDescription)
+                setNotes(viewItemData.notes)
+                setThumbnails(viewItemData.thumbnails)
+                setCurrentHistoryId(viewItemData.id)
+                setPreviewContent(viewItemData.previewContent ?? null)
+                setPendingMaterialAnimation(true)
+                resetChatSession()
+              }
+              router.dismissAll()
+            }}
+            haptic="medium"
+          >
             <Text style={styles.startClassBtnText}>この教材を選択する</Text>
           </BouncyPressable>
         ) : null}

@@ -247,12 +247,14 @@ export default function TrainingScreen() {
                   {/* 研修する教材の選択：プルダウン（教材が増えても場所を取らず、スマホでも操作しやすい） */}
                   {(() => {
                     const selectedMaterial = drillMaterialId === 'all' ? null : materialsWithCards.find((h) => h.id === drillMaterialId) ?? null
-                    const selectedLabel = selectedMaterial ? selectedMaterial.title.replace(TITLE_RE, '') : `全部ミックス（${allCards.length}枚）`
+                    const selectedLabel = selectedMaterial ? selectedMaterial.title.replace(TITLE_RE, '') : '全部ミックス'
+                    const selectedCount = selectedMaterial ? (selectedMaterial.factsheet?.cards?.length ?? 0) : allCards.length
                     const selectedPending = selectedMaterial ? pendingCountOf(selectedMaterial.factsheet?.cards ?? []) : allPending
                     return (
                       <TouchableOpacity style={styles.pickerBtn} onPress={() => setDrillPickerOpen(true)}>
                         <Text style={styles.pickerLabel}>教材</Text>
                         <Text style={styles.pickerValue} numberOfLines={1}>{selectedLabel}</Text>
+                        <Text style={styles.pickerCount}>{selectedCount}枚</Text>
                         {selectedPending > 0 && (
                           <View style={styles.chipBadge}>
                             <Text style={styles.chipBadgeText}>まだ{selectedPending}</Text>
@@ -381,8 +383,9 @@ export default function TrainingScreen() {
             <ScrollView>
               <TouchableOpacity style={styles.pickerRow} onPress={() => { setDrillMaterialId('all'); setDrillPickerOpen(false) }}>
                 <Text style={[styles.pickerRowText, drillMaterialId === 'all' && styles.pickerRowTextSel]} numberOfLines={1}>
-                  全部ミックス（{allCards.length}枚）
+                  全部ミックス
                 </Text>
+                <Text style={styles.pickerCount}>{allCards.length}枚</Text>
                 {allPending > 0 && (
                   <View style={styles.chipBadge}>
                     <Text style={styles.chipBadgeText}>まだ{allPending}</Text>
@@ -398,6 +401,7 @@ export default function TrainingScreen() {
                     <Text style={[styles.pickerRowText, sel && styles.pickerRowTextSel]} numberOfLines={1}>
                       {h.title.replace(TITLE_RE, '')}
                     </Text>
+                    <Text style={styles.pickerCount}>{h.factsheet?.cards?.length ?? 0}枚</Text>
                     {pending > 0 && (
                       <View style={styles.chipBadge}>
                         <Text style={styles.chipBadgeText}>まだ{pending}</Text>
@@ -584,6 +588,7 @@ const styles = StyleSheet.create({
   pickerLabel: { fontSize: 10, fontWeight: '700', color: c.faint },
   pickerValue: { flex: 1, fontSize: 13, fontWeight: '600', color: c.textMid },
   pickerCaret: { fontSize: 11, color: c.faint },
+  pickerCount: { fontSize: 10, color: c.faint, flexShrink: 0 },
   pickerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 18, paddingVertical: 14,

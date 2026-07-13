@@ -715,7 +715,7 @@ export default function HomeScreen() {
           {/* ゾーン見出しは常時表示（アップロード前でもしごとゾーンの物語を保つ）。
               ＋教材を作るリンクは教材選択後のみ（選択前はアップロードUI自体が"作る"） */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>今日のおしごと</Text>
+            <Text style={styles.sectionTitle}>今日のお仕事</Text>
             {hasContent && (
               <TouchableOpacity onPress={clearSelection}>
                 <Text style={styles.sectionClear}>＋ 教材を作る</Text>
@@ -907,7 +907,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* しごとカード：「今日のおしごと」ゾーンの続き。動詞タイトル＋行き先サブ＋状態バッジで自己紹介する
+        {/* しごとカード：「今日のお仕事」ゾーンの続き。動詞タイトル＋行き先サブ＋状態バッジで自己紹介する
             （並びはタブ順＝教材が左・研修が右） */}
         {history.length > 0 && (() => {
           const pendingCount = history.flatMap((h) => h.factsheet?.cards ?? []).filter((cd) => drillPendingKeys.has(cd.statement.replace(/[\s　]/g, ''))).length

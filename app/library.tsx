@@ -88,15 +88,11 @@ export default function LibraryScreen() {
     setSheetMode(mode)
   }
 
+  // 見るだけでは選択状態を変えない（選択は教材ビューの「この教材を選択する」でのみ）。
+  // 旧プレビューが無い教材は、裏で生成して保存だけ試みる（コンテキストには触らない）
   const viewItem = (item: HistoryItem) => {
-    setImageDescription(item.imageDescription)
-    setNotes(item.notes)
-    setThumbnails(item.thumbnails)
-    setCurrentHistoryId(item.id)
-    setPreviewContent(item.previewContent ?? null)
-    resetChatSession()
     closeSheet()
-    if (!item.previewContent) {
+    if (!item.previewContent && !item.factsheet?.cards?.length) {
       const attempt = async () => {
         const content = await fetchPreviewContent(item.imageDescription)
         if ((content as any).error) throw new Error(String((content as any).error))
@@ -109,14 +105,13 @@ export default function LibraryScreen() {
             await new Promise(r => setTimeout(r, 2000))
             pc = await attempt()
           }
-          setPreviewContent(pc)
           await updateHistoryPreview(item.id, pc)
           await refresh()
         } catch {}
       })()
     }
-    // from=library: 教材ビュー側で「この教材を選択する」CTAを出すための目印
-    requestAnimationFrame(() => router.push({ pathname: '/preview', params: { from: 'library' } }))
+    // from=library＋id: 教材ビューは選択と独立にこのidを表示し、「この教材を選択する」CTAを出す
+    requestAnimationFrame(() => router.push({ pathname: '/preview', params: { from: 'library', id: item.id } }))
   }
 
   const closeSheet = () => setActionItem(null)
