@@ -718,7 +718,7 @@ export default function HomeScreen() {
               <Text style={styles.sectionTitle}>今日のしごと</Text>
               {/* カード内の「新しい教材を作る」と同一動作だったため、ここに一本化 */}
               <TouchableOpacity onPress={clearSelection}>
-                <Text style={styles.sectionClear}>＋ 新しい教材を作る</Text>
+                <Text style={styles.sectionClear}>＋ 教材を作る</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -908,26 +908,16 @@ export default function HomeScreen() {
           return (
             <View style={styles.quickRow}>
               <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/library')} activeOpacity={0.8}>
-                <View style={styles.jobHead}>
-                  <Ionicons name="book-outline" size={15} color={c.sky} />
-                  <Text style={styles.jobTitle}>教材を確認する</Text>
-                </View>
-                <View style={styles.jobFoot}>
-                  <Text style={styles.jobSub}>教材ライブラリ</Text>
-                  <View style={[styles.jobBadge, { backgroundColor: c.skyBg }]}><Text style={[styles.jobBadgeText, { color: c.link }]}>{history.length}冊</Text></View>
-                </View>
+                <Ionicons name="book-outline" size={15} color={c.sky} />
+                <Text style={styles.jobTitle} numberOfLines={1}>教材を確認する</Text>
+                <View style={[styles.jobBadge, { backgroundColor: c.skyBg }]}><Text style={[styles.jobBadgeText, { color: c.link }]}>{history.length}冊</Text></View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/training')} activeOpacity={0.8}>
-                <View style={styles.jobHead}>
-                  <Ionicons name="school-outline" size={15} color="#d97706" />
-                  <Text style={styles.jobTitle}>研修を受ける</Text>
-                </View>
-                <View style={styles.jobFoot}>
-                  <Text style={styles.jobSub}>研修ルーム</Text>
-                  {pendingCount > 0 && (
-                    <View style={[styles.jobBadge, { backgroundColor: '#fef3c7' }]}><Text style={[styles.jobBadgeText, { color: '#b45309' }]}>まだ {pendingCount}</Text></View>
-                  )}
-                </View>
+                <Ionicons name="school-outline" size={15} color="#d97706" />
+                <Text style={styles.jobTitle} numberOfLines={1}>研修を受ける</Text>
+                {pendingCount > 0 && (
+                  <View style={[styles.jobBadge, { backgroundColor: '#fef3c7' }]}><Text style={[styles.jobBadgeText, { color: '#b45309' }]}>まだ {pendingCount}</Text></View>
+                )}
               </TouchableOpacity>
             </View>
           )
@@ -1453,7 +1443,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
-  lessonEyebrow: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: c.primary, paddingHorizontal: 14, paddingTop: 11, marginBottom: -4 },
+  lessonEyebrow: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: c.faint, paddingHorizontal: 14, paddingTop: 11, marginBottom: -4 },
   lessonCardRow: { flexDirection: 'row' },
   lessonLengthRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -1463,7 +1453,7 @@ const styles = StyleSheet.create({
   lessonLengthLabel: { fontSize: 11, fontWeight: '600', color: c.textSub },
   lessonLengthValue: { fontSize: 12, fontWeight: '700', color: c.textStrong },
   lessonMaterial: { flex: 1, padding: 14, gap: 8 },
-  lessonThumb: { width: '100%', aspectRatio: 1.4, borderRadius: 12 },
+  lessonThumb: { width: '100%', aspectRatio: 1.7, borderRadius: 12 },
   lessonThumbText: { backgroundColor: c.pinkSoft, alignItems: 'center', justifyContent: 'center' },
   lessonMaterialTitle: { fontSize: 13, fontWeight: '700', color: c.textStrong, lineHeight: 18 },
   lessonThumbOpenBadge: {
@@ -1519,13 +1509,11 @@ const styles = StyleSheet.create({
   // しごとカード（教材を確認する／研修を受ける）
   quickRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   jobCard: {
-    flex: 1, backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 16,
-    paddingHorizontal: 12, paddingVertical: 11, gap: 7,
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 16,
+    paddingHorizontal: 11, paddingVertical: 12,
   },
-  jobHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  jobTitle: { fontSize: 12, fontWeight: '800', color: c.textStrong },
-  jobFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4 },
-  jobSub: { fontSize: 10, color: c.textSub },
+  jobTitle: { flex: 1, fontSize: 12, fontWeight: '800', color: c.textStrong },
   jobBadge: { borderRadius: 999, paddingHorizontal: 7, paddingVertical: 1 },
   jobBadgeText: { fontSize: 10, fontWeight: '700' },
   recentSection: {
