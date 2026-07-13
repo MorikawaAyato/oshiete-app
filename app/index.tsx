@@ -715,7 +715,7 @@ export default function HomeScreen() {
           {/* 教材が用意できてから「次の授業」を表示する（作成中は出さない） */}
           {hasContent && (
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>今日のしごと</Text>
+              <Text style={styles.sectionTitle}>今日のおしごと</Text>
               {/* カード内の「新しい教材を作る」と同一動作だったため、ここに一本化 */}
               <TouchableOpacity onPress={clearSelection}>
                 <Text style={styles.sectionClear}>＋ 教材を作る</Text>
@@ -817,7 +817,7 @@ export default function HomeScreen() {
             <Animated.View style={{ transform: [{ scale: materialScale }] }}>
               {/* 教材＋生徒 分割カード（脚部に授業の長さ。カード＝授業の設定、下のボタン＝実行） */}
               <View style={styles.lessonCard}>
-                {/* ゾーン見出しが「今日のしごと」に抽象化されたぶん、カード自身が
+                {/* ゾーン見出しが「今日のおしごと」に抽象化されたぶん、カード自身が
                     アイブロウ「次の授業」で自己紹介する（研修ルームと同じ文法） */}
                 <Text style={styles.lessonEyebrow}>次の授業</Text>
                 <View style={styles.lessonCardRow}>
@@ -901,7 +901,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* しごとカード：「今日のしごと」ゾーンの続き。動詞タイトル＋行き先サブ＋状態バッジで自己紹介する
+        {/* しごとカード：「今日のおしごと」ゾーンの続き。動詞タイトル＋行き先サブ＋状態バッジで自己紹介する
             （並びはタブ順＝教材が左・研修が右） */}
         {history.length > 0 && (() => {
           const pendingCount = history.flatMap((h) => h.factsheet?.cards ?? []).filter((cd) => drillPendingKeys.has(cd.statement.replace(/[\s　]/g, ''))).length
