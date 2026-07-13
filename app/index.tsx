@@ -817,6 +817,9 @@ export default function HomeScreen() {
             <Animated.View style={{ transform: [{ scale: materialScale }] }}>
               {/* 教材＋生徒 分割カード（脚部に授業の長さ。カード＝授業の設定、下のボタン＝実行） */}
               <View style={styles.lessonCard}>
+                {/* ゾーン見出しが「今日のしごと」に抽象化されたぶん、カード自身が
+                    アイブロウ「次の授業」で自己紹介する（研修ルームと同じ文法） */}
+                <Text style={styles.lessonEyebrow}>次の授業</Text>
                 <View style={styles.lessonCardRow}>
                   {/* 左：教材（タップで教材を見る。生徒側タップ＝生徒詳細と対称の文法） */}
                   <TouchableOpacity style={styles.lessonMaterial} onPress={() => void handlePreview()} disabled={previewLoading} activeOpacity={0.85}>
@@ -1450,6 +1453,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
+  lessonEyebrow: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: c.primary, paddingHorizontal: 14, paddingTop: 11, marginBottom: -4 },
   lessonCardRow: { flexDirection: 'row' },
   lessonLengthRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
