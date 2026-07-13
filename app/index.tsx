@@ -712,16 +712,21 @@ export default function HomeScreen() {
 
         {/* 今日の授業 */}
         <View style={styles.todaySection}>
-          {/* 教材が用意できてから「次の授業」を表示する（作成中は出さない） */}
-          {hasContent && (
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>今日のおしごと</Text>
-              {/* カード内の「新しい教材を作る」と同一動作だったため、ここに一本化 */}
+          {/* ゾーン見出しは常時表示（アップロード前でもしごとゾーンの物語を保つ）。
+              ＋教材を作るリンクは教材選択後のみ（選択前はアップロードUI自体が"作る"） */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>今日のおしごと</Text>
+            {hasContent && (
               <TouchableOpacity onPress={clearSelection}>
                 <Text style={styles.sectionClear}>＋ 教材を作る</Text>
               </TouchableOpacity>
-            </View>
-          )}
+            )}
+          </View>
+
+          {/* 教材未選択：アップロードUIも「アイブロウ付き白カード」の文法に揃える */}
+          {!hasContent && (
+          <View style={styles.createCard}>
+            <Text style={styles.lessonEyebrow}>教材を作る</Text>
 
           {/* 入力モード タブ */}
           {!hasContent && (
@@ -810,6 +815,8 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+          )}
+          </View>
           )}
 
           {/* 状態3: 分析済み */}
@@ -1380,7 +1387,9 @@ const styles = StyleSheet.create({
   sectionClear: { fontSize: 11, color: c.textSub, fontWeight: '500' },
 
   // 状態1：アップロード
-  inputModeTabs: { flexDirection: 'row', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: c.border, marginBottom: 12 },
+  // 教材を作るカード（アップロードUIの器。選択後の授業カードと同じ文法）
+  createCard: { backgroundColor: 'white', borderRadius: 20, borderWidth: 1, borderColor: c.border, padding: 12, gap: 10 },
+  inputModeTabs: { flexDirection: 'row', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: c.border },
   inputModeTab: { flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: 'white' },
   inputModeTabActive: { backgroundColor: c.primaryStrong },
   inputModeTabInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
@@ -1410,12 +1419,8 @@ const styles = StyleSheet.create({
   uploadCardText: { fontSize: 19, color: c.link, fontWeight: '800' },
   uploadCardSub: { fontSize: 12, color: c.textSub, fontWeight: '400' },
 
-  // 状態2：ペンディング
-  pendingCard: {
-    backgroundColor: 'white', borderRadius: 20, padding: 16, gap: 12,
-    shadowColor: c.faint, shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
-  },
+  // 状態2：ペンディング（createCardの中に入るため器の装飾は持たない）
+  pendingCard: { gap: 12 },
   thumbRowWrap: { flexDirection: 'row', alignItems: 'center' },
   thumbRow: { flex: 1 },
   thumb: { width: 72, height: 72, borderRadius: 12, marginRight: 8 },
