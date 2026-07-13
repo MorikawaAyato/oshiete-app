@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as ImagePicker from 'expo-image-picker'
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons'
+import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons'
 import PawGlyph from '@/components/PawGlyph'
 import { useApp, LESSON_PRESETS, MINUTES_PER_TURN } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
@@ -715,7 +715,7 @@ export default function HomeScreen() {
           {/* 教材が用意できてから「次の授業」を表示する（作成中は出さない） */}
           {hasContent && (
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>次の授業</Text>
+              <Text style={styles.sectionTitle}>今日のしごと</Text>
               {/* カード内の「新しい教材を作る」と同一動作だったため、ここに一本化 */}
               <TouchableOpacity onPress={clearSelection}>
                 <Text style={styles.sectionClear}>＋ 新しい教材を作る</Text>
@@ -857,9 +857,6 @@ export default function HomeScreen() {
                             <Text style={{ fontSize: 10, fontWeight: '700', color: c.successText }}>オンライン</Text>
                           </View>
                         </View>
-                        <Text style={styles.lessonStudentAppeal} numberOfLines={3}>
-                          {selectedStudent.appeal}
-                        </Text>
                       </>
                     ) : (
                       <>
@@ -880,37 +877,54 @@ export default function HomeScreen() {
                     {(LESSON_PRESETS.find((p) => p.turns === lessonMaxTurns) ?? LESSON_PRESETS[1]).label}（やりとり{lessonMaxTurns}回） ▾
                   </Text>
                 </TouchableOpacity>
+
+                {/* CTAはカードの内側：このカード一式＝授業のしごと、という単位にする */}
+                <BouncyPressable
+                  style={[styles.startBtn, !selectedStudentId && styles.startBtnDisabled]}
+                  onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
+                  haptic="medium"
+                >
+                  {selectedStudentId ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="chatbubble-ellipses-outline" size={16} color="white" />
+                      <Text style={styles.startBtnText}>授業をする</Text>
+                    </View>
+                  ) : (
+                    <Text style={[styles.startBtnText, styles.startBtnTextDisabled]}>生徒を選んでからスタート →</Text>
+                  )}
+                </BouncyPressable>
               </View>
-
-              {/* 授業をするボタン（長さの設定は「次の授業」カードの脚部へ。教材を見るは教材スペースのタップに吸収） */}
-              <BouncyPressable
-                style={[styles.startBtn, !selectedStudentId && styles.startBtnDisabled]}
-                onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
-                haptic="medium"
-              >
-                <Text style={[styles.startBtnText, !selectedStudentId && styles.startBtnTextDisabled]}>
-                  {selectedStudentId ? '授業をする' : '生徒を選んでからスタート →'}
-                </Text>
-              </BouncyPressable>
-
             </Animated.View>
           )}
         </View>
 
-        {/* じぶんの研鑽・資料棚：状態バッジ付きの1タップ導線（説明ラベルではなく理由で誘導する） */}
+        {/* しごとカード：「今日のしごと」ゾーンの続き。動詞タイトル＋行き先サブ＋状態バッジで自己紹介する
+            （並びはタブ順＝教材が左・研修が右） */}
         {history.length > 0 && (() => {
           const pendingCount = history.flatMap((h) => h.factsheet?.cards ?? []).filter((cd) => drillPendingKeys.has(cd.statement.replace(/[\s　]/g, ''))).length
           return (
             <View style={styles.quickRow}>
-              {/* 並びはタブ順（教材が左・研修が右）に合わせる */}
-              <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/library')} activeOpacity={0.8}>
-                <Text style={styles.quickBtnText}>教材ライブラリへ</Text>
+              <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/library')} activeOpacity={0.8}>
+                <View style={styles.jobHead}>
+                  <Ionicons name="book-outline" size={15} color={c.sky} />
+                  <Text style={styles.jobTitle}>教材を確認する</Text>
+                </View>
+                <View style={styles.jobFoot}>
+                  <Text style={styles.jobSub}>教材ライブラリ</Text>
+                  <View style={[styles.jobBadge, { backgroundColor: c.skyBg }]}><Text style={[styles.jobBadgeText, { color: c.link }]}>{history.length}冊</Text></View>
+                </View>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/training')} activeOpacity={0.8}>
-                <Text style={styles.quickBtnText}>研修ルームへ</Text>
-                {pendingCount > 0 && (
-                  <View style={styles.quickBadge}><Text style={styles.quickBadgeText}>まだ {pendingCount}</Text></View>
-                )}
+              <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/training')} activeOpacity={0.8}>
+                <View style={styles.jobHead}>
+                  <Ionicons name="school-outline" size={15} color="#d97706" />
+                  <Text style={styles.jobTitle}>研修を受ける</Text>
+                </View>
+                <View style={styles.jobFoot}>
+                  <Text style={styles.jobSub}>研修ルーム</Text>
+                  {pendingCount > 0 && (
+                    <View style={[styles.jobBadge, { backgroundColor: '#fef3c7' }]}><Text style={[styles.jobBadgeText, { color: '#b45309' }]}>まだ {pendingCount}</Text></View>
+                  )}
+                </View>
               </TouchableOpacity>
             </View>
           )
@@ -919,10 +933,8 @@ export default function HomeScreen() {
         {/* 最近の教材 */}
         <View style={styles.recentSection}>
           <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
+            {/* ライブラリへの導線は「教材を確認する」カードに一本化（すべて見る→は削除） */}
             <Text style={styles.sectionTitle}>最近の教材</Text>
-            <TouchableOpacity onPress={() => router.push('/library')}>
-              <Text style={styles.sectionAction}>すべて見る →</Text>
-            </TouchableOpacity>
           </View>
 
           {history.length === 0 ? (
@@ -1373,7 +1385,6 @@ const styles = StyleSheet.create({
   todaySection: { gap: 10 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { fontSize: 13, fontFamily: font.round, color: c.skyStrong, letterSpacing: 0.8 },
-  sectionAction: { fontSize: 12, color: c.link, fontWeight: '500' },
   sectionClear: { fontSize: 11, color: c.textSub, fontWeight: '500' },
 
   // 状態1：アップロード
@@ -1465,7 +1476,6 @@ const styles = StyleSheet.create({
   },
   lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 1 },
   lessonStudentName: { fontSize: 12, fontFamily: font.round, color: c.textStrong },
-  lessonStudentAppeal: { fontSize: 11, color: c.primaryStrong, textAlign: 'center', lineHeight: 16 },
   lessonStudentEmpty: {
     width: 64, height: 64, borderRadius: 32,
     backgroundColor: c.pinkSoft, alignItems: 'center', justifyContent: 'center',
@@ -1502,16 +1512,18 @@ const styles = StyleSheet.create({
   toastText: { color: 'white', fontSize: 14, fontWeight: '600' },
 
   // 最近の授業
-  // じぶんの研鑽・資料棚（研修/ライブラリへの状態付き導線）
-  quickRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  quickBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 14,
-    paddingVertical: 12,
+  // しごとカード（教材を確認する／研修を受ける）
+  quickRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  jobCard: {
+    flex: 1, backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 16,
+    paddingHorizontal: 12, paddingVertical: 11, gap: 7,
   },
-  quickBtnText: { fontSize: 12, fontWeight: '700', color: c.textMid },
-  quickBadge: { backgroundColor: '#fef3c7', borderRadius: 999, paddingHorizontal: 7, paddingVertical: 1 },
-  quickBadgeText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
+  jobHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  jobTitle: { fontSize: 12, fontWeight: '800', color: c.textStrong },
+  jobFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4 },
+  jobSub: { fontSize: 10, color: c.textSub },
+  jobBadge: { borderRadius: 999, paddingHorizontal: 7, paddingVertical: 1 },
+  jobBadgeText: { fontSize: 10, fontWeight: '700' },
   recentSection: {
     marginHorizontal: -20,
     paddingHorizontal: 20,
