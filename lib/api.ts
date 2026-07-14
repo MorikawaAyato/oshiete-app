@@ -1,4 +1,4 @@
-import type { Factsheet, Notebook, Recap, CardLogEntry } from './types'
+import type { Factsheet, Recap } from './types'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? ''
 
@@ -62,29 +62,28 @@ export async function gradeExam(
   return res.json()
 }
 
-// 宿題の生成（ノート採点で❌にした項目から、設問・模範解答・生徒の答案を作る）
-export async function fetchHomework(
+// プリント授業：答案（正誤つき）と虎の巻（ひとこと解説の候補）の生成
+export async function fetchPrint(
   studentId: string,
-  wrongLines: string[],
-  facts: string[],
-): Promise<{ items?: { question: string; modelAnswer: string; studentAnswer: string }[]; error?: string }> {
-  const res = await fetch(`${API_BASE}/api/homework`, {
+  items: { question: string; modelAnswer: string; isReview?: boolean }[],
+  misconceptions: string[],
+): Promise<{ items?: { studentAnswer: string; truth: 'correct' | 'wrong'; choices?: string[] }[]; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/print`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, wrongLines, facts }),
+    body: JSON.stringify({ studentId, items, misconceptions }),
   })
   return res.json()
 }
 
-// カード直結の宿題：設問・模範解答は確定済みで、生徒の答案だけをミックス生成（直せた答案が多め）
-export async function fetchHomeworkAnswers(
-  studentId: string,
-  items: { question: string; modelAnswer: string; misconception: string }[],
-): Promise<{ items?: { question: string; modelAnswer: string; studentAnswer: string }[]; error?: string }> {
-  const res = await fetch(`${API_BASE}/api/homework`, {
+// 赤ペン（先生の解説）の一括判定。ズレた解説だけ答え合わせで生徒から聞き返される
+export async function judgeRedpen(
+  items: { question: string; modelAnswer: string; explanation: string }[],
+): Promise<{ verdicts?: ('match' | 'diverge')[]; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/redpen`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, items }),
+    body: JSON.stringify({ items }),
   })
   return res.json()
 }
@@ -104,44 +103,3 @@ export async function fetchFollowupMail(
   return res.json()
 }
 
-export async function startChat(
-  studentId: string,
-  imageDescription: string,
-  notes: string,
-  teacherName?: string,
-  teacherCharacter?: string,
-  recap?: Recap,
-  factsheet?: Factsheet,
-): Promise<{ manaResponse?: string; hints?: string[]; correctHintIndex?: number; error?: string }> {
-  const res = await fetch(`${API_BASE}/api/start`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, imageDescription, notes, teacherName, teacherCharacter, recap, factsheet }),
-  })
-  return res.json()
-}
-
-export async function sendChat(
-  studentId: string,
-  imageDescription: string,
-  notes: string,
-  messages: { role: string; text: string }[],
-  teacherName?: string,
-  teacherCharacter?: string,
-  isFinalTurn?: boolean,
-  turnsLeft?: number,
-  correctness?: (boolean | null)[],
-  recap?: Recap,
-  factsheet?: Factsheet,
-  hintCorrect?: boolean,
-  // カード駆動授業：消化済みカード番号と、このターンでカードから質問させるか
-  cardState?: { covered: number[]; askCard: boolean },
-  cardLog?: CardLogEntry[],
-): Promise<{ text?: string; mailSubject?: string; mailContent?: string; hints?: string[]; correctHintIndex?: number; correct?: boolean; cardResult?: { covered: number[]; cardIndex: number | null; verdict: boolean | null }; notebook?: Notebook; recap?: Recap; error?: string }> {
-  const res = await fetch(`${API_BASE}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, imageDescription, notes, messages, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, recap, factsheet, hintCorrect, cardState, cardLog }),
-  })
-  return res.json()
-}

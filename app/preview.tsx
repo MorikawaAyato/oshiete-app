@@ -16,12 +16,12 @@ export default function PreviewScreen() {
   const router = useRouter()
   const { from, id } = useLocalSearchParams<{ from?: string; id?: string }>()
   const {
-    previewContent, selectedStudentId, chatMessages, classEnded, currentHistoryId,
+    previewContent, selectedStudentId, chatMessages, printStage, currentHistoryId,
     setImageDescription, setNotes, setThumbnails, setCurrentHistoryId, setPreviewContent,
     setPendingMaterialAnimation, resetChatSession,
   } = useApp()
   const student = STUDENTS.find(s => s.id === selectedStudentId) ?? null
-  const hasActiveChat = chatMessages.length > 0 && !classEnded
+  const hasActiveChat = chatMessages.length > 0 && printStage !== 'done'
   const fromLibrary = from === 'library'
   // 表示対象の教材ID：ライブラリから「見るだけ」で開いた場合はidパラメータ。
   // 選択中の教材とは独立させ、選択は「この教材を選択する」でのみ行う

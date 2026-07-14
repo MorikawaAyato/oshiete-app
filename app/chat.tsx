@@ -6,23 +6,23 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
-import { useApp, MINUTES_PER_TURN } from '@/lib/AppContext'
+import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
-import { startChat, sendChat } from '@/lib/api'
-import { getTeacherCharacter } from '@/lib/teacherProfile'
-import { addMail, loadRecap, loadFactsheet, saveRecapToHistory, saveHomeworkWindow, updateHistoryFactsheet } from '@/lib/storage'
-import type { HomeworkItem } from '@/lib/storage'
-import { applyCardCorrection } from '@/lib/factsheet'
-import type { ChatMessage } from '@/lib/types'
+import { fetchPrint, judgeRedpen, fetchFactsheet } from '@/lib/api'
+import {
+  loadFactsheet, updateHistoryFactsheet, saveRecapToHistory,
+  loadCardProgress, saveCardProgress, loadDrillPending, saveDrillPending, drillKey,
+} from '@/lib/storage'
+import type { CardProgress, PrintItem, QACard, Recap } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import { Feather } from '@expo/vector-icons'
 import BouncyPressable from '@/components/BouncyPressable'
 import PawGlyph from '@/components/PawGlyph'
 import StampText from '@/components/StampText'
 
-// 授業の長さはユーザ選択（AppContextのlessonMaxTurns）。1送信=10分換算
-const HINT_MAX_USES = 3
-const HINT_LIMIT_ENABLED = false // 実験中: 虎の巻の回数制限を無効化（戻すときは true）
+// プリント授業：1枚＝5問（復習枠 最大2＋新規枠）。流れは 丸付け→赤ペン→答え合わせ
+const PRINT_SIZE = 5
+const PRINT_REVIEW_MAX = 2
 
 const NG_PATTERNS = [
   /死[にねの]/, /死んで/, /氏ね/,
@@ -35,7 +35,40 @@ function containsNG(text: string): boolean {
   return NG_PATTERNS.some((p) => p.test(text))
 }
 
-// 添削アニメ: 花丸スタンプ／赤ペンをぽんっと表示する
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+// プリントの出題構成：復習枠（進度pending＋研修「まだ」を古い順に最大2問）＋新規枠（未出題優先、
+// 尽きたら最終出題が古い順）。昇進試験の出題ロジックと同じ思想。出題順はシャッフルして返す
+function composePrint(
+  cards: QACard[],
+  progress: Record<string, CardProgress>,
+  drillPending: Set<string>,
+): { card: QACard; index: number; isReview: boolean }[] {
+  const entries = cards.map((card, index) => ({ card, index, key: drillKey(card) }))
+  const isPending = (e: { key: string }) => !!progress[e.key]?.pending || drillPending.has(e.key)
+  const reviews = entries
+    .filter(isPending)
+    .sort((a, b) => (progress[a.key]?.lastAt ?? 0) - (progress[b.key]?.lastAt ?? 0))
+    .slice(0, PRINT_REVIEW_MAX)
+  const picked = new Set(reviews.map((e) => e.key))
+  const fresh = shuffle(entries.filter((e) => !picked.has(e.key) && !progress[e.key]))
+  const seen = entries
+    .filter((e) => !picked.has(e.key) && progress[e.key] && !isPending(e))
+    .sort((a, b) => progress[a.key].lastAt - progress[b.key].lastAt)
+  const fill = [...fresh, ...seen].slice(0, Math.max(0, PRINT_SIZE - reviews.length))
+  return shuffle([
+    ...reviews.map((e) => ({ card: e.card, index: e.index, isReview: true })),
+    ...fill.map((e) => ({ card: e.card, index: e.index, isReview: false })),
+  ])
+}
+
 // タイピング演出: 足あとがとことこ現れて消える
 function TypingPaws() {
   const paw0 = useRef(new Animated.Value(0)).current
@@ -78,8 +111,7 @@ function TypingPaws() {
 function EnteringRoom({ student }: { student: { name: string; avatar: ReturnType<typeof require>; color: string } }) {
   const msgs = [
     `${student.name}のトークルームに接続中...`,
-    '教材を送信しています...',
-    `${student.name}が確認しています...`,
+    `${student.name}がプリントをかばんから出しています...`,
     'もうすぐ始まります...',
   ]
   const [idx, setIdx] = useState(0)
@@ -116,46 +148,40 @@ function EnteringRoom({ student }: { student: { name: string; avatar: ReturnType
 export default function ChatScreen() {
   const router = useRouter()
   const {
-    imageDescription, notes, selectedStudentId, teacherProfile, currentHistoryId,
+    imageDescription, notes, selectedStudentId, currentHistoryId,
     chatMessages, setChatMessages,
-    turnCount, setTurnCount,
-    classEnded, setClassEnded,
-    hints, setHints,
-    setCorrectHintIndex,
-    hintUsesLeft, setHintUsesLeft,
-    correctness, setCorrectness,
-    coveredCards, setCoveredCards,
-    cardLog, setCardLog,
-    lessonMaxTurns,
-    lessonRecap, setLessonRecap,
-    notebook, setNotebook,
-    notebookState, setNotebookState,
+    printItems, setPrintItems,
+    printStage, setPrintStage,
     resetChatSession,
   } = useApp()
-  const teacherName = teacherProfile.name || undefined
-  const teacherCharacter = getTeacherCharacter(teacherProfile.avatarId)
   const student = getStudentById(selectedStudentId ?? '')
   const scrollRef = useRef<ScrollView>(null)
 
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState(false)
-  const [sendError, setSendError] = useState<ChatMessage[] | null>(null)
-  const [inputBlocked, setInputBlocked] = useState(false)
-  const [showHints, setShowHints] = useState(false)
-  const [hintCharged, setHintCharged] = useState(false) // このターンのヒントを開封済みか（開閉で二重消費しない）
-  const [showNotebook, setShowNotebook] = useState(false)
-  const [studentTyping, setStudentTyping] = useState(false) // 授業終了の連投を時差配信する間の入力中演出
-  const [editingLine, setEditingLine] = useState<number | null>(null) // ✎で答えを直している行
-  const [editValue, setEditValue] = useState('')
-  const [principalToast, setPrincipalToast] = useState<string | null>(null) // 🐯校長の受理メッセージ
+  const [studentTyping, setStudentTyping] = useState(false)
+  const [showPrint, setShowPrint] = useState(false) // プリント（丸付け／添削済み）モーダル
+  const [showRedpen, setShowRedpen] = useState(false) // 赤ペンモーダル
+  const [showCheck, setShowCheck] = useState(false) // 答え合わせモーダル
+  const [redpenDrafts, setRedpenDrafts] = useState<Record<number, string>>({}) // 赤ペンの下書き（item index → text）
+  const [redpenHintOpen, setRedpenHintOpen] = useState<number | null>(null) // 虎の巻を開いている問題
+  const [redpenSending, setRedpenSending] = useState(false) // 返却（赤ペン一括判定）の通信中
+  const [redpenError, setRedpenError] = useState<string | null>(null)
+  const [flipNoteDrafts, setFlipNoteDrafts] = useState<Record<number, string>>({}) // ○→✕のひとこと下書き
 
-  const remainingMins = classEnded ? 0 : (lessonMaxTurns - turnCount) * MINUTES_PER_TURN
-  const progressRatio = (lessonMaxTurns - turnCount) / lessonMaxTurns
-  const timerColor = classEnded
-    ? c.faint
-    : progressRatio > 0.55 ? c.success : progressRatio > 0.3 ? c.warn : c.danger
+  // 生徒のセリフを入力中演出を挟んで1通ずつ届けるタイマー（画面を離れたら破棄）
+  const beatTimers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const pushBeats = (texts: string[]) => {
+    texts.forEach((t, i) => {
+      beatTimers.current.push(setTimeout(() => setStudentTyping(true), i * 2000 + 500))
+      beatTimers.current.push(setTimeout(() => {
+        setStudentTyping(false)
+        setChatMessages(prev => [...prev, { role: 'mana', text: t }])
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+      }, i * 2000 + 1800))
+    })
+  }
+  useEffect(() => () => { beatTimers.current.forEach(clearTimeout) }, [])
 
   useEffect(() => {
     if (chatMessages.length > 0) {
@@ -163,259 +189,192 @@ export default function ChatScreen() {
     }
   }, [])
 
-  const initChat = () => {
+  // 授業開始：カードバンクからプリントを構成し、答案（正誤つき）を生成して教室へ
+  const initPrint = async () => {
     if (!student) return
     setStartError(false)
     setStarting(true)
-    // この教材×この生徒の前回Recap（生徒メモリ）とファクトシートがあれば授業に持ち込む
-    Promise.all([loadRecap(currentHistoryId, student.id), loadFactsheet(currentHistoryId)])
-      .then(([recap, factsheet]) => {
-        setLessonRecap(recap)
-        setCorrectness([])
-        setCoveredCards([])
-        setCardLog([])
-        setNotebook(null)
-        setNotebookState(null)
-        return startChat(student.id, imageDescription, notes, teacherName, teacherCharacter, recap ?? undefined, factsheet)
-      })
-      .then((res) => {
-        if (res.manaResponse) {
-          setChatMessages([{ role: 'mana', text: res.manaResponse }])
-          setHints(res.hints ?? null)
-          setCorrectHintIndex(res.correctHintIndex ?? null)
-          setShowHints(false)
-          setHintUsesLeft(HINT_MAX_USES)
-          setHintCharged(false)
-        } else {
-          setStartError(true)
+    try {
+      const factsheet = await loadFactsheet(currentHistoryId)
+      const cards = factsheet?.cards ?? []
+      if (cards.length === 0) {
+        // プリントはカードバンクから作る。バンクが無い教材はバックフィルを仕掛けてから待ってもらう
+        if (currentHistoryId && imageDescription) {
+          const histId = currentHistoryId
+          void fetchFactsheet(imageDescription, notes)
+            .then((res) => { if (res.factsheet) void updateHistoryFactsheet(histId, res.factsheet) })
+            .catch(() => {})
         }
-      })
-      .catch(() => setStartError(true))
-      .finally(() => setStarting(false))
+        setStartError(true)
+        return
+      }
+      const [progress, drillPending] = await Promise.all([loadCardProgress(), loadDrillPending()])
+      const picked = composePrint(cards, progress, drillPending)
+      const res = await fetchPrint(
+        student.id,
+        picked.map((p) => ({ question: p.card.q, modelAnswer: p.card.a, isReview: p.isReview })),
+        factsheet?.misconceptions ?? [],
+      )
+      if (!res.items || res.items.length !== picked.length) {
+        setStartError(true)
+        return
+      }
+      const items: PrintItem[] = picked.map((p, i) => ({
+        cardIndex: p.index,
+        cardKey: drillKey(p.card),
+        question: p.card.q,
+        modelAnswer: p.card.a,
+        studentAnswer: res.items![i].studentAnswer,
+        truth: res.items![i].truth,
+        choices: (res.items![i].choices ?? []).slice(0, 3),
+        isReview: p.isReview,
+      }))
+      // 初回（この教材のカードにまだ進度がない）だけ「さっき解いてもらったてい」の挨拶にする
+      const isFirst = !cards.some((cd) => progress[drillKey(cd)])
+      setPrintItems(items)
+      setPrintStage('grading')
+      pushBeats([isFirst ? student.printGreetingFirst : student.printGreeting])
+    } catch {
+      setStartError(true)
+    } finally {
+      setStarting(false)
+    }
   }
 
   useEffect(() => {
-    // メッセージが既にある（教材画面から戻ってきた等）場合はstartChatしない
-    if (!student || chatMessages.length > 0) return
-    initChat()
+    // プリントが既にある（教材画面から戻ってきた・再開した）場合は生成しない
+    if (!student || printItems.length > 0) return
+    void initPrint()
   }, [])
 
-  const performSend = async (next: ChatMessage[]) => {
-    if (!student) return
-    setSendError(null)
-    setLoading(true)
+  // 第1段：先生（ユーザー）がプリントの各問に⭕❌をつける（模範解答は見ない）
+  const setPrintMark = (i: number, val: boolean) => {
+    setPrintItems((prev) => prev.map((it, j) => (j === i ? { ...it, teacherMark: val } : it)))
+  }
 
-    try {
-      const isFinalTurn = turnCount + 1 >= lessonMaxTurns
-      const turnsLeft = lessonMaxTurns - (turnCount + 1)
-      const factsheet = await loadFactsheet(currentHistoryId)
-      // 虎の巻から選んだ説明も必ず採点AIで判定する（ラベルを盲信すると誤ラベルの誤答が正解確定してしまうため）
-      // カード駆動：バンクがある教材では消化状態を送り、質問はカード（2ターンに1枚）から出させる
-      const cardMode = (factsheet?.cards?.length ?? 0) > 0
-      const cardState = cardMode ? { covered: coveredCards, askCard: turnCount % 2 === 0 } : undefined
-      const res = await sendChat(student.id, imageDescription, notes, next, teacherName, teacherCharacter, isFinalTurn, turnsLeft, correctness, lessonRecap ?? undefined, factsheet, undefined, cardState, cardMode ? cardLog : undefined)
-      if (res.text) {
-        const newMessages: ChatMessage[] = [...next, { role: 'mana', text: res.text }]
-        setChatMessages(newMessages)
-        setHints(res.hints ?? null)
-        setCorrectHintIndex(res.correctHintIndex ?? null)
-        setShowHints(false)
-        setHintCharged(false)
-        setCorrectness(prev => [...prev, res.correct ?? null])
-        if (res.cardResult) {
-          const cr = res.cardResult
-          setCoveredCards(cr.covered)
-          // 照合が紐づけた「主題カード×先生の説明」をQ&Aペアとして記録（同じカードは最新の説明で上書き）
-          const teacherText = [...next].reverse().find((m) => m.role === 'user')?.text ?? ''
-          if (teacherText && cr.cardIndex != null) {
-            const idx = cr.cardIndex
-            setCardLog(prev => {
-              const nextLog = [...prev]
-              const entry = { cardIndex: idx, explanation: teacherText, verdict: cr.verdict }
-              const at = nextLog.findIndex(e => e.cardIndex === idx)
-              if (at >= 0) nextLog[at] = entry
-              else nextLog.push(entry)
-              return nextLog
-            })
-          }
-        }
-        const newTurnCount = turnCount + 1
-        setTurnCount(newTurnCount)
-        if (newTurnCount >= lessonMaxTurns) {
-          setClassEnded(true)
-          setHints(null)
-          if (res.recap && currentHistoryId) {
-            void saveRecapToHistory(currentHistoryId, student.id, res.recap)
-          }
-          // 宿題ウィンドウはノート採点で❌がついたとき（handleReturnNotebook）に開く
-          if (res.mailContent) {
-            void addMail({
-              id: Date.now().toString(),
-              type: 'student',
-              from: student.name,
-              studentId: student.id,
-              subject: res.mailSubject,
-              content: res.mailContent,
-              timestamp: new Date().toISOString(),
-              read: false,
-            })
-          }
-          // 授業終了の連投（最終返答→挨拶→ノート）は入力中演出を挟んで1通ずつ届ける
-          const nb = res.notebook
-          setTimeout(() => setStudentTyping(true), 900)
-          setTimeout(() => {
-            setStudentTyping(false)
-            setChatMessages(prev => [...prev, { role: 'mana', text: student.endMessage }])
-            setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
-          }, 2600)
-          if (nb) {
-            setTimeout(() => setStudentTyping(true), 3600)
-            setTimeout(() => {
-              setStudentTyping(false)
-              setChatMessages(prev => [...prev, { role: 'mana', text: student.notebookMessage }])
-              setNotebook(nb)
-              setNotebookState('received')
-              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
-            }, 5400)
-          }
-        }
-      } else {
-        // APIがエラーJSONを返した場合（メッセージには何も追加しない）
-        setSendError(next)
-        setHints(null)
+  // 丸付けと truth の突き合わせ（答え合わせで生徒が聞きに来る「採点のズレ」）
+  const hasGradeMismatch = (it: PrintItem) => it.teacherMark !== undefined && it.teacherMark !== (it.truth === 'correct')
+
+  // 授業の締め：最終○✕を確定し、カード進度・研修「まだ」・Recapへ反映してリザルトを届ける
+  const finishLesson = (rawItems: PrintItem[], opts?: { noMismatch?: boolean }) => {
+    if (!student) return
+    const items = rawItems.map((it) => ({ ...it, finalMark: it.finalMark ?? it.teacherMark }))
+    setPrintItems(items)
+    setPrintStage('done')
+    setShowCheck(false)
+    const now = Date.now()
+    void (async () => {
+      const [progress, drillPending] = await Promise.all([loadCardProgress(), loadDrillPending()])
+      for (const it of items) {
+        // 「クリア」＝最終○かつ説明も覚え直し不要。それ以外は復習待ちとして次回プリントの復習枠へ
+        const cleared = it.finalMark === true && it.redPenFinal !== 'relearn'
+        const prev = progress[it.cardKey]
+        progress[it.cardKey] = { seen: (prev?.seen ?? 0) + 1, lastAt: now, lastResult: it.finalMark === true, pending: !cleared }
+        if (cleared) drillPending.delete(it.cardKey) // 研修の「まだ」も授業のクリアで解消する
       }
-    } catch {
-      setSendError(next)
-      setHints(null)
-    } finally {
-      setLoading(false)
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
-    }
-  }
-
-  const doSend = async (text: string) => {
-    if (!student) return
-    setHints(null)
-    setShowHints(false)
-    setHintCharged(false)
-    const userMsg: ChatMessage = { role: 'user', text }
-    const next = [...chatMessages, userMsg]
-    setChatMessages(next)
-    await performSend(next)
-  }
-
-  const openHints = () => {
-    if (showHints) { setShowHints(false); return }
-    if (HINT_LIMIT_ENABLED && !hintCharged) {
-      if (hintUsesLeft <= 0) return
-      setHintUsesLeft((v) => v - 1)
-      setHintCharged(true)
-    }
-    setShowHints(true)
-  }
-
-  const send = async () => {
-    if (!input.trim() || loading || !student) return
-    if (containsNG(input)) {
-      setInputBlocked(true)
-      setTimeout(() => setInputBlocked(false), 3000)
-      return
-    }
-    const text = input.trim()
-    setInput('')
-    await doSend(text)
-  }
-
-  const endClass = () => {
-    if (classEnded) return
-    setClassEnded(true)
-    if (student) {
-      setChatMessages((prev) => [...prev, { role: 'mana', text: student.endMessage }])
-    }
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
-  }
-
-  // 先生（ユーザー）がノートの各行に⭕❌をつける（①化：AIの自動判定ではなく人間が採点）
-  const setNoteMark = (i: number, val: boolean) => {
-    if (!notebook) return
-    setNotebook({ ...notebook, lines: notebook.lines.map((l, j) => j === i ? { ...l, teacherMark: val } : l) })
-  }
-
-  // 採点して生徒に返す。❌にした行（うまく説明できなかったこと）があれば宿題の元として保持する
-  const handleReturnNotebook = () => {
-    if (!student) return
-    setNotebookState('returned')
-    setShowNotebook(false)
-    setChatMessages((prev) => [...prev, { role: 'mana', text: student.notebookThanks }])
-    const wrongLineObjs = (notebook?.lines ?? []).filter((l) => l.teacherMark === false)
-    if (currentHistoryId && wrongLineObjs.length > 0) {
-      const histId = currentHistoryId
-      const sid = student.id
-      // カード紐付きの行は設問=カードの問い・模範解答=カードの答え・生徒の答案=誤解した本文、で直結（API不要）
-      void (async () => {
-        const cards = (await loadFactsheet(histId))?.cards ?? []
-        const items: HomeworkItem[] = []
-        const legacy: string[] = []
-        for (const l of wrongLineObjs) {
-          const card = l.cardIndex != null ? cards[l.cardIndex] : undefined
-          if (card) items.push({ question: card.q, modelAnswer: card.a, studentAnswer: l.text })
-          else legacy.push(l.text)
+      await saveCardProgress(progress)
+      await saveDrillPending(drillPending)
+      // 生徒プロフィールの記録（Recap）はプリント結果から機械生成（AIコール不要）
+      if (currentHistoryId) {
+        const recap: Recap = {
+          savedAt: now,
+          coveredTopics: items.map((it) => ({ topic: it.question.slice(0, 40), understanding: it.finalMark ? ('high' as const) : ('low' as const) })),
+          struggledPoints: items.filter((it) => !it.finalMark || it.redPenFinal === 'relearn').map((it) => it.modelAnswer).slice(0, 6),
+          uncoveredTopics: [],
         }
-        await saveHomeworkWindow({
-          historyId: histId, studentId: sid, endedAt: Date.now(),
-          ...(items.length > 0 ? { items } : {}),
-          ...(legacy.length > 0 ? { wrongLines: legacy } : {}),
-        })
-      })()
-      setPrincipalToast(`まちがえた問題は、${student.name}が宿題としてもう一度やってきます`)
-      setTimeout(() => setPrincipalToast(null), 3600)
-    }
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
-  }
-
-  // ✎ 先生がノートの「答」を直す：バンクの該当カードを上書き（判定・虎の巻・宿題・試験・教材文脈に一括反映）。
-  // 校長は「受理の顔」として一言添えるだけ。教材が誤っているとはアプリから言わない。
-  const saveCardCorrection = async (lineIndex: number) => {
-    const line = notebook?.lines[lineIndex]
-    const newAnswer = editValue.trim()
-    setEditingLine(null)
-    if (!line || line.cardIndex == null || !currentHistoryId || !newAnswer) return
-    const fs = await loadFactsheet(currentHistoryId)
-    const res = fs?.cards ? applyCardCorrection(fs.cards, fs.errata, line.cardIndex, newAnswer) : null
-    if (fs && res) {
-      await updateHistoryFactsheet(currentHistoryId, { ...fs, cards: res.cards, facts: res.facts, errata: res.errata })
-      if (notebook) {
-        setNotebook({
-          ...notebook,
-          lines: notebook.lines.map((l, i) => i === lineIndex ? { ...l, reference: newAnswer, correction: l.status === 'wrong' ? newAnswer : l.correction } : l),
-        })
+        await saveRecapToHistory(currentHistoryId, student.id, recap)
       }
-      setPrincipalToast('校長先生に伝えました。教材に反映しておきますね')
-      setTimeout(() => setPrincipalToast(null), 3200)
+    })()
+    const okCount = items.filter((it) => it.finalMark).length
+    const retryCount = items.filter((it) => !it.finalMark || it.redPenFinal === 'relearn').length
+    const beats: string[] = []
+    if (opts?.noMismatch) beats.push(okCount === items.length ? student.perfectLine : student.noMismatchLine)
+    beats.push(student.printThanks)
+    beats.push(`今日のプリントは ○が${okCount}問・✕が${items.length - okCount}問 でした。${retryCount > 0 ? `まちがえた${retryCount}問は、次のプリントでもういちど挑戦しますね！` : 'ぜんぶばっちりです！'}`)
+    pushBeats(beats)
+  }
+
+  // 答え合わせへ：採点のズレも説明のズレも無ければ、そのまま授業を締める
+  const goCheck = (items: PrintItem[]) => {
+    const mismatches = items.filter(hasGradeMismatch)
+    const diverged = items.filter((it) => it.redPenVerdict === 'diverge')
+    if (mismatches.length === 0 && diverged.length === 0) {
+      finishLesson(items, { noMismatch: true })
+    } else {
+      setPrintStage('check')
+      if (student) pushBeats([student.checkRequest])
     }
   }
 
-  // ✎押下時、データ変更であることを周知してから編集モードに入る（修正するを押して初めて）
-  const confirmEditThen = (onConfirm: () => void) => {
-    Alert.alert(
-      'この内容を編集しますか？',
-      '編集すると、この教材の内容として保存され、授業中の判定・虎の巻・ノート・宿題・試験のすべてに反映されます。',
-      [
-        { text: 'やめる', style: 'cancel' },
-        { text: '編集する', style: 'destructive', onPress: onConfirm },
-      ],
-    )
+  // 第1段の締め：採点してプリントを返す。✕があれば赤ペンへ、無ければ答え合わせへ
+  const returnPrint = () => {
+    setShowPrint(false)
+    const wrongs = printItems.filter((it) => it.teacherMark === false)
+    if (wrongs.length > 0) {
+      setPrintStage('redpen')
+      if (student) pushBeats([student.redpenRequest])
+    } else {
+      goCheck(printItems)
+    }
+  }
+
+  // 第2段の締め：赤ペンを書き終えて返却。正誤一致の✕の解説だけ一括判定にかける
+  // （先生の✕が実は正解の答案だった問題は、答え合わせの採点ズレ側で解消されるため判定しない）
+  const submitRedpen = async () => {
+    if (redpenSending) return
+    const wrongIdx = printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false)
+    for (const { i } of wrongIdx) {
+      const d = (redpenDrafts[i] ?? '').trim()
+      if (!d) return
+      if (containsNG(d)) { setRedpenError('その内容は書けません'); return }
+    }
+    setRedpenSending(true)
+    setRedpenError(null)
+    let items = printItems.map((it, i) => (it.teacherMark === false ? { ...it, redPen: (redpenDrafts[i] ?? '').trim() } : it))
+    const judgeTargets = items.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false && it.truth === 'wrong')
+    if (judgeTargets.length > 0) {
+      try {
+        const res = await judgeRedpen(judgeTargets.map(({ it }) => ({ question: it.question, modelAnswer: it.modelAnswer, explanation: it.redPen ?? '' })))
+        if (Array.isArray(res.verdicts) && res.verdicts.length === judgeTargets.length) {
+          const byIndex = new Map(judgeTargets.map(({ i }, k) => [i, res.verdicts![k]]))
+          items = items.map((it, i) => (byIndex.has(i) ? { ...it, redPenVerdict: byIndex.get(i) } : it))
+        }
+      } catch { /* 判定に失敗しても授業は止めない（全件match扱い） */ }
+    }
+    setPrintItems(items)
+    setShowRedpen(false)
+    setRedpenSending(false)
+    goCheck(items)
+  }
+
+  // 第3段：採点ズレの再判定（最終判断は常にユーザ）
+  const setCheckDecision = (i: number, finalMark: boolean) => {
+    setPrintItems((prev) => prev.map((it, j) => (j === i ? { ...it, finalMark } : it)))
+  }
+
+  // 第3段：説明ズレへの1タップ判定
+  const setRedpenDecision = (i: number, verdict: 'relearn' | 'ok') => {
+    setPrintItems((prev) => prev.map((it, j) => (j === i ? { ...it, redPenFinal: verdict } : it)))
+  }
+
+  // 第3段の締め：○→✕にひっくり返した問題のひとことを反映して授業を締める
+  const finishCheck = () => {
+    const items = printItems.map((it, i) => {
+      const note = (flipNoteDrafts[i] ?? '').trim()
+      return it.teacherMark === true && it.finalMark === false && note ? { ...it, flipNote: note } : it
+    })
+    finishLesson(items)
   }
 
   const handleBack = () => {
-    if (chatMessages.length > 0 && !classEnded) {
+    if (chatMessages.length > 0 && printStage !== 'done') {
       Alert.alert(
-        '授業を終了しますか？',
-        '途中で戻ると会話の記録が消えます。',
+        '授業をとちゅうでやめますか？',
+        'やめると、このプリントの採点はリセットされます。',
         [
           { text: 'キャンセル', style: 'cancel' },
           {
-            text: '終了して戻る',
+            text: 'やめて戻る',
             style: 'destructive',
             onPress: () => {
               resetChatSession()
@@ -425,7 +384,7 @@ export default function ChatScreen() {
         ],
       )
     } else {
-      if (classEnded) resetChatSession()
+      if (printStage === 'done') resetChatSession()
       router.back()
     }
   }
@@ -443,7 +402,7 @@ export default function ChatScreen() {
     )
   }
 
-  if (starting || (startError && chatMessages.length === 0)) {
+  if (starting || (startError && printItems.length === 0)) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: student.color + '18' }]}>
         <View style={styles.header}>
@@ -456,8 +415,8 @@ export default function ChatScreen() {
           <EnteringRoom student={student} />
         ) : (
           <View style={styles.center}>
-            <Text style={styles.errorText}><Feather name="alert-triangle" size={13} color={c.danger} /> {student.name}のトークルームに接続できませんでした</Text>
-            <TouchableOpacity onPress={initChat} style={styles.retryBtn}>
+            <Text style={styles.errorText}><Feather name="alert-triangle" size={13} color={c.danger} /> プリントの用意ができませんでした。教材の準備中かもしれません。少し待ってからもう一度試してください</Text>
+            <TouchableOpacity onPress={() => void initPrint()} style={styles.retryBtn}>
               <Text style={styles.retryBtnText}>もう一度接続する</Text>
             </TouchableOpacity>
           </View>
@@ -465,6 +424,8 @@ export default function ChatScreen() {
       </SafeAreaView>
     )
   }
+
+  const stageLabel = printStage === 'done' ? '授業終了' : printStage === 'grading' ? 'プリントの丸付け中' : printStage === 'redpen' ? '赤ペンを待っています' : '答え合わせ中'
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: student.color + '18' }]}>
@@ -476,27 +437,16 @@ export default function ChatScreen() {
         {/* ヘッダー */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-            <Text style={styles.backText}>← 戻る</Text>
+            <Text style={styles.backText}>← 退出</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Image source={student.avatar} style={styles.headerAvatar} />
             <View>
               <Text style={styles.headerName}>{student.name}</Text>
-              <Text style={[styles.timerText, { color: timerColor }]}>
-                {classEnded ? '終了' : `残り${remainingMins}分`}
-              </Text>
-              {!classEnded && (
-                <Text style={styles.timerSub}>送信ごとに時計が10分すすむ</Text>
-              )}
+              <Text style={styles.stageText}>{stageLabel}</Text>
             </View>
           </View>
-          {!classEnded ? (
-            <TouchableOpacity onPress={endClass} style={styles.endBtn}>
-              <Text style={styles.endBtnText}>授業終了</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={{ width: 60 }} />
-          )}
+          <View style={{ width: 60 }} />
         </View>
 
         {/* 教材を見るボタン */}
@@ -505,7 +455,7 @@ export default function ChatScreen() {
           <Text style={styles.previewBarText}>教材を見る</Text>
         </TouchableOpacity>
 
-        {/* チャット */}
+        {/* チャット（生徒のセリフ＋プリントカード） */}
         <ScrollView
           ref={scrollRef}
           style={styles.messages}
@@ -528,43 +478,35 @@ export default function ChatScreen() {
               </View>
             </View>
           ))}
-          {sendError && !loading && (
-            <View style={styles.sendErrorWrap}>
-              <Text style={styles.sendErrorText}><Feather name="alert-triangle" size={13} color={c.danger} /> 通信エラーで届きませんでした</Text>
-              <TouchableOpacity onPress={() => performSend(sendError)} style={styles.retryBtn}>
-                <Text style={styles.retryBtnText}>もう一度送る</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          {(loading || studentTyping) && (
+          {/* プリントカード（授業のはじめに生徒から届く。タップで採点／見返し） */}
+          {printItems.length > 0 && chatMessages.length > 0 && (
             <View style={[styles.bubble, styles.bubbleMana]}>
               <Image source={student.avatar} style={styles.bubbleAvatar} />
-              <TypingPaws />
-            </View>
-          )}
-          {/* ノート写真カード（授業終了後に生徒から届く） */}
-          {notebook && notebookState && (
-            <View style={[styles.bubble, styles.bubbleMana]}>
-              <Image source={student.avatar} style={styles.bubbleAvatar} />
-              <TouchableOpacity onPress={() => setShowNotebook(true)} style={styles.notebookCard}>
+              <TouchableOpacity onPress={() => setShowPrint(true)} style={styles.notebookCard}>
                 <View style={styles.notebookCardPaper}>
-                  <Text style={styles.notebookCardTitle} numberOfLines={1}>{notebook.title}</Text>
-                  {notebook.lines.slice(0, 3).map((l, i) => (
+                  <Text style={styles.notebookCardTitle} numberOfLines={1}>一問一答プリント</Text>
+                  {printItems.slice(0, 3).map((it, i) => (
                     <Text key={i} style={styles.notebookCardLine} numberOfLines={1}>
-                      {l.status === 'blank' ? '　' : l.text}
+                      {it.question}
                     </Text>
                   ))}
                   <Text style={styles.notebookCardLine}>…</Text>
                 </View>
                 <Text style={styles.notebookCardAction}>
-                  {notebookState === 'returned' ? '添削済みのノートを見る' : 'タップして添削する'}
+                  {printStage === 'grading' ? 'タップして採点する' : printStage === 'done' ? '添削済みのプリントを見る' : 'プリントを見る'}
                 </Text>
               </TouchableOpacity>
             </View>
           )}
-          {classEnded && (
+          {studentTyping && (
+            <View style={[styles.bubble, styles.bubbleMana]}>
+              <Image source={student.avatar} style={styles.bubbleAvatar} />
+              <TypingPaws />
+            </View>
+          )}
+          {printStage === 'done' && !studentTyping && (
             <View style={styles.endedActions}>
-              <Text style={styles.endedLabel}>授業が終わりました</Text>
+              <Text style={styles.endedLabel}>今日の授業は終わりました！</Text>
               <TouchableOpacity style={styles.finishBtn} onPress={handleBack}>
                 <Text style={styles.finishBtnText}>ホームに戻る</Text>
               </TouchableOpacity>
@@ -572,88 +514,95 @@ export default function ChatScreen() {
           )}
         </ScrollView>
 
-        {/* ノート添削モーダル */}
+        {/* アクションバー：いまやることのボタンを1つだけ出す */}
+        {printStage !== 'done' && (
+          <View style={styles.actionBar}>
+            {studentTyping ? (
+              <Text style={styles.actionWaiting}>{student.name}が書いています…</Text>
+            ) : printStage === 'grading' ? (
+              <BouncyPressable style={[styles.actionBtn, { backgroundColor: student.colorStrong }]} onPress={() => setShowPrint(true)} haptic="light">
+                <Text style={styles.actionBtnText}>プリントを採点する</Text>
+              </BouncyPressable>
+            ) : printStage === 'redpen' ? (
+              <BouncyPressable style={[styles.actionBtn, { backgroundColor: '#f43f5e' }]} onPress={() => setShowRedpen(true)} haptic="light">
+                <Text style={styles.actionBtnText}>赤ペンを入れる</Text>
+              </BouncyPressable>
+            ) : (
+              <BouncyPressable style={[styles.actionBtn, { backgroundColor: '#f59e0b' }]} onPress={() => setShowCheck(true)} haptic="light">
+                <Text style={styles.actionBtnText}>答え合わせをする</Text>
+              </BouncyPressable>
+            )}
+          </View>
+        )}
+
+        {/* プリントモーダル（第1段：丸付け／終了後：添削済みの見返し） */}
         <Modal
-          visible={showNotebook && !!notebook}
+          visible={showPrint && printItems.length > 0}
           transparent
           animationType="fade"
-          onRequestClose={() => setShowNotebook(false)}
+          onRequestClose={() => setShowPrint(false)}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.notebookModal}>
               <View style={styles.notebookModalHeader}>
-                <Text style={styles.notebookModalTitle}>{student.name}のノート</Text>
-                <TouchableOpacity onPress={() => setShowNotebook(false)} hitSlop={8}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Image source={require('../assets/print.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+                  <Text style={styles.notebookModalTitle}>{student.name}のプリント</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowPrint(false)} hitSlop={8}>
                   <Text style={styles.notebookModalClose}>✕</Text>
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.notebookScroll}>
-                {notebookState === 'received' && (() => {
-                  const hasAuto = notebook?.lines.some((l) => l.autoMarked)
-                  return (
-                    <Text style={styles.notebookGradeHint}>
-                      赤い<Text style={styles.modelAnswerWord}>答</Text>と見くらべて、合っていたら <Text style={styles.gradeMarkO}>○</Text>、ちがえば <Text style={styles.gradeMarkX}>✕</Text> をつけてね。
-                      {hasAuto ? <Text>{' '}ぴったり合う行には、さきに <Text style={styles.gradeMarkO}>○</Text> がついています。</Text> : null}
-                    </Text>
-                  )
-                })()}
+                {printStage === 'grading' && (
+                  <Text style={styles.notebookGradeHint}>
+                    模範解答は見ずに、先生の記憶だけで採点します。合っていたら <Text style={styles.gradeMarkO}>○</Text>、ちがえば <Text style={styles.gradeMarkX}>✕</Text> をつけてね。
+                  </Text>
+                )}
                 <View style={styles.notebookPaper}>
-                  <Text style={styles.notebookTitle}>{notebook?.title}</Text>
-                  {notebook?.lines.map((line, i) => {
-                    const isBlank = line.status === 'blank'
-                    const settled = notebookState === 'received' && line.autoMarked && line.teacherMark === true
+                  <Text style={styles.notebookTitle}>一問一答プリント</Text>
+                  {printItems.map((it, i) => {
+                    const isGrading = printStage === 'grading'
+                    const showAnswers = printStage === 'done' // 途中段階で模範解答を見せない（赤ペンは純粋想起で書く）
+                    const mark = it.finalMark ?? it.teacherMark
                     return (
-                      <View key={i} style={[styles.notebookLineRow, settled && { opacity: 0.55 }]}>
+                      <View key={i} style={styles.notebookLineRow}>
                         <View style={{ flex: 1 }}>
-                          <Text style={[styles.notebookLineText, isBlank && styles.notebookLineBlank]}>
-                            {!isBlank && <Text style={styles.notebookPenMark}>✎ </Text>}
-                            {isBlank ? '（ここ、書けませんでした…）' : line.text}
+                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4 }}>
+                            <Text style={[styles.printQuestion, { flex: 1 }]}>
+                              <Text style={{ fontWeight: '700' }}>問{i + 1} </Text>{it.question}
+                            </Text>
+                            {it.isReview && <View style={styles.reviewBadge}><Text style={styles.reviewBadgeText}>復習</Text></View>}
+                          </View>
+                          <Text style={styles.notebookLineText}>
+                            <Text style={styles.notebookPenMark}>✎ </Text>{it.studentAnswer}
                           </Text>
-                          {!!line.reference && (editingLine === i ? (
-                            <View style={styles.editRefWrap}>
-                              <TextInput
-                                value={editValue}
-                                onChangeText={setEditValue}
-                                multiline
-                                autoFocus
-                                style={styles.editRefInput}
-                              />
-                              <View style={styles.editRefBtns}>
-                                <TouchableOpacity onPress={() => void saveCardCorrection(i)} style={styles.editRefSave}>
-                                  <Text style={styles.editRefSaveText}>保存する</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setEditingLine(null)} style={styles.editRefCancel}>
-                                  <Text style={styles.editRefCancelText}>やめる</Text>
-                                </TouchableOpacity>
-                              </View>
-                            </View>
-                          ) : (
-                            <View style={styles.refRow}>
-                              <Text style={[styles.notebookReference, { flex: 1 }]}>
-                                <Text style={styles.notebookReferenceMark}>答 </Text>{line.reference}
-                              </Text>
-                              {line.cardIndex != null && (
-                                <TouchableOpacity onPress={() => confirmEditThen(() => { setEditingLine(i); setEditValue(line.reference ?? '') })} style={styles.editRefBtn}>
-                                  <Text style={styles.editRefBtnText}>✎</Text>
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          ))}
+                          {showAnswers && (
+                            <Text style={styles.notebookReference}>
+                              <Text style={styles.notebookReferenceMark}>答 </Text>{it.modelAnswer}
+                            </Text>
+                          )}
+                          {showAnswers && (it.redPen || it.flipNote) ? (
+                            <Text style={styles.redpenLine}>
+                              <Text style={styles.notebookReferenceMark}>赤ペン </Text>{it.redPen ?? it.flipNote}
+                            </Text>
+                          ) : null}
                         </View>
-                        {!isBlank && notebookState === 'received' && (
+                        {isGrading ? (
                           <View style={styles.markRow}>
-                            <TouchableOpacity onPress={() => setNoteMark(i, true)} style={[styles.markBtn, line.teacherMark === true && styles.markBtnCorrect]}>
-                              <StampText active={line.teacherMark === true} style={[styles.markBtnText, line.teacherMark === true && styles.markBtnTextSel]}>○</StampText>
+                            <TouchableOpacity onPress={() => setPrintMark(i, true)} style={[styles.markBtn, it.teacherMark === true && styles.markBtnCorrect]}>
+                              <StampText active={it.teacherMark === true} style={[styles.markBtnText, it.teacherMark === true && styles.markBtnTextSel]}>○</StampText>
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setNoteMark(i, false)} style={[styles.markBtn, line.teacherMark === false && styles.markBtnWrong]}>
-                              <StampText active={line.teacherMark === false} style={[styles.markBtnText, line.teacherMark === false && styles.markBtnTextSel]}>✕</StampText>
+                            <TouchableOpacity onPress={() => setPrintMark(i, false)} style={[styles.markBtn, it.teacherMark === false && styles.markBtnWrong]}>
+                              <StampText active={it.teacherMark === false} style={[styles.markBtnText, it.teacherMark === false && styles.markBtnTextSel]}>✕</StampText>
                             </TouchableOpacity>
                           </View>
-                        )}
-                        {!isBlank && notebookState === 'returned' && line.teacherMark !== undefined && (
-                          <Text style={[styles.notebookMarkResult, { color: line.teacherMark ? '#059669' : '#e11d48' }]}>
-                            {line.teacherMark ? '○' : '✕'}
-                          </Text>
+                        ) : (
+                          mark !== undefined && (
+                            <Text style={[styles.notebookMarkResult, { color: mark ? '#059669' : '#e11d48' }]}>
+                              {mark ? '○' : '✕'}
+                            </Text>
+                          )
                         )}
                       </View>
                     )
@@ -661,91 +610,244 @@ export default function ChatScreen() {
                 </View>
               </ScrollView>
               <View style={styles.notebookModalFooter}>
-                {notebookState === 'received' ? (() => {
-                  const gradable = notebook?.lines.filter((l) => l.status !== 'blank') ?? []
-                  const allGraded = gradable.every((l) => l.teacherMark !== undefined)
+                {printStage === 'grading' ? (() => {
+                  const allGraded = printItems.every((it) => it.teacherMark !== undefined)
                   return (
-                    <BouncyPressable onPress={() => { if (allGraded) handleReturnNotebook() }} style={[styles.returnBtn, !allGraded && styles.returnBtnDisabled]} haptic="success">
+                    <BouncyPressable onPress={() => { if (allGraded) returnPrint() }} style={[styles.returnBtn, !allGraded && styles.returnBtnDisabled]} haptic="success">
                       <Text style={[styles.gradeBtnText, !allGraded && styles.gradeBtnTextDisabled]}>
-                        {allGraded ? '採点してノートを返す' : <>すべての行に <Text style={styles.gradeMarkO}>○</Text> か <Text style={styles.gradeMarkX}>✕</Text> をつけてね</>}
+                        {allGraded ? '採点してプリントを返す' : <>すべての問題に <Text style={styles.gradeMarkO}>○</Text> か <Text style={styles.gradeMarkX}>✕</Text> をつけてね</>}
                       </Text>
                     </BouncyPressable>
                   )
                 })() : (
-                  <TouchableOpacity onPress={() => setShowNotebook(false)} style={styles.closeNotebookBtn}>
+                  <TouchableOpacity onPress={() => setShowPrint(false)} style={styles.closeNotebookBtn}>
                     <Text style={styles.closeNotebookBtnText}>閉じる</Text>
                   </TouchableOpacity>
                 )}
               </View>
             </View>
-            {principalToast && (
-              <View style={styles.principalToast} pointerEvents="none">
-                <Text style={styles.principalToastText}>{principalToast}</Text>
-              </View>
-            )}
           </View>
         </Modal>
 
-        {/* 入力エリア */}
-        {!classEnded && (
-          <View style={styles.inputAreaWrap}>
-            {/* 生徒の応答待ち（入力中）は虎の巻もお休みも出さない */}
-            {loading || studentTyping ? null : hints ? (
-              <View style={styles.hintsWrap}>
-                <TouchableOpacity
-                  onPress={openHints}
-                  disabled={HINT_LIMIT_ENABLED && !showHints && !hintCharged && hintUsesLeft <= 0}
-                  style={[styles.hintToggle, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}
-                >
-                  <Image source={require('../assets/toranomaki.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
-                  <Text style={[styles.hintToggleText, HINT_LIMIT_ENABLED && hintUsesLeft <= 0 && !hintCharged && styles.hintToggleTextDisabled]}>
-                    {HINT_LIMIT_ENABLED && hintUsesLeft <= 0 && !hintCharged
-                      ? '虎の巻は使い切りました'
-                      : `虎の巻を開く${HINT_LIMIT_ENABLED ? `（残り${hintUsesLeft}回）` : ''} ${showHints ? '▲' : '▼'}`}
-                  </Text>
+        {/* 赤ペンモーダル（第2段：✕の問題すべてに、模範解答を見ずにひとことで教える） */}
+        <Modal
+          visible={showRedpen && printStage === 'redpen'}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowRedpen(false)}
+        >
+          <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={styles.notebookModal}>
+              <View style={styles.notebookModalHeader}>
+                <Text style={styles.notebookModalTitle}>赤ペンを入れる</Text>
+                <TouchableOpacity onPress={() => setShowRedpen(false)} hitSlop={8}>
+                  <Text style={styles.notebookModalClose}>✕</Text>
                 </TouchableOpacity>
-                {showHints && (
-                  <>
-                    <Text style={styles.hintNote}>1つが正解、2つが誤りです。タップすると入力欄に写せます</Text>
-                    {hints.map((hint, i) => (
-                      <TouchableOpacity key={i} onPress={() => setInput(hint)} disabled={loading} style={styles.hintItem}>
-                        <Text style={styles.hintItemText}>{hint}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </>
+              </View>
+              <ScrollView style={styles.notebookScroll} keyboardShouldPersistTaps="handled">
+                <Text style={styles.notebookGradeHint}>
+                  <Text style={styles.gradeMarkX}>✕</Text>にした問題を、自分の言葉で教えてあげよう。むずかしく書かなくてOK、ひとことで！
+                </Text>
+                <View style={{ gap: 10, paddingBottom: 8 }}>
+                  {printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false).map(({ it, i }) => (
+                    <View key={i} style={styles.redpenItem}>
+                      <Text style={styles.printQuestion}><Text style={{ fontWeight: '700' }}>問{i + 1} </Text>{it.question}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 2 }}>
+                        <Text style={[styles.redpenStudentAnswer, { flex: 1 }]}>✎ {it.studentAnswer}</Text>
+                        <Text style={[styles.gradeMarkX, { fontSize: 14 }]}>✕</Text>
+                      </View>
+                      <TextInput
+                        value={redpenDrafts[i] ?? ''}
+                        onChangeText={(t) => setRedpenDrafts((prev) => ({ ...prev, [i]: t }))}
+                        placeholder="ひとことで教えてあげよう…"
+                        placeholderTextColor={c.faint}
+                        multiline
+                        maxLength={200}
+                        style={styles.redpenInput}
+                      />
+                      {(it.choices?.length ?? 0) > 0 && (
+                        <View style={{ marginTop: 6 }}>
+                          <TouchableOpacity
+                            onPress={() => setRedpenHintOpen(redpenHintOpen === i ? null : i)}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                          >
+                            <Image source={require('../assets/toranomaki.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                            <Text style={styles.hintToggleText}>虎の巻を開く {redpenHintOpen === i ? '▲' : '▼'}</Text>
+                          </TouchableOpacity>
+                          {redpenHintOpen === i && (
+                            <View style={{ gap: 6, marginTop: 6 }}>
+                              <Text style={styles.hintNote}>1つが正解、2つが誤りです。タップすると赤ペンに写せます</Text>
+                              {it.choices!.map((choice, k) => (
+                                <TouchableOpacity key={k} onPress={() => { setRedpenDrafts((prev) => ({ ...prev, [i]: choice })); setRedpenHintOpen(null) }} style={styles.hintItem}>
+                                  <Text style={styles.hintItemText}>{choice}</Text>
+                                </TouchableOpacity>
+                              ))}
+                            </View>
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+                {redpenError && (
+                  <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> {redpenError}</Text>
                 )}
+              </ScrollView>
+              <View style={styles.notebookModalFooter}>
+                {(() => {
+                  const wrongs = printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false)
+                  const allWritten = wrongs.every(({ i }) => (redpenDrafts[i] ?? '').trim().length > 0)
+                  return (
+                    <BouncyPressable
+                      onPress={() => { if (allWritten && !redpenSending) void submitRedpen() }}
+                      style={[styles.returnBtn, { backgroundColor: '#f43f5e' }, (!allWritten || redpenSending) && styles.returnBtnDisabled]}
+                      haptic="success"
+                    >
+                      <Text style={[styles.gradeBtnText, (!allWritten || redpenSending) && styles.gradeBtnTextDisabled]}>
+                        {redpenSending ? 'プリントを返しています…' : allWritten ? '赤ペンを入れてプリントを返す' : 'ぜんぶの問題にひとこと書いてあげてね'}
+                      </Text>
+                    </BouncyPressable>
+                  )
+                })()}
               </View>
-            ) : (
-              // 虎の巻が出ないターンも枠を残し、消えて不具合に見えないようにする（深掘りの質問等では出ないのが正常）
-              <View style={[styles.hintsWrap, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-                <Image source={require('../assets/toranomaki.webp')} style={{ width: 16, height: 16, opacity: 0.6 }} resizeMode="contain" />
-                <Text style={[styles.hintRestNote, { flex: 1 }]}>今回は虎の巻はお休み。自分の言葉で説明してみよう！</Text>
-              </View>
-            )}
-            <View style={styles.inputArea}>
-              <TextInput
-                style={styles.input}
-                value={input}
-                onChangeText={setInput}
-                placeholder="先生として説明してみよう..."
-                placeholderTextColor={c.faint}
-                multiline
-                maxLength={500}
-              />
-              <BouncyPressable
-                style={[styles.sendBtn, { backgroundColor: student.colorStrong }, (!input.trim() || loading) && styles.sendBtnDisabled]}
-                onPress={send}
-                disabled={!input.trim() || loading}
-                haptic="light"
-              >
-                <Text style={styles.sendBtnText}>送信</Text>
-              </BouncyPressable>
             </View>
-            {inputBlocked && (
-              <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> その内容は送信できません</Text>
-            )}
-          </View>
-        )}
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* 答え合わせモーダル（第3段：採点のズレと説明のズレを一括解消。最終判断は常にユーザ） */}
+        <Modal
+          visible={showCheck && printStage === 'check'}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowCheck(false)}
+        >
+          <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={styles.notebookModal}>
+              <View style={styles.notebookModalHeader}>
+                <Text style={styles.notebookModalTitle}>答え合わせ</Text>
+                <TouchableOpacity onPress={() => setShowCheck(false)} hitSlop={8}>
+                  <Text style={styles.notebookModalClose}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.notebookScroll} keyboardShouldPersistTaps="handled">
+                {(() => {
+                  const mismatches = printItems.map((it, i) => ({ it, i })).filter(({ it }) => hasGradeMismatch(it))
+                  const diverged = printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.redPenVerdict === 'diverge')
+                  return (
+                    <View style={{ gap: 14, paddingBottom: 8 }}>
+                      {mismatches.length > 0 && (
+                        <View>
+                          <Text style={styles.notebookGradeHint}>
+                            {student.name}が模範解答と見比べて気になった採点です。赤い<Text style={styles.modelAnswerWord}>答</Text>と見比べて、先生が最終判断してあげてね。
+                          </Text>
+                          <View style={{ gap: 10 }}>
+                            {mismatches.map(({ it, i }) => (
+                              <View key={i} style={styles.redpenItem}>
+                                <Text style={styles.printQuestion}><Text style={{ fontWeight: '700' }}>問{i + 1} </Text>{it.question}</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 2 }}>
+                                  <Text style={[styles.redpenStudentAnswer, { flex: 1 }]}>✎ {it.studentAnswer}</Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '700', color: it.teacherMark ? '#059669' : '#e11d48' }}>{it.teacherMark ? '○' : '✕'}</Text>
+                                </View>
+                                <Text style={styles.notebookReference}>
+                                  <Text style={styles.notebookReferenceMark}>答 </Text>{it.modelAnswer}
+                                </Text>
+                                <View style={styles.decisionRow}>
+                                  {it.teacherMark === true ? (
+                                    <>
+                                      <TouchableOpacity onPress={() => setCheckDecision(i, false)} style={[styles.decisionBtn, it.finalMark === false && styles.decisionBtnWrong]}>
+                                        <Text style={[styles.decisionBtnText, it.finalMark === false && styles.decisionBtnTextSel]}>✕に直す</Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity onPress={() => setCheckDecision(i, true)} style={[styles.decisionBtn, it.finalMark === true && styles.decisionBtnCorrect]}>
+                                        <Text style={[styles.decisionBtnText, it.finalMark === true && styles.decisionBtnTextSel]}>この答えでも○</Text>
+                                      </TouchableOpacity>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <TouchableOpacity onPress={() => setCheckDecision(i, true)} style={[styles.decisionBtn, it.finalMark === true && styles.decisionBtnCorrect]}>
+                                        <Text style={[styles.decisionBtnText, it.finalMark === true && styles.decisionBtnTextSel]}>○に直す</Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity onPress={() => setCheckDecision(i, false)} style={[styles.decisionBtn, it.finalMark === false && styles.decisionBtnWrong]}>
+                                        <Text style={[styles.decisionBtnText, it.finalMark === false && styles.decisionBtnTextSel]}>やっぱり✕</Text>
+                                      </TouchableOpacity>
+                                    </>
+                                  )}
+                                </View>
+                                {it.teacherMark === true && it.finalMark === false && (
+                                  <View style={{ marginTop: 6, gap: 4 }}>
+                                    <Text style={styles.hintNote}>「じゃあここも、ひとことだけ教えてください！」</Text>
+                                    <TextInput
+                                      value={flipNoteDrafts[i] ?? ''}
+                                      onChangeText={(t) => setFlipNoteDrafts((prev) => ({ ...prev, [i]: t }))}
+                                      placeholder="ひとことで教えてあげよう…"
+                                      placeholderTextColor={c.faint}
+                                      multiline
+                                      maxLength={200}
+                                      style={styles.redpenInput}
+                                    />
+                                  </View>
+                                )}
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+                      {diverged.length > 0 && (
+                        <View>
+                          <Text style={styles.notebookGradeHint}>
+                            「先生の説明、模範解答とちょっとちがう気がして…」——赤ペンと模範解答を見比べて、1タップで答えてあげてね。
+                          </Text>
+                          <View style={{ gap: 10 }}>
+                            {diverged.map(({ it, i }) => (
+                              <View key={i} style={styles.redpenItem}>
+                                <Text style={styles.printQuestion}><Text style={{ fontWeight: '700' }}>問{i + 1} </Text>{it.question}</Text>
+                                <Text style={[styles.redpenLine, { marginTop: 2 }]}>
+                                  <Text style={styles.notebookReferenceMark}>赤ペン </Text>{it.redPen}
+                                </Text>
+                                <Text style={styles.notebookReference}>
+                                  <Text style={styles.notebookReferenceMark}>答 </Text>{it.modelAnswer}
+                                </Text>
+                                <View style={styles.decisionRow}>
+                                  <TouchableOpacity onPress={() => setRedpenDecision(i, 'relearn')} style={[styles.decisionBtn, it.redPenFinal === 'relearn' && styles.decisionBtnRelearn]}>
+                                    <Text style={[styles.decisionBtnText, it.redPenFinal === 'relearn' && styles.decisionBtnTextSel]}>模範解答で覚え直す</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity onPress={() => setRedpenDecision(i, 'ok')} style={[styles.decisionBtn, it.redPenFinal === 'ok' && styles.decisionBtnCorrect]}>
+                                    <Text style={[styles.decisionBtnText, it.redPenFinal === 'ok' && styles.decisionBtnTextSel]}>同じ意味だからOK</Text>
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  )
+                })()}
+              </ScrollView>
+              <View style={styles.notebookModalFooter}>
+                {(() => {
+                  const mismatches = printItems.map((it, i) => ({ it, i })).filter(({ it }) => hasGradeMismatch(it))
+                  const diverged = printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.redPenVerdict === 'diverge')
+                  const flipsNeedingNote = printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === true && it.finalMark === false)
+                  const canFinish =
+                    mismatches.every(({ it }) => it.finalMark !== undefined) &&
+                    diverged.every(({ it }) => it.redPenFinal !== undefined) &&
+                    flipsNeedingNote.every(({ i }) => (flipNoteDrafts[i] ?? '').trim().length > 0)
+                  return (
+                    <BouncyPressable
+                      onPress={() => { if (canFinish) finishCheck() }}
+                      style={[styles.returnBtn, !canFinish && styles.returnBtnDisabled]}
+                      haptic="success"
+                    >
+                      <Text style={[styles.gradeBtnText, !canFinish && styles.gradeBtnTextDisabled]}>
+                        {canFinish ? '答え合わせをおわる' : 'ぜんぶの項目に答えてあげてね'}
+                      </Text>
+                    </BouncyPressable>
+                  )
+                })()}
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
@@ -782,10 +884,7 @@ const styles = StyleSheet.create({
   headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerAvatar: { width: 32, height: 32, borderRadius: 16 },
   headerName: { fontSize: 14, fontFamily: font.round, color: c.textStrong },
-  timerText: { fontSize: 11, fontWeight: '700', marginTop: 1 },
-  timerSub: { fontSize: 9, color: c.textSub, marginTop: 1 },
-  endBtn: { backgroundColor: c.bgSub, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  endBtnText: { fontSize: 12, color: c.textSub, fontFamily: font.round },
+  stageText: { fontSize: 11, fontWeight: '600', color: c.textSub, marginTop: 1 },
 
   previewBar: {
     backgroundColor: c.skyTint, borderBottomWidth: 1, borderBottomColor: c.skyBorder,
@@ -806,10 +905,6 @@ const styles = StyleSheet.create({
   msgText: { fontSize: 14, color: c.textStrong, lineHeight: 21 },
   msgTextUser: { color: 'white' },
 
-  typingDots: { backgroundColor: 'white', borderRadius: 16, padding: 12 },
-
-  sendErrorWrap: { alignItems: 'center', gap: 8, paddingVertical: 4 },
-  sendErrorText: { fontSize: 12, color: c.dangerText, fontWeight: '600' },
   retryBtn: { ...btn.secondary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 9 },
   retryBtnText: { ...btn.secondaryText, fontSize: 13 },
 
@@ -827,8 +922,15 @@ const styles = StyleSheet.create({
     fontSize: 10, color: c.textSub, lineHeight: 18,
     borderBottomWidth: 1, borderBottomColor: c.paperLine + '80',
   },
-  notebookCardStamp: { position: 'absolute', top: 2, right: 4, fontSize: 24 },
   notebookCardAction: { marginTop: 7, fontSize: 12, fontWeight: '700', color: c.primary, textAlign: 'center' },
+
+  actionBar: {
+    backgroundColor: 'white', borderTopWidth: 1, borderTopColor: c.border,
+    paddingHorizontal: 16, paddingVertical: 12,
+  },
+  actionBtn: { borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
+  actionBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
+  actionWaiting: { fontSize: 12, color: c.faint, textAlign: 'center', paddingVertical: 6 },
 
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
@@ -855,8 +957,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2, borderBottomColor: c.paperRule,
     paddingBottom: 4, marginBottom: 6,
   },
-  notebookLineText: { fontSize: 13, color: c.text, lineHeight: 20, fontWeight: '600' },
-  notebookLineBlank: { color: c.borderStrong, fontWeight: '400' },
+  printQuestion: { fontSize: 11.5, color: c.textSub, lineHeight: 17 },
+  reviewBadge: { backgroundColor: '#fde68a', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
+  reviewBadgeText: { fontSize: 9, fontWeight: '700', color: '#92400e' },
+  notebookLineText: { fontSize: 13, color: c.text, lineHeight: 20, fontWeight: '600', marginTop: 2 },
   notebookPenMark: { color: c.textSub, fontWeight: '400' },
   notebookLineRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
@@ -865,24 +969,10 @@ const styles = StyleSheet.create({
   },
   notebookReference: { fontSize: 11, color: '#e11d48', lineHeight: 17, marginTop: 3 },
   notebookReferenceMark: { fontWeight: '700' },
-  refRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
-  editRefBtn: { paddingHorizontal: 4, paddingVertical: 1, marginTop: 2 },
-  editRefBtnText: { fontSize: 13, color: c.textSub },
-  editRefWrap: { marginTop: 4, gap: 6 },
-  editRefNote: { fontSize: 11, lineHeight: 15, color: c.faint },
-  editRefInput: { borderWidth: 1, borderColor: '#fca5a5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, fontSize: 12, color: c.text, backgroundColor: c.paper, minHeight: 40 },
-  editRefBtns: { flexDirection: 'row', gap: 8 },
-  editRefSave: { backgroundColor: '#e11d48', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
-  editRefSaveText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  editRefCancel: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
-  editRefCancelText: { color: c.textSub, fontSize: 12, fontWeight: '700' },
-  principalToast: { position: 'absolute', bottom: 40, alignSelf: 'center', backgroundColor: '#1e293b', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10 },
-  principalToastText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  redpenLine: { fontSize: 11, color: '#be123c', lineHeight: 17, marginTop: 3 },
   notebookMarkResult: { fontSize: 18, fontWeight: '700', paddingTop: 1 },
-  notebookGradeHint: { fontSize: 12, color: c.textSub, lineHeight: 18, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 4 },
+  notebookGradeHint: { fontSize: 12, color: c.textSub, lineHeight: 18, paddingTop: 12, paddingBottom: 8 },
   modelAnswerWord: { fontWeight: '700', color: '#e11d48' },
-  gradePurposeBox: { marginHorizontal: 14, marginTop: 12, marginBottom: 4, backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 },
-  gradePurposeText: { fontSize: 11.5, color: c.textMid, lineHeight: 17 },
   gradeMarkO: { fontWeight: '700', color: '#10b981' },
   gradeMarkX: { fontWeight: '700', color: '#f43f5e' },
   markRow: { flexDirection: 'row', gap: 6 },
@@ -902,43 +992,38 @@ const styles = StyleSheet.create({
   closeNotebookBtn: { ...btn.secondary, borderRadius: 12 },
   closeNotebookBtnText: { ...btn.secondaryText },
 
-  endedActions: { marginTop: 16, gap: 10 },
-  endedLabel: { fontSize: 13, color: c.textSub, textAlign: 'center', fontWeight: '600' },
-  finishBtn: { ...btn.secondary, borderRadius: 12, paddingVertical: 14 },
-  finishBtnText: { ...btn.secondaryText },
-  homeworkBtn: { backgroundColor: '#f59e0b', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  homeworkBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-  finishBtnTextPreview: { fontSize: 14, fontFamily: font.round, color: c.link },
-
-  inputAreaWrap: {
-    backgroundColor: 'white', borderTopWidth: 1, borderTopColor: c.border,
+  redpenItem: {
+    borderWidth: 1, borderColor: c.border, borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 10,
   },
-  hintsWrap: { paddingHorizontal: 12, paddingTop: 10, gap: 6 },
-  hintToggle: { paddingVertical: 2 },
+  redpenStudentAnswer: { fontSize: 12.5, color: c.text, lineHeight: 19, fontWeight: '600' },
+  redpenInput: {
+    marginTop: 6, borderWidth: 1, borderColor: '#fecdd3', borderRadius: 10,
+    backgroundColor: '#fff1f2', paddingHorizontal: 10, paddingVertical: 8,
+    fontSize: 13, color: c.textStrong, minHeight: 44,
+  },
   hintToggleText: { fontSize: 12, fontWeight: '600', color: c.paperText },
-  hintToggleTextDisabled: { color: c.borderStrong },
-  hintNote: { fontSize: 11, color: c.textSub, marginBottom: 2 },
-  hintRestNote: { fontSize: 12, color: c.faint },
+  hintNote: { fontSize: 11, color: c.textSub },
   hintItem: {
     borderWidth: 1, borderColor: c.paperLine, borderRadius: 12,
     backgroundColor: c.paper, paddingHorizontal: 14, paddingVertical: 10,
   },
   hintItemText: { fontSize: 13, color: c.text, lineHeight: 19 },
-  inputArea: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 12,
+  ngWarning: { fontSize: 12, color: c.danger, textAlign: 'center', paddingBottom: 8 },
+
+  decisionRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  decisionBtn: {
+    flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: 10,
+    paddingVertical: 8, alignItems: 'center', backgroundColor: '#fff',
   },
-  ngWarning: {
-    fontSize: 12, color: c.danger, textAlign: 'center',
-    paddingBottom: 8,
-  },
-  input: {
-    flex: 1, backgroundColor: c.bg, borderRadius: 12,
-    borderWidth: 1, borderColor: c.border,
-    paddingHorizontal: 14, paddingVertical: 10,
-    fontSize: 14, color: c.textStrong, maxHeight: 100,
-  },
-  sendBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
-  sendBtnDisabled: { opacity: 0.4 },
-  sendBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
+  decisionBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
+  decisionBtnWrong: { backgroundColor: '#f43f5e', borderColor: '#f43f5e' },
+  decisionBtnRelearn: { backgroundColor: '#f59e0b', borderColor: '#f59e0b' },
+  decisionBtnText: { fontSize: 12, fontWeight: '700', color: c.textSub },
+  decisionBtnTextSel: { color: '#fff' },
+
+  endedActions: { marginTop: 16, gap: 10 },
+  endedLabel: { fontSize: 13, color: c.textSub, textAlign: 'center', fontWeight: '600' },
+  finishBtn: { ...btn.secondary, borderRadius: 12, paddingVertical: 14 },
+  finishBtnText: { ...btn.secondaryText },
 })

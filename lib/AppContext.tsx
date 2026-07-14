@@ -1,40 +1,21 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { PreviewContent, ChatMessage, Recap, Notebook, CardLogEntry } from './types'
+import type { PreviewContent, ChatMessage, PrintItem, PrintStage } from './types'
 import { type TeacherProfile, DEFAULT_TEACHER, normalizeAvatarId } from './teacherProfile'
 
 const STUDENT_KEY = 'oshiete_student'
 const TEACHER_KEY = 'oshiete_teacher'
-const CHAT_SESSION_KEY = 'oshiete_chat_session'
-const LESSON_TURNS_KEY = 'oshiete_lesson_turns'
+const PRINT_SESSION_KEY = 'oshiete_print_session'
+const LEGACY_CHAT_SESSION_KEY = 'oshiete_chat_session' // 旧フリーチャット授業（読み捨てて破棄）
 
-// 授業の長さ（1送信=10分のフィクション換算）。選択は記憶される
-export const MINUTES_PER_TURN = 10
-export const LESSON_PRESETS = [
-  { turns: 3, label: 'さくっと' },
-  { turns: 6, label: 'ふつう' },
-  { turns: 9, label: 'じっくり' },
-] as const
-export const DEFAULT_LESSON_TURNS = 6
-
-// アプリ強制終了後も授業を再開できるように保存する内容（E4）
-type ChatSession = {
+// アプリ強制終了後もプリント授業を再開できるように保存する内容
+type PrintSession = {
   imageDescription: string
   notes: string
   currentHistoryId: string | null
   messages: ChatMessage[]
-  turnCount: number
-  classEnded: boolean
-  hints: string[] | null
-  correctHintIndex: number | null
-  hintUsesLeft: number
-  correctness: (boolean | null)[]
-  lessonRecap: Recap | null
-  notebook: Notebook | null
-  notebookState: 'received' | 'returned' | null
-  coveredCards?: number[]
-  cardLog?: CardLogEntry[]
-  maxTurns?: number // この授業の長さ（再開時に保つ。旧セッションは9）
+  items: PrintItem[]
+  stage: PrintStage
 }
 
 type AppState = {
@@ -54,33 +35,13 @@ type AppState = {
   setTeacherProfile: (v: TeacherProfile) => void
   pendingMaterialAnimation: boolean
   setPendingMaterialAnimation: (v: boolean) => void
-  // チャット状態（画面遷移をまたいで保持）
+  // プリント授業の状態（画面遷移をまたいで保持）
   chatMessages: ChatMessage[]
   setChatMessages: (v: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => void
-  turnCount: number
-  setTurnCount: (v: number) => void
-  classEnded: boolean
-  setClassEnded: (v: boolean) => void
-  hints: string[] | null
-  setHints: (v: string[] | null) => void
-  correctHintIndex: number | null
-  setCorrectHintIndex: (v: number | null) => void
-  hintUsesLeft: number
-  setHintUsesLeft: (v: number | ((prev: number) => number)) => void
-  correctness: (boolean | null)[]
-  setCorrectness: (v: (boolean | null)[] | ((prev: (boolean | null)[]) => (boolean | null)[])) => void
-  coveredCards: number[]
-  setCoveredCards: (v: number[]) => void
-  cardLog: CardLogEntry[]
-  setCardLog: (v: CardLogEntry[] | ((prev: CardLogEntry[]) => CardLogEntry[])) => void
-  lessonMaxTurns: number
-  chooseLessonTurns: (turns: number) => void
-  lessonRecap: Recap | null
-  setLessonRecap: (v: Recap | null) => void
-  notebook: Notebook | null
-  setNotebook: (v: Notebook | null) => void
-  notebookState: 'received' | 'returned' | null
-  setNotebookState: (v: 'received' | 'returned' | null) => void
+  printItems: PrintItem[]
+  setPrintItems: (v: PrintItem[] | ((prev: PrintItem[]) => PrintItem[])) => void
+  printStage: PrintStage
+  setPrintStage: (v: PrintStage) => void
   resetChatSession: () => void
 }
 
@@ -137,56 +98,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null)
   const [pendingMaterialAnimation, setPendingMaterialAnimation] = useState(false)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
-  const [turnCount, setTurnCount] = useState(0)
-  const [classEnded, setClassEnded] = useState(false)
-  const [hints, setHints] = useState<string[] | null>(null)
-  const [correctHintIndex, setCorrectHintIndex] = useState<number | null>(null) // 虎の巻の正解位置（無編集送信の検出用）
-  const [hintUsesLeft, setHintUsesLeft] = useState(3)
-  const [correctness, setCorrectness] = useState<(boolean | null)[]>([])
-  const [coveredCards, setCoveredCards] = useState<number[]>([]) // カード駆動：この授業で消化済みのカード番号
-  const [cardLog, setCardLog] = useState<CardLogEntry[]>([]) // カード駆動：カード×先生の説明のQ&Aペア
-  const [lessonMaxTurns, setLessonMaxTurns] = useState(DEFAULT_LESSON_TURNS) // 授業の長さ（ラリー数）
-  const chooseLessonTurns = (turns: number) => {
-    setLessonMaxTurns(turns)
-    AsyncStorage.setItem(LESSON_TURNS_KEY, String(turns)).catch(() => {})
-  }
-  // 前回選んだ授業の長さを復元（進行中セッションから復元済みなら、そちらを優先）
-  const sessionTurnsRestored = useRef(false)
-  useEffect(() => {
-    AsyncStorage.getItem(LESSON_TURNS_KEY).then((v) => {
-      const turns = Number(v)
-      if (!sessionTurnsRestored.current && LESSON_PRESETS.some((p) => p.turns === turns)) setLessonMaxTurns(turns)
-    }).catch(() => {})
-  }, [])
-  const [lessonRecap, setLessonRecap] = useState<Recap | null>(null)
-  const [notebook, setNotebook] = useState<Notebook | null>(null)
-  const [notebookState, setNotebookState] = useState<'received' | 'returned' | null>(null)
+  const [printItems, setPrintItems] = useState<PrintItem[]>([])
+  const [printStage, setPrintStage] = useState<PrintStage>('grading')
 
-  // 授業セッションの復元（E4: アプリ強制終了後も授業を再開できる）
+  // 授業セッションの復元（アプリ強制終了後もプリント授業を再開できる）
   const sessionLoaded = useRef(false)
   useEffect(() => {
-    AsyncStorage.getItem(CHAT_SESSION_KEY).then(raw => {
+    AsyncStorage.removeItem(LEGACY_CHAT_SESSION_KEY).catch(() => {})
+    AsyncStorage.getItem(PRINT_SESSION_KEY).then(raw => {
       if (raw) {
         try {
-          const s = JSON.parse(raw) as ChatSession
-          if (Array.isArray(s.messages) && s.messages.length > 0) {
+          const s = JSON.parse(raw) as PrintSession
+          if (Array.isArray(s.items) && s.items.length > 0 && Array.isArray(s.messages)) {
             setImageDescription(s.imageDescription ?? '')
             setNotes(s.notes ?? '')
             setCurrentHistoryId(s.currentHistoryId ?? null)
             setChatMessages(s.messages)
-            setTurnCount(s.turnCount ?? 0)
-            setClassEnded(!!s.classEnded)
-            setHints(s.hints ?? null)
-            setCorrectHintIndex(s.correctHintIndex ?? null)
-            setHintUsesLeft(typeof s.hintUsesLeft === 'number' ? s.hintUsesLeft : 3)
-            setCorrectness(Array.isArray(s.correctness) ? s.correctness : [])
-            setCoveredCards(Array.isArray(s.coveredCards) ? s.coveredCards : [])
-            setCardLog(Array.isArray(s.cardLog) ? s.cardLog : [])
-            setLessonMaxTurns(s.maxTurns ?? 9) // 旧セッションは9ラリー
-            sessionTurnsRestored.current = true
-            setLessonRecap(s.lessonRecap ?? null)
-            setNotebook(s.notebook ?? null)
-            setNotebookState(s.notebookState ?? null)
+            setPrintItems(s.items)
+            setPrintStage(s.stage ?? 'grading')
           }
         } catch {}
       }
@@ -196,33 +125,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!sessionLoaded.current) return
-    if (chatMessages.length === 0) {
-      AsyncStorage.removeItem(CHAT_SESSION_KEY).catch(() => {})
+    if (printItems.length === 0) {
+      AsyncStorage.removeItem(PRINT_SESSION_KEY).catch(() => {})
       return
     }
-    const session: ChatSession = {
+    const session: PrintSession = {
       imageDescription, notes, currentHistoryId,
-      messages: chatMessages, turnCount, classEnded,
-      hints, correctHintIndex, hintUsesLeft, correctness, lessonRecap, notebook, notebookState,
-      coveredCards, cardLog,
-      maxTurns: lessonMaxTurns,
+      messages: chatMessages, items: printItems, stage: printStage,
     }
-    AsyncStorage.setItem(CHAT_SESSION_KEY, JSON.stringify(session)).catch(() => {})
-  }, [chatMessages, turnCount, classEnded, hints, correctHintIndex, hintUsesLeft, correctness, coveredCards, cardLog, lessonMaxTurns, lessonRecap, notebook, notebookState, imageDescription, notes, currentHistoryId])
+    AsyncStorage.setItem(PRINT_SESSION_KEY, JSON.stringify(session)).catch(() => {})
+  }, [chatMessages, printItems, printStage, imageDescription, notes, currentHistoryId])
 
   const resetChatSession = () => {
     setChatMessages([])
-    setTurnCount(0)
-    setClassEnded(false)
-    setHints(null)
-    setCorrectHintIndex(null)
-    setHintUsesLeft(3)
-    setCorrectness([])
-    setCoveredCards([])
-    setCardLog([])
-    setLessonRecap(null)
-    setNotebook(null)
-    setNotebookState(null)
+    setPrintItems([])
+    setPrintStage('grading')
   }
 
   return (
@@ -237,18 +154,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         currentHistoryId, setCurrentHistoryId,
         pendingMaterialAnimation, setPendingMaterialAnimation,
         chatMessages, setChatMessages,
-        turnCount, setTurnCount,
-        classEnded, setClassEnded,
-        hints, setHints,
-        correctHintIndex, setCorrectHintIndex,
-        hintUsesLeft, setHintUsesLeft,
-        correctness, setCorrectness,
-        coveredCards, setCoveredCards,
-        cardLog, setCardLog,
-        lessonMaxTurns, chooseLessonTurns,
-        lessonRecap, setLessonRecap,
-        notebook, setNotebook,
-        notebookState, setNotebookState,
+        printItems, setPrintItems,
+        printStage, setPrintStage,
         resetChatSession,
       }}
     >

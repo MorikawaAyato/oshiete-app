@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { Factsheet, HistoryItem, PreviewContent, Recap } from './types'
+import type { CardProgress, Factsheet, HistoryItem, PreviewContent, QACard, Recap } from './types'
 
 export type MailMessage = {
   id: string
@@ -12,62 +12,31 @@ export type MailMessage = {
   read: boolean
   historyId?: string // あとから質問メールの対象教材（メールから教材をひらくCTA用）
   examInvite?: boolean // 校長先生からの昇進試験案内（メールから受験するCTA用）
-  homework?: boolean // 宿題の答案が届いたメール（メールから添削するCTA用）
 }
 
-// 宿題：ノート採点で先生が❌とした（うまく説明できなかった）項目を源に、設問・模範解答・
-// 生徒の答案（誤解を抱えたまま解いてくる）を生成。後日、先生が模範解答と見比べて自分で採点する。
-export type HomeworkItem = { question: string; modelAnswer: string; studentAnswer: string; teacherMark?: boolean }
-export type Homework = {
-  historyId: string
-  materialTitle: string
-  studentId: string
-  items: HomeworkItem[]
-  assignedAt: number
-  state: 'assigned' | 'arrived'
+// カード同一性のキー（研修・カード進度・プリントで共通。statementベース）
+export function drillKey(card: QACard): string {
+  return card.statement.replace(/[\s　]/g, '')
 }
 
-const HOMEWORK_KEY = 'oshiete_homework'
+// カード進度：プリント授業の背骨。宿題は独立システムではなく
+// 「pending のカードが次回プリントの復習枠に入る」ことで実現される
+const CARD_PROGRESS_KEY = 'oshiete_card_progress'
 
-// 宿題は生徒ごとに最大1件（B案）。配列で保持し、旧形式（単一オブジェクト）も読めるようにする
-export async function loadHomeworks(): Promise<Homework[]> {
+export async function loadCardProgress(): Promise<Record<string, CardProgress>> {
   try {
-    const raw = await AsyncStorage.getItem(HOMEWORK_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    const list = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' ? [parsed] : [])
-    // 新形式（items を持つ）のみ通す。旧形式（cards/answers）は破棄
-    return (list as Homework[]).filter((h) => h && Array.isArray(h.items))
+    const raw = await AsyncStorage.getItem(CARD_PROGRESS_KEY)
+    return raw ? (JSON.parse(raw) as Record<string, CardProgress>) : {}
   } catch {
-    return []
+    return {}
   }
 }
 
-export async function saveHomeworks(list: Homework[]): Promise<void> {
+export async function saveCardProgress(map: Record<string, CardProgress>): Promise<void> {
   try {
-    if (list.length > 0) await AsyncStorage.setItem(HOMEWORK_KEY, JSON.stringify(list))
-    else await AsyncStorage.removeItem(HOMEWORK_KEY)
-  } catch {}
-}
-
-// 宿題は授業の締めに出すもの：ノート採点で❌にした項目を持って24時間だけ出題導線が開く。
-// items=カード紐付き（設問・模範解答をカードから直結、API不要）／wrongLines=非カード（後でAPI生成）
-export type HomeworkWindow = { historyId: string; studentId: string; endedAt: number; wrongLines?: string[]; items?: HomeworkItem[] }
-const HOMEWORK_WINDOW_KEY = 'oshiete_homework_window'
-
-export async function loadHomeworkWindow(): Promise<HomeworkWindow | null> {
-  try {
-    const raw = await AsyncStorage.getItem(HOMEWORK_WINDOW_KEY)
-    return raw ? (JSON.parse(raw) as HomeworkWindow) : null
-  } catch {
-    return null
-  }
-}
-
-export async function saveHomeworkWindow(w: HomeworkWindow | null): Promise<void> {
-  try {
-    if (w) await AsyncStorage.setItem(HOMEWORK_WINDOW_KEY, JSON.stringify(w))
-    else await AsyncStorage.removeItem(HOMEWORK_WINDOW_KEY)
+    const entries = Object.entries(map)
+    const kept = entries.length > 800 ? entries.sort((a, b) => b[1].lastAt - a[1].lastAt).slice(0, 800) : entries
+    await AsyncStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(Object.fromEntries(kept)))
   } catch {}
 }
 

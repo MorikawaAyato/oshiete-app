@@ -44,27 +44,29 @@ export type Factsheet = {
   errata?: Erratum[] // 先生による訂正。あれば自動再生成しない
 }
 
-export type NotebookLine = {
-  text: string
-  status: 'correct' | 'wrong' | 'blank'
-  correction?: string
-  reference?: string // 採点時に見比べる「教材からの模範解答」（1行1文）
-  teacherMark?: boolean // 先生（ユーザー）がつけた○(true)/✕(false)
-  autoMarked?: boolean // 照合で「教材とぴったり一致」と確信できた行に先に⭕（変更可能）
-  cardIndex?: number // カード駆動時、その行が由来する一問一答カードの番号（宿題のカード直結に使う）
+// プリント授業の1問。truth（答案の正誤）は生成時にサーバが決め打ちしており、
+// 丸付けとのズレ照合はこの値との突き合わせだけで完結する（採点AI不要）
+export type PrintItem = {
+  cardIndex: number // バンク上の位置
+  cardKey: string // drillKey。進度ストア・研修と同じ同一性
+  question: string
+  modelAnswer: string
+  studentAnswer: string
+  truth: 'correct' | 'wrong'
+  choices?: string[] // 虎の巻（赤ペンのひとこと解説の候補。1つが正しい）
+  isReview?: boolean // 復習枠（前回✕・研修「まだ」）からの出題
+  teacherMark?: boolean // 第1段：先生の丸付け（模範解答なし）
+  redPen?: string // 第2段：✕の問題への先生のひとこと解説
+  redPenVerdict?: 'match' | 'diverge' // 返却時の一括判定（判定対象＝正誤一致の✕のみ）
+  finalMark?: boolean // 第3段：答え合わせ後の最終○✕
+  redPenFinal?: 'relearn' | 'ok' // 説明ズレへの先生の1タップ判定
+  flipNote?: string // ○→✕にひっくり返った問題への、その場のひとこと赤ペン
 }
 
-export type Notebook = {
-  title: string
-  lines: NotebookLine[]
-}
+export type PrintStage = 'grading' | 'redpen' | 'check' | 'done'
 
-// カード駆動授業のQ&Aペア（照合コールが紐づけた「カード×先生の説明」。ノート生成の源泉になる）
-export type CardLogEntry = {
-  cardIndex: number
-  explanation: string
-  verdict: boolean | null
-}
+// カード進度：プリント授業の背骨。drillKeyをキーに「触れたか・直近の結果・復習待ちか」を記録
+export type CardProgress = { seen: number; lastAt: number; lastResult?: boolean; pending?: boolean }
 
 export type HistoryItem = {
   id: string
