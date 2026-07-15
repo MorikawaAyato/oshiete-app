@@ -60,7 +60,6 @@ export type PrintItem = {
   redPenVerdict?: 'match' | 'diverge' // 返却時の一括判定（判定対象＝正誤一致の✕のみ）
   finalMark?: boolean // 第3段：答え合わせ後の最終○✕
   redPenFinal?: 'relearn' | 'ok' // 説明ズレへの先生の1タップ判定
-  flipNote?: string // ○→✕にひっくり返った問題への、その場のひとこと赤ペン
 }
 
 export type PrintStage = 'grading' | 'redpen' | 'check' | 'done'

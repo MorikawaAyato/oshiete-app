@@ -166,7 +166,6 @@ export default function ChatScreen() {
   const [showRedpenHints, setShowRedpenHints] = useState(false) // いま聞かれている問題の虎の巻
   const [redpenSending, setRedpenSending] = useState(false) // 返却（赤ペン一括判定）の通信中
   const [redpenError, setRedpenError] = useState<string | null>(null)
-  const [flipNoteDrafts, setFlipNoteDrafts] = useState<Record<number, string>>({}) // ○→✕のひとこと下書き
 
   // 生徒のセリフを入力中演出を挟んで1通ずつ届けるタイマー（画面を離れたら破棄）
   const beatTimers = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -425,11 +424,11 @@ export default function ChatScreen() {
     if (idx >= 0) setTimeout(() => setNotePage(idx), 280)
   }
 
-  // 第3段：採点ズレの再判定（最終判断は常にユーザ）。○→✕はひとこと入力があるのでページ送りしない
+  // 第3段：採点ズレの再判定（最終判断は常にユーザ）
   const setCheckDecision = (i: number, finalMark: boolean) => {
     const updated = printItems.map((it, j) => (j === i ? { ...it, finalMark } : it))
     setPrintItems(updated)
-    if (!(updated[i].teacherMark === true && finalMark === false)) advanceToPending(updated, i)
+    advanceToPending(updated, i)
   }
 
   // 第3段：説明ズレへの1タップ判定
@@ -439,12 +438,9 @@ export default function ChatScreen() {
     advanceToPending(updated, i)
   }
 
-  // 第3段の締め：○→✕のひとことを反映し、見直しの結果を先生の一言で伝えてから授業を締める
+  // 第3段の締め：見直しの結果を先生の一言で伝えてから授業を締める
   const finishCheck = () => {
-    const items = printItems.map((it, i) => {
-      const note = (flipNoteDrafts[i] ?? '').trim()
-      return it.teacherMark === true && it.finalMark === false && note ? { ...it, flipNote: note } : it
-    })
+    const items = printItems
     const okFlips = items.filter((it) => it.teacherMark === false && it.finalMark === true).length
     const xFlips = items.filter((it) => it.teacherMark === true && it.finalMark === false).length
     const relearns = items.filter((it) => it.redPenFinal === 'relearn').length
@@ -732,13 +728,12 @@ export default function ChatScreen() {
               const isCheck = printStage === 'check'
               const showAnswers = printStage === 'done'
               const mark = it.finalMark ?? it.teacherMark
-              const memo = it.redPen ?? it.flipNote
+              const memo = it.redPen
               const needsGradeDecision = isCheck && hasGradeMismatch(it)
               const needsRedpenDecision = isCheck && it.redPenVerdict === 'diverge'
-              // 訂正線：説明（メモ）を受けて直した答案。採点を見直し中のページには引かない（○かもしれない答案を消して見せない）
-              const corrected = memo !== undefined && mark === false && !(needsGradeDecision && it.finalMark === undefined)
+              // 訂正線：メモを受けて直した答案（振り返りでは最終✕すべて）。見直し中のページには引かない
+              const corrected = mark === false && (memo !== undefined || showAnswers) && !(needsGradeDecision && it.finalMark === undefined)
               const showModel = showAnswers || needsGradeDecision || needsRedpenDecision
-              const flipPending = needsGradeDecision && it.teacherMark === true && it.finalMark === false
               const reviewChip = !showAnswers ? null
                 : it.redPenFinal === 'relearn' ? { t: '覚え直し', bg: '#fde68a', fg: '#92400e' }
                 : it.teacherMark !== undefined && it.finalMark !== undefined && it.teacherMark !== it.finalMark
@@ -746,8 +741,7 @@ export default function ChatScreen() {
                   : { t: '採点ぴったり', bg: '#a7f3d0', fg: '#065f46' }
               const allMarked = printItems.every((p) => p.teacherMark !== undefined)
               const pendingChecks = printItems.filter((p) => (hasGradeMismatch(p) && p.finalMark === undefined) || (p.redPenVerdict === 'diverge' && p.redPenFinal === undefined)).length
-              const flipsNeedingNote = printItems.map((p, j) => ({ p, j })).filter(({ p }) => p.teacherMark === true && p.finalMark === false)
-              const canFinishCheck = pendingChecks === 0 && flipsNeedingNote.every(({ j }) => (flipNoteDrafts[j] ?? '').trim().length > 0)
+              const canFinishCheck = pendingChecks === 0
               return (
                 <View style={styles.notebookModal}>
                   <View style={styles.notebookModalHeader}>
@@ -857,20 +851,6 @@ export default function ChatScreen() {
                               </>
                             )}
                           </View>
-                          {flipPending && (
-                            <View style={{ marginTop: 8, gap: 4 }}>
-                              <Text style={styles.hintNote}>「じゃあここも、ひとことだけ教えてください！」</Text>
-                              <TextInput
-                                value={flipNoteDrafts[page] ?? ''}
-                                onChangeText={(t) => setFlipNoteDrafts((prev) => ({ ...prev, [page]: t }))}
-                                placeholder="ひとことで教えてあげよう…"
-                                placeholderTextColor={c.faint}
-                                multiline
-                                maxLength={200}
-                                style={styles.redpenInput}
-                              />
-                            </View>
-                          )}
                         </View>
                       )}
                       {/* 答え合わせ：説明のズレ（1タップ判定） */}
