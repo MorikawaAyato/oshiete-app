@@ -161,10 +161,9 @@ export default function ChatScreen() {
   const [startError, setStartError] = useState(false)
   const [studentTyping, setStudentTyping] = useState(false)
   const [showPrint, setShowPrint] = useState(false) // プリント（丸付け／添削済み）モーダル
-  const [showRedpen, setShowRedpen] = useState(false) // 赤ペンモーダル
   const [showCheck, setShowCheck] = useState(false) // 答え合わせモーダル
-  const [redpenDrafts, setRedpenDrafts] = useState<Record<number, string>>({}) // 赤ペンの下書き（item index → text）
-  const [redpenHintOpen, setRedpenHintOpen] = useState<number | null>(null) // 虎の巻を開いている問題
+  const [redpenInput, setRedpenInput] = useState('') // 赤ペンラリーの入力欄
+  const [showRedpenHints, setShowRedpenHints] = useState(false) // いま聞かれている問題の虎の巻
   const [redpenSending, setRedpenSending] = useState(false) // 返却（赤ペン一括判定）の通信中
   const [redpenError, setRedpenError] = useState<string | null>(null)
   const [flipNoteDrafts, setFlipNoteDrafts] = useState<Record<number, string>>({}) // ○→✕のひとこと下書き
@@ -255,8 +254,12 @@ export default function ChatScreen() {
   // 丸付けと truth の突き合わせ（答え合わせで生徒が聞きに来る「採点のズレ」）
   const hasGradeMismatch = (it: PrintItem) => it.teacherMark !== undefined && it.teacherMark !== (it.truth === 'correct')
 
+  // セリフのテンプレ埋め（{n}=問番号 {q}=問題文。長い問題文は詰める）
+  const fillAsk = (template: string, n: number, q: string) =>
+    template.replace('{n}', String(n)).replace('{q}', q.length > 24 ? q.slice(0, 24) + '…' : q)
+
   // 授業の締め：最終○✕を確定し、カード進度・研修「まだ」・Recapへ反映してリザルトを届ける
-  const finishLesson = (rawItems: PrintItem[], opts?: { noMismatch?: boolean }) => {
+  const finishLesson = (rawItems: PrintItem[], opts?: { noMismatch?: boolean; leadBeats?: string[] }) => {
     if (!student) return
     const items = rawItems.map((it) => ({ ...it, finalMark: it.finalMark ?? it.teacherMark }))
     setPrintItems(items)
@@ -287,7 +290,7 @@ export default function ChatScreen() {
     })()
     const okCount = items.filter((it) => it.finalMark).length
     const retryCount = items.filter((it) => !it.finalMark || it.redPenFinal === 'relearn').length
-    const beats: string[] = []
+    const beats: string[] = [...(opts?.leadBeats ?? [])]
     if (opts?.noMismatch) beats.push(okCount === items.length ? student.perfectLine : student.noMismatchLine)
     beats.push(student.printThanks)
     beats.push(`今日のプリントは ○が${okCount}問・✕が${items.length - okCount}問 でした。${retryCount > 0 ? `まちがえた${retryCount}問は、次のプリントでもういちど挑戦しますね！` : 'ぜんぶばっちりです！'}`)
@@ -306,31 +309,48 @@ export default function ChatScreen() {
     }
   }
 
-  // 第1段の締め：採点してプリントを返す。✕があれば赤ペンへ、無ければ答え合わせへ
+  // 第1段の締め：採点してプリントを返す。✕があれば赤ペンのラリーへ、無ければ答え合わせへ
   const returnPrint = () => {
     setShowPrint(false)
-    const wrongs = printItems.filter((it) => it.teacherMark === false)
-    if (wrongs.length > 0) {
+    const wrongs = printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false)
+    if (wrongs.length > 0 && student) {
       setPrintStage('redpen')
-      if (student) pushBeats([student.redpenRequest])
+      pushBeats([student.redpenRequest, fillAsk(student.redpenAsk, wrongs[0].i + 1, wrongs[0].it.question)])
     } else {
       goCheck(printItems)
     }
   }
 
-  // 第2段の締め：赤ペンを書き終えて返却。正誤一致の✕の解説だけ一括判定にかける
-  // （先生の✕が実は正解の答案だった問題は、答え合わせの採点ズレ側で解消されるため判定しない）
-  const submitRedpen = async () => {
-    if (redpenSending) return
-    const wrongIdx = printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false)
-    for (const { i } of wrongIdx) {
-      const d = (redpenDrafts[i] ?? '').trim()
-      if (!d) return
-      if (containsNG(d)) { setRedpenError('その内容は書けません'); return }
-    }
-    setRedpenSending(true)
+  // 赤ペンラリー：✕の問題を生徒が1問ずつ聞いてくる。先生の返信で次の問いへ（相づちは定型＝AI待ちゼロ）
+  const sendRedpenChat = () => {
+    if (!student || redpenSending || studentTyping) return
+    const text = redpenInput.trim()
+    if (!text) return
+    if (containsNG(text)) { setRedpenError('その内容は送信できません'); return }
+    const current = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
+    if (!current) return
     setRedpenError(null)
-    let items = printItems.map((it, i) => (it.teacherMark === false ? { ...it, redPen: (redpenDrafts[i] ?? '').trim() } : it))
+    setRedpenInput('')
+    setShowRedpenHints(false)
+    const items = printItems.map((it, i) => (i === current.i ? { ...it, redPen: text } : it))
+    setPrintItems(items)
+    setChatMessages((prev) => [...prev, { role: 'user', text }])
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+    const next = items.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
+    if (next) {
+      pushBeats([fillAsk(student.redpenAskNext, next.i + 1, next.it.question)])
+    } else {
+      void completeRedpen(items)
+    }
+  }
+
+  // 赤ペンラリーの締め：正誤一致の✕の解説だけ一括判定にかけて、答え合わせ or 終了へ
+  // （先生の✕が実は正解の答案だった問題は、答え合わせの採点ズレ側で解消されるため判定しない）
+  const completeRedpen = async (itemsIn: PrintItem[]) => {
+    if (!student || redpenSending) return
+    setRedpenSending(true)
+    setStudentTyping(true)
+    let items = itemsIn
     const judgeTargets = items.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false && it.truth === 'wrong')
     if (judgeTargets.length > 0) {
       try {
@@ -341,11 +361,26 @@ export default function ChatScreen() {
         }
       } catch { /* 判定に失敗しても授業は止めない（全件match扱い） */ }
     }
-    setPrintItems(items)
-    setShowRedpen(false)
+    setStudentTyping(false)
     setRedpenSending(false)
-    goCheck(items)
+    setPrintItems(items)
+    const mismatches = items.filter(hasGradeMismatch)
+    const diverged = items.filter((it) => it.redPenVerdict === 'diverge')
+    if (mismatches.length === 0 && diverged.length === 0) {
+      finishLesson(items, { noMismatch: true, leadBeats: [student.redpenClose] })
+    } else {
+      setPrintStage('check')
+      pushBeats([student.redpenClose, student.checkRequest])
+    }
   }
+
+  // 再開時の取りこぼし対策：赤ペンを全部書き終えた直後に中断されたセッションは、判定から続きを進める
+  useEffect(() => {
+    if (printStage !== 'redpen' || printItems.length === 0 || redpenSending) return
+    const pendingAsk = printItems.some((it) => it.teacherMark === false && it.redPen === undefined)
+    if (!pendingAsk) void completeRedpen(printItems)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [printStage])
 
   // 第3段：採点ズレの再判定（最終判断は常にユーザ）
   const setCheckDecision = (i: number, finalMark: boolean) => {
@@ -449,11 +484,30 @@ export default function ChatScreen() {
           <View style={{ width: 60 }} />
         </View>
 
-        {/* 教材を見るボタン */}
-        <TouchableOpacity style={[styles.previewBar, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]} onPress={() => router.push('/preview')}>
-          <Feather name="book-open" size={14} color={c.textMid} />
-          <Text style={styles.previewBarText}>教材を見る</Text>
-        </TouchableOpacity>
+        {/* 共有ドック：オンライン授業の「画面共有」スロット。プリントは常にここから開ける */}
+        <View style={styles.dockRow}>
+          {printItems.length > 0 && (() => {
+            const marked = printItems.filter((it) => it.teacherMark !== undefined).length
+            const wrongs = printItems.filter((it) => it.teacherMark === false)
+            const explained = wrongs.filter((it) => it.redPen !== undefined).length
+            const dockLabel =
+              printStage === 'grading' ? `丸付け ${marked}/${printItems.length}`
+              : printStage === 'redpen' ? `赤ペン ${explained}/${wrongs.length}`
+              : printStage === 'check' ? '答え合わせ中'
+              : '添削ずみ'
+            return (
+              <TouchableOpacity style={styles.printDock} onPress={() => setShowPrint(true)} activeOpacity={0.8}>
+                <Image source={require('../assets/print.webp')} style={{ width: 15, height: 15 }} resizeMode="contain" />
+                <Text style={styles.printDockText} numberOfLines={1}>共有中：プリント</Text>
+                <View style={styles.printDockChip}><Text style={styles.printDockChipText}>{dockLabel}</Text></View>
+              </TouchableOpacity>
+            )
+          })()}
+          <TouchableOpacity style={styles.previewDock} onPress={() => router.push('/preview')} activeOpacity={0.8}>
+            <Feather name="book-open" size={14} color={c.textMid} />
+            <Text style={styles.previewBarText}>教材を見る</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* チャット（生徒のセリフ＋プリントカード） */}
         <ScrollView
@@ -485,11 +539,18 @@ export default function ChatScreen() {
               <TouchableOpacity onPress={() => setShowPrint(true)} style={styles.notebookCard}>
                 <View style={styles.notebookCardPaper}>
                   <Text style={styles.notebookCardTitle} numberOfLines={1}>一問一答プリント</Text>
-                  {printItems.slice(0, 3).map((it, i) => (
-                    <Text key={i} style={styles.notebookCardLine} numberOfLines={1}>
-                      {it.question}
-                    </Text>
-                  ))}
+                  {/* ライブドキュメント：採点の○✕がその場で書き込まれていく */}
+                  {printItems.slice(0, 3).map((it, i) => {
+                    const mark = it.finalMark ?? it.teacherMark
+                    return (
+                      <Text key={i} style={styles.notebookCardLine} numberOfLines={1}>
+                        <Text style={{ fontWeight: '700', color: mark === undefined ? c.paperLine : mark ? '#059669' : '#e11d48' }}>
+                          {mark === undefined ? '・' : mark ? '○' : '✕'}
+                        </Text>
+                        {' '}{it.question}
+                      </Text>
+                    )
+                  })}
                   <Text style={styles.notebookCardLine}>…</Text>
                 </View>
                 <Text style={styles.notebookCardAction}>
@@ -514,7 +575,7 @@ export default function ChatScreen() {
           )}
         </ScrollView>
 
-        {/* アクションバー：いまやることのボタンを1つだけ出す */}
+        {/* アクションバー：丸付け・答え合わせはボタン、赤ペンラリー中はチャット入力欄になる */}
         {printStage !== 'done' && (
           <View style={styles.actionBar}>
             {studentTyping ? (
@@ -524,9 +585,57 @@ export default function ChatScreen() {
                 <Text style={styles.actionBtnText}>プリントを採点する</Text>
               </BouncyPressable>
             ) : printStage === 'redpen' ? (
-              <BouncyPressable style={[styles.actionBtn, { backgroundColor: '#f43f5e' }]} onPress={() => setShowRedpen(true)} haptic="light">
-                <Text style={styles.actionBtnText}>赤ペンを入れる</Text>
-              </BouncyPressable>
+              (() => {
+                const current = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
+                if (!current) return <Text style={styles.actionWaiting}>プリントを返しています…</Text>
+                return (
+                  <View>
+                    {(current.it.choices?.length ?? 0) > 0 && (
+                      <View style={{ marginBottom: 8, gap: 6 }}>
+                        <TouchableOpacity
+                          onPress={() => setShowRedpenHints((v) => !v)}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                        >
+                          <Image source={require('../assets/toranomaki.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                          <Text style={styles.hintToggleText}>虎の巻を開く {showRedpenHints ? '▲' : '▼'}</Text>
+                        </TouchableOpacity>
+                        {showRedpenHints && (
+                          <>
+                            <Text style={styles.hintNote}>1つが正解、2つが誤りです。タップすると入力欄に写せます</Text>
+                            {current.it.choices!.map((choice, k) => (
+                              <TouchableOpacity key={k} onPress={() => setRedpenInput(choice)} style={styles.hintItem}>
+                                <Text style={styles.hintItemText}>{choice}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </>
+                        )}
+                      </View>
+                    )}
+                    <View style={styles.inputRow}>
+                      <TextInput
+                        style={styles.input}
+                        value={redpenInput}
+                        onChangeText={setRedpenInput}
+                        placeholder="ひとことで教えてあげよう…"
+                        placeholderTextColor={c.faint}
+                        multiline
+                        maxLength={200}
+                      />
+                      <BouncyPressable
+                        style={[styles.sendBtn, (!redpenInput.trim() || redpenSending) && styles.sendBtnDisabled]}
+                        onPress={sendRedpenChat}
+                        disabled={!redpenInput.trim() || redpenSending}
+                        haptic="light"
+                      >
+                        <Text style={styles.sendBtnText}>送信</Text>
+                      </BouncyPressable>
+                    </View>
+                    {redpenError && (
+                      <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> {redpenError}</Text>
+                    )}
+                  </View>
+                )
+              })()
             ) : (
               <BouncyPressable style={[styles.actionBtn, { backgroundColor: '#f59e0b' }]} onPress={() => setShowCheck(true)} haptic="light">
                 <Text style={styles.actionBtnText}>答え合わせをする</Text>
@@ -627,91 +736,6 @@ export default function ChatScreen() {
               </View>
             </View>
           </View>
-        </Modal>
-
-        {/* 赤ペンモーダル（第2段：✕の問題すべてに、模範解答を見ずにひとことで教える） */}
-        <Modal
-          visible={showRedpen && printStage === 'redpen'}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowRedpen(false)}
-        >
-          <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View style={styles.notebookModal}>
-              <View style={styles.notebookModalHeader}>
-                <Text style={styles.notebookModalTitle}>赤ペンを入れる</Text>
-                <TouchableOpacity onPress={() => setShowRedpen(false)} hitSlop={8}>
-                  <Text style={styles.notebookModalClose}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              <ScrollView style={styles.notebookScroll} keyboardShouldPersistTaps="handled">
-                <Text style={styles.notebookGradeHint}>
-                  <Text style={styles.gradeMarkX}>✕</Text>にした問題を、自分の言葉で教えてあげよう。むずかしく書かなくてOK、ひとことで！
-                </Text>
-                <View style={{ gap: 10, paddingBottom: 8 }}>
-                  {printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false).map(({ it, i }) => (
-                    <View key={i} style={styles.redpenItem}>
-                      <Text style={styles.printQuestion}><Text style={{ fontWeight: '700' }}>問{i + 1} </Text>{it.question}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 2 }}>
-                        <Text style={[styles.redpenStudentAnswer, { flex: 1 }]}>✎ {it.studentAnswer}</Text>
-                        <Text style={[styles.gradeMarkX, { fontSize: 14 }]}>✕</Text>
-                      </View>
-                      <TextInput
-                        value={redpenDrafts[i] ?? ''}
-                        onChangeText={(t) => setRedpenDrafts((prev) => ({ ...prev, [i]: t }))}
-                        placeholder="ひとことで教えてあげよう…"
-                        placeholderTextColor={c.faint}
-                        multiline
-                        maxLength={200}
-                        style={styles.redpenInput}
-                      />
-                      {(it.choices?.length ?? 0) > 0 && (
-                        <View style={{ marginTop: 6 }}>
-                          <TouchableOpacity
-                            onPress={() => setRedpenHintOpen(redpenHintOpen === i ? null : i)}
-                            style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                          >
-                            <Image source={require('../assets/toranomaki.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
-                            <Text style={styles.hintToggleText}>虎の巻を開く {redpenHintOpen === i ? '▲' : '▼'}</Text>
-                          </TouchableOpacity>
-                          {redpenHintOpen === i && (
-                            <View style={{ gap: 6, marginTop: 6 }}>
-                              <Text style={styles.hintNote}>1つが正解、2つが誤りです。タップすると赤ペンに写せます</Text>
-                              {it.choices!.map((choice, k) => (
-                                <TouchableOpacity key={k} onPress={() => { setRedpenDrafts((prev) => ({ ...prev, [i]: choice })); setRedpenHintOpen(null) }} style={styles.hintItem}>
-                                  <Text style={styles.hintItemText}>{choice}</Text>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                </View>
-                {redpenError && (
-                  <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> {redpenError}</Text>
-                )}
-              </ScrollView>
-              <View style={styles.notebookModalFooter}>
-                {(() => {
-                  const wrongs = printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false)
-                  const allWritten = wrongs.every(({ i }) => (redpenDrafts[i] ?? '').trim().length > 0)
-                  return (
-                    <BouncyPressable
-                      onPress={() => { if (allWritten && !redpenSending) void submitRedpen() }}
-                      style={[styles.returnBtn, { backgroundColor: '#f43f5e' }, (!allWritten || redpenSending) && styles.returnBtnDisabled]}
-                      haptic="success"
-                    >
-                      <Text style={[styles.gradeBtnText, (!allWritten || redpenSending) && styles.gradeBtnTextDisabled]}>
-                        {redpenSending ? 'プリントを返しています…' : allWritten ? '赤ペンを入れてプリントを返す' : 'ぜんぶの問題にひとこと書いてあげてね'}
-                      </Text>
-                    </BouncyPressable>
-                  )
-                })()}
-              </View>
-            </View>
-          </KeyboardAvoidingView>
         </Modal>
 
         {/* 答え合わせモーダル（第3段：採点のズレと説明のズレを一括解消。最終判断は常にユーザ） */}
@@ -886,9 +910,23 @@ const styles = StyleSheet.create({
   headerName: { fontSize: 14, fontFamily: font.round, color: c.textStrong },
   stageText: { fontSize: 11, fontWeight: '600', color: c.textSub, marginTop: 1 },
 
-  previewBar: {
-    backgroundColor: c.skyTint, borderBottomWidth: 1, borderBottomColor: c.skyBorder,
-    paddingVertical: 9, alignItems: 'center',
+  dockRow: {
+    flexDirection: 'row', gap: 8,
+    paddingHorizontal: 10, paddingVertical: 6,
+    backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: c.border,
+  },
+  printDock: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 10,
+    paddingVertical: 7, paddingHorizontal: 8,
+  },
+  printDockText: { fontSize: 12, fontWeight: '700', color: '#92400e', flexShrink: 1 },
+  printDockChip: { backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: '#fde68a', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
+  printDockChipText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
+  previewDock: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: 10,
+    paddingVertical: 7, paddingHorizontal: 8,
   },
   previewBarText: { fontSize: 13, fontWeight: '700', color: c.link },
 
@@ -931,6 +969,16 @@ const styles = StyleSheet.create({
   actionBtn: { borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
   actionBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
   actionWaiting: { fontSize: 12, color: c.faint, textAlign: 'center', paddingVertical: 6 },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  input: {
+    flex: 1, backgroundColor: c.bg, borderRadius: 12,
+    borderWidth: 1, borderColor: c.border,
+    paddingHorizontal: 14, paddingVertical: 10,
+    fontSize: 14, color: c.textStrong, maxHeight: 100,
+  },
+  sendBtn: { backgroundColor: '#f43f5e', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
+  sendBtnDisabled: { opacity: 0.4 },
+  sendBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
 
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',

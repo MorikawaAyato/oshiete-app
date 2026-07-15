@@ -13,7 +13,10 @@ export type Student = {
   // プリント授業の定型セリフ（ローカル配信・AIコールなし）
   printGreeting: string // 通常回：宿題プリントを持ってくる
   printGreetingFirst: string // 初回：授業の冒頭で解いたてい
-  redpenRequest: string // ✕の問題の解説をまとめて頼む
+  redpenRequest: string // ✕の問題を聞き始める前置き
+  redpenAsk: string // 最初の✕を聞く（{n}=問番号 {q}=問題文）
+  redpenAskNext: string // 相づち＋次の✕を聞く（{n} {q}）
+  redpenClose: string // 全部聞き終えた締めの相づち
   checkRequest: string // 返却後、模範解答と見比べて聞きに来る
   perfectLine: string // 全問○だったとき
   noMismatchLine: string // 答え合わせでズレがなかったとき
@@ -66,7 +69,10 @@ export const STUDENTS: Student[] = [
     appeal: 'よろしくお願いします！楽しみにしてます😊',
     printGreeting: '先生、こんにちは！宿題のプリント、がんばってやってきました！✨ みてもらえますか？📝',
     printGreetingFirst: '先生、こんにちは！さっき解いてみたプリント、みてもらえますか？✨ ドキドキです…！',
-    redpenRequest: '✕のところ、じつはいまいちわかってなくて…🤔 むずかしく書かなくていいので、ひとことで教えてください！',
+    redpenRequest: '✕のところ、じつはいまいちわかってなくて…🤔 むずかしくなくていいので、ひとことずつ教えてください！',
+    redpenAsk: 'さっそくですけど、問{n}の「{q}」！どこがちがうんですか？🤔',
+    redpenAskNext: 'なるほど…！メモしました✨ つぎは問{n}の「{q}」です！これはどうしてですか？',
+    redpenClose: 'ぜんぶメモしました！✨ あとで模範解答とも見比べてみますね！ありがとうございます😊',
     checkRequest: 'プリントありがとうございます！模範解答とくらべてみたら、ちょっと気になるところがあって…みてもらえますか？',
     perfectLine: 'えーっ、ぜんぶ○！？やったー！！✨ わたし、がんばりました！😊',
     noMismatchLine: '模範解答ともぜんぶ合ってました！先生すごいです…！✨',
@@ -94,7 +100,10 @@ ${TEACHING_ROLE}`,
     appeal: 'よろしくおねがいします🐾 ゆっくりお願いします...',
     printGreeting: '先生、こんにちは...。宿題のプリント、やってきました🐾 みてもらえますか...？',
     printGreetingFirst: 'あの...さっき解いてみたプリントです🐾 まちがってたらごめんなさい...',
-    redpenRequest: '✕のところ、えーっと...よくわかってなくて...。ひとことでいいので、教えてほしいです🐾',
+    redpenRequest: '✕のところ、えーっと...よくわかってなくて...。ひとことずつ、教えてほしいです🐾',
+    redpenAsk: 'えっと...問{n}の「{q}」...どこがちがうんですか...？🐾',
+    redpenAskNext: 'ふむふむ...メモしました🐾 つぎは、問{n}の「{q}」...これはどうしてですか...？',
+    redpenClose: 'ぜんぶメモできました...🐾 あとで模範解答とも見比べてみますね。ありがとうございます😊',
     checkRequest: 'プリントありがとうございます...。模範解答とくらべてたら、ちょっと気になるところがあって...きいてもいいですか？',
     perfectLine: 'え...ぜんぶ○...？やった...！ぼく、うれしいです🐾😊',
     noMismatchLine: '模範解答とも、ぜんぶ合ってました...。先生、すごいです🐾',
