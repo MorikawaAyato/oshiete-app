@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
 import { fetchPrint, judgeRedpen, fetchFactsheet } from '@/lib/api'
@@ -182,6 +182,13 @@ export default function ChatScreen() {
   }
   useEffect(() => () => { beatTimers.current.forEach(clearTimeout) }, [])
 
+  // 共有ドック：段が進むたびにぽんっと跳ねて目線を誘導する（カードではなくここが資料の定位置）
+  const dockScale = useRef(new Animated.Value(1)).current
+  useEffect(() => {
+    dockScale.setValue(1.06)
+    Animated.spring(dockScale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 9 }).start()
+  }, [printStage])
+
   useEffect(() => {
     if (chatMessages.length > 0) {
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 100)
@@ -293,7 +300,11 @@ export default function ChatScreen() {
     const beats: string[] = [...(opts?.leadBeats ?? [])]
     if (opts?.noMismatch) beats.push(okCount === items.length ? student.perfectLine : student.noMismatchLine)
     beats.push(student.printThanks)
-    beats.push(`今日のプリントは ○が${okCount}問・✕が${items.length - okCount}問 でした。${retryCount > 0 ? `まちがえた${retryCount}問は、次のプリントでもういちど挑戦しますね！` : 'ぜんぶばっちりです！'}`)
+    // 先生の採点そのものの正確さも伝える（○にした問題が本当に合っていたかの不安を残さない）
+    const accurate = items.filter((it) => it.teacherMark === (it.truth === 'correct')).length
+    beats.push(
+      `今日のプリントは ○が${okCount}問・✕が${items.length - okCount}問。先生の採点は ${accurate === items.length ? 'ぜんぶ模範解答とぴったりでした！' : `${items.length}問中${accurate}問が模範解答とぴったりでした！`}${retryCount > 0 ? ` まちがえた${retryCount}問は、次のプリントでもういちど挑戦しますね！` : ''}`
+    )
     pushBeats(beats)
   }
 
@@ -309,9 +320,12 @@ export default function ChatScreen() {
     }
   }
 
-  // 第1段の締め：採点してプリントを返す。✕があれば赤ペンのラリーへ、無ければ答え合わせへ
+  // 第1段の締め：採点してプリントを返す。✕があれば赤ペンのラリーへ、無ければ答え合わせへ。
+  // 無言で突き返さないよう、先生の一言を自動で添える
   const returnPrint = () => {
     setShowPrint(false)
+    setChatMessages((prev) => [...prev, { role: 'user', text: 'まるつけできたよ。プリント、返すね！' }])
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
     const wrongs = printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false)
     if (wrongs.length > 0 && student) {
       setPrintStage('redpen')
@@ -462,6 +476,32 @@ export default function ChatScreen() {
 
   const stageLabel = printStage === 'done' ? '授業終了' : printStage === 'grading' ? 'プリントの丸付け中' : printStage === 'redpen' ? '赤ペンを待っています' : '答え合わせ中'
 
+  // チャット内のプリントカード。提出時（先頭）と返却時（末尾）の2回だけ登場する
+  const renderPrintCard = (label: string) => (
+    <View style={[styles.bubble, styles.bubbleMana]}>
+      <Image source={student.avatar} style={styles.bubbleAvatar} />
+      <TouchableOpacity onPress={() => setShowPrint(true)} style={styles.notebookCard}>
+        <View style={styles.notebookCardPaper}>
+          <Text style={styles.notebookCardTitle} numberOfLines={1}>一問一答プリント</Text>
+          {/* ライブドキュメント：採点の○✕がその場で書き込まれていく */}
+          {printItems.slice(0, 3).map((it, i) => {
+            const mark = it.finalMark ?? it.teacherMark
+            return (
+              <Text key={i} style={styles.notebookCardLine} numberOfLines={1}>
+                <Text style={{ fontWeight: '700', color: mark === undefined ? c.paperLine : mark ? '#059669' : '#e11d48' }}>
+                  {mark === undefined ? '・' : mark ? '○' : '✕'}
+                </Text>
+                {' '}{it.question}
+              </Text>
+            )
+          })}
+          <Text style={styles.notebookCardLine}>…</Text>
+        </View>
+        <Text style={styles.notebookCardAction}>{label}</Text>
+      </TouchableOpacity>
+    </View>
+  )
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: student.color + '18' }]}>
       <KeyboardAvoidingView
@@ -496,11 +536,13 @@ export default function ChatScreen() {
               : printStage === 'check' ? '答え合わせ中'
               : '添削ずみ'
             return (
-              <TouchableOpacity style={styles.printDock} onPress={() => setShowPrint(true)} activeOpacity={0.8}>
-                <Image source={require('../assets/print.webp')} style={{ width: 15, height: 15 }} resizeMode="contain" />
-                <Text style={styles.printDockText} numberOfLines={1}>共有中：プリント</Text>
-                <View style={styles.printDockChip}><Text style={styles.printDockChipText}>{dockLabel}</Text></View>
-              </TouchableOpacity>
+              <Animated.View style={{ flex: 1, transform: [{ scale: dockScale }] }}>
+                <TouchableOpacity style={styles.printDock} onPress={() => setShowPrint(true)} activeOpacity={0.8}>
+                  <Image source={require('../assets/print.webp')} style={{ width: 15, height: 15 }} resizeMode="contain" />
+                  <Text style={styles.printDockText} numberOfLines={1}>共有中：プリント</Text>
+                  <View style={styles.printDockChip}><Text style={styles.printDockChipText}>{dockLabel}</Text></View>
+                </TouchableOpacity>
+              </Animated.View>
             )
           })()}
           <TouchableOpacity style={styles.previewDock} onPress={() => router.push('/preview')} activeOpacity={0.8}>
@@ -517,48 +559,28 @@ export default function ChatScreen() {
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
         >
           {chatMessages.map((msg, i) => (
-            <View key={i} style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleMana]}>
-              {msg.role === 'mana' && (
-                <Image source={student.avatar} style={styles.bubbleAvatar} />
-              )}
-              <View style={[
-                styles.bubbleText,
-                msg.role === 'user' ? styles.bubbleTextUser : styles.bubbleTextMana,
-                { maxWidth: msg.role === 'user' ? '75%' : '80%' },
-              ]}>
-                <Text style={[styles.msgText, msg.role === 'user' && styles.msgTextUser]}>
-                  {msg.text}
-                </Text>
-              </View>
-            </View>
-          ))}
-          {/* プリントカード（授業のはじめに生徒から届く。タップで採点／見返し） */}
-          {printItems.length > 0 && chatMessages.length > 0 && (
-            <View style={[styles.bubble, styles.bubbleMana]}>
-              <Image source={student.avatar} style={styles.bubbleAvatar} />
-              <TouchableOpacity onPress={() => setShowPrint(true)} style={styles.notebookCard}>
-                <View style={styles.notebookCardPaper}>
-                  <Text style={styles.notebookCardTitle} numberOfLines={1}>一問一答プリント</Text>
-                  {/* ライブドキュメント：採点の○✕がその場で書き込まれていく */}
-                  {printItems.slice(0, 3).map((it, i) => {
-                    const mark = it.finalMark ?? it.teacherMark
-                    return (
-                      <Text key={i} style={styles.notebookCardLine} numberOfLines={1}>
-                        <Text style={{ fontWeight: '700', color: mark === undefined ? c.paperLine : mark ? '#059669' : '#e11d48' }}>
-                          {mark === undefined ? '・' : mark ? '○' : '✕'}
-                        </Text>
-                        {' '}{it.question}
-                      </Text>
-                    )
-                  })}
-                  <Text style={styles.notebookCardLine}>…</Text>
+            <Fragment key={i}>
+              <View style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleMana]}>
+                {msg.role === 'mana' && (
+                  <Image source={student.avatar} style={styles.bubbleAvatar} />
+                )}
+                <View style={[
+                  styles.bubbleText,
+                  msg.role === 'user' ? styles.bubbleTextUser : styles.bubbleTextMana,
+                  { maxWidth: msg.role === 'user' ? '75%' : '80%' },
+                ]}>
+                  <Text style={[styles.msgText, msg.role === 'user' && styles.msgTextUser]}>
+                    {msg.text}
+                  </Text>
                 </View>
-                <Text style={styles.notebookCardAction}>
-                  {printStage === 'grading' ? 'タップして採点する' : printStage === 'done' ? '添削済みのプリントを見る' : 'プリントを見る'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+              </View>
+              {/* プリントカードは「提出の瞬間」の位置に固定（毎回チャットの後ろに現れて目線を奪わない）。
+                  以後のアクセスは共有ドックが受け持つ */}
+              {i === 0 && printItems.length > 0 && renderPrintCard(printStage === 'grading' ? 'タップして採点する' : 'プリントを見る')}
+            </Fragment>
+          ))}
+          {/* 添削済みのプリントは「返却の瞬間」として最後にもう一度届く */}
+          {printStage === 'done' && printItems.length > 0 && chatMessages.length > 0 && renderPrintCard('今日の振り返りを見る')}
           {studentTyping && (
             <View style={[styles.bubble, styles.bubbleMana]}>
               <Image source={student.avatar} style={styles.bubbleAvatar} />
@@ -568,6 +590,9 @@ export default function ChatScreen() {
           {printStage === 'done' && !studentTyping && (
             <View style={styles.endedActions}>
               <Text style={styles.endedLabel}>今日の授業は終わりました！</Text>
+              <TouchableOpacity style={styles.reviewBtn} onPress={() => setShowPrint(true)}>
+                <Text style={styles.reviewBtnText}>今日の振り返りを見る</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.finishBtn} onPress={handleBack}>
                 <Text style={styles.finishBtnText}>ホームに戻る</Text>
               </TouchableOpacity>
@@ -656,7 +681,7 @@ export default function ChatScreen() {
               <View style={styles.notebookModalHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Image source={require('../assets/print.webp')} style={{ width: 18, height: 18 }} resizeMode="contain" />
-                  <Text style={styles.notebookModalTitle}>{student.name}のプリント</Text>
+                  <Text style={styles.notebookModalTitle}>{printStage === 'done' ? '今日の振り返り' : `${student.name}のプリント`}</Text>
                 </View>
                 <TouchableOpacity onPress={() => setShowPrint(false)} hitSlop={8}>
                   <Text style={styles.notebookModalClose}>✕</Text>
@@ -668,12 +693,23 @@ export default function ChatScreen() {
                     模範解答は見ずに、先生の記憶だけで採点します。合っていたら <Text style={styles.gradeMarkO}>○</Text>、ちがえば <Text style={styles.gradeMarkX}>✕</Text> をつけてね。
                   </Text>
                 )}
+                {printStage === 'done' && (
+                  <Text style={styles.notebookGradeHint}>
+                    自分の採点・赤ペンを、赤い<Text style={styles.modelAnswerWord}>答</Text>と見くらべて振り返ろう。
+                  </Text>
+                )}
                 <View style={styles.notebookPaper}>
                   <Text style={styles.notebookTitle}>一問一答プリント</Text>
                   {printItems.map((it, i) => {
                     const isGrading = printStage === 'grading'
                     const showAnswers = printStage === 'done' // 途中段階で模範解答を見せない（赤ペンは純粋想起で書く）
                     const mark = it.finalMark ?? it.teacherMark
+                    // 振り返り用：この問題の採点が模範解答とどうだったかのバッジ
+                    const reviewChip = !showAnswers ? null
+                      : it.redPenFinal === 'relearn' ? { t: '覚え直し', bg: '#fde68a', fg: '#92400e' }
+                      : it.teacherMark !== undefined && it.finalMark !== undefined && it.teacherMark !== it.finalMark
+                        ? (it.finalMark ? { t: '見直して○', bg: '#bae6fd', fg: '#075985' } : { t: '見直して✕', bg: '#fecdd3', fg: '#9f1239' })
+                        : { t: '採点ぴったり', bg: '#a7f3d0', fg: '#065f46' }
                     return (
                       <View key={i} style={styles.notebookLineRow}>
                         <View style={{ flex: 1 }}>
@@ -682,6 +718,7 @@ export default function ChatScreen() {
                               <Text style={{ fontWeight: '700' }}>問{i + 1} </Text>{it.question}
                             </Text>
                             {it.isReview && <View style={styles.reviewBadge}><Text style={styles.reviewBadgeText}>復習</Text></View>}
+                            {reviewChip && <View style={[styles.reviewBadge, { backgroundColor: reviewChip.bg }]}><Text style={[styles.reviewBadgeText, { color: reviewChip.fg }]}>{reviewChip.t}</Text></View>}
                           </View>
                           <Text style={styles.notebookLineText}>
                             <Text style={styles.notebookPenMark}>✎ </Text>{it.studentAnswer}
@@ -1072,6 +1109,8 @@ const styles = StyleSheet.create({
 
   endedActions: { marginTop: 16, gap: 10 },
   endedLabel: { fontSize: 13, color: c.textSub, textAlign: 'center', fontWeight: '600' },
+  reviewBtn: { backgroundColor: c.primaryStrong, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  reviewBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
   finishBtn: { ...btn.secondary, borderRadius: 12, paddingVertical: 14 },
   finishBtnText: { ...btn.secondaryText },
 })
