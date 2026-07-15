@@ -353,21 +353,20 @@ export default function ChatScreen() {
     return parts.length > 0 ? `見直したよ。${parts.join('。')}！` : '見直したよ。これでばっちり！'
   }
 
-  // 入力欄への下書きは用途が切り替わった瞬間に1回だけ入れる（ユーザの編集は上書きしない）
-  const prefillRef = useRef<string | null>(null)
+  // 下書きは入力欄には入れず、プレースホルダーとして見せる（空のまま送信＝下書きが届く／書けば自分の言葉）。
+  // 用途が切り替わったら入力欄を空にする
+  const composeDraft = composeMode === 'return' ? 'まるつけできたよ。ノート、返すね！' : composeMode === 'checkDone' ? checkSummaryDraft() : null
+  const prevComposeRef = useRef<string | null>(null)
   useEffect(() => {
-    if (composeMode === prefillRef.current) return
-    prefillRef.current = composeMode
-    if (composeMode === 'return') setRedpenInput('まるつけできたよ。ノート、返すね！')
-    else if (composeMode === 'checkDone') setRedpenInput(checkSummaryDraft())
-    else setRedpenInput('')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (composeMode === prevComposeRef.current) return
+    prevComposeRef.current = composeMode
+    setRedpenInput('')
   }, [composeMode])
 
   // 返却・見直し報告の送信（先生の発言は必ず先生が押して送る）
   const sendTeacherLine = () => {
     if (!student || studentTyping) return
-    const text = redpenInput.trim()
+    const text = redpenInput.trim() || (composeDraft ?? '')
     if (!text) return
     if (containsNG(text)) { setRedpenError('その内容は送信できません'); return }
     setRedpenError(null)
@@ -712,17 +711,15 @@ export default function ChatScreen() {
                 ? `${student.name}が書いています…`
                 : composeMode === 'rally'
                   ? (composerAsk ? 'ひとことで教えてあげよう…' : 'ノートを返しています…')
-                  : composeMode === 'return'
-                    ? '一言そえてノートを返そう…'
-                    : composeMode === 'checkDone'
-                      ? '見直しの結果を伝えよう…'
+                  : composeMode === 'return' || composeMode === 'checkDone'
+                    ? (composeDraft ?? '')
                       : printStage === 'grading'
                         ? 'ノートの丸付けがおわったら返せるよ'
                         : '答え合わせがおわったら伝えられるよ'
               const guide = !studentTyping && composeMode === 'return'
-                ? 'ノートを返すよ。一言そえてあげよう（そのまま送ってもOK）'
+                ? 'そのまま送信でこの言葉が届くよ。書けば自分の言葉になるよ'
                 : !studentTyping && composeMode === 'checkDone'
-                  ? '見直しの結果を伝えてあげよう（そのまま送ってもOK）'
+                  ? '見直しの結果だよ。そのまま送信でもOK、書けば自分の言葉に'
                   : null
               const handleSend = () => { if (composeMode === 'rally') sendRedpenChat(); else sendTeacherLine() }
               return (
@@ -759,9 +756,9 @@ export default function ChatScreen() {
                       maxLength={200}
                     />
                     <BouncyPressable
-                      style={[styles.sendBtn, composeMode !== 'rally' && { backgroundColor: c.primaryStrong }, (!canCompose || !redpenInput.trim()) && styles.sendBtnDisabled]}
+                      style={[styles.sendBtn, composeMode !== 'rally' && { backgroundColor: c.primaryStrong }, (!canCompose || (composeMode === 'rally' ? !redpenInput.trim() : !redpenInput.trim() && !composeDraft)) && styles.sendBtnDisabled]}
                       onPress={handleSend}
-                      disabled={!canCompose || !redpenInput.trim()}
+                      disabled={!canCompose || (composeMode === 'rally' ? !redpenInput.trim() : !redpenInput.trim() && !composeDraft)}
                       haptic="light"
                     >
                       <Text style={styles.sendBtnText}>送信</Text>
