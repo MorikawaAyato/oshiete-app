@@ -445,6 +445,9 @@ export default function ChatScreen() {
     if (printStage === 'grading') {
       const idx = printItems.findIndex((it) => it.teacherMark === undefined)
       page = idx >= 0 ? idx : 0
+    } else if (printStage === 'redpen') {
+      const idx = printItems.findIndex((it) => it.teacherMark === false && it.redPen === undefined)
+      page = idx >= 0 ? idx : 0
     } else if (printStage === 'check') {
       const idx = printItems.findIndex((it) => (hasGradeMismatch(it) && it.finalMark === undefined) || (it.redPenVerdict === 'diverge' && it.redPenFinal === undefined))
       page = idx >= 0 ? idx : 0
@@ -591,30 +594,61 @@ export default function ChatScreen() {
           <View style={{ width: 60 }} />
         </View>
 
-        {/* 共有ドック：オンライン授業の「画面共有」スロット。プリントは常にここから開ける */}
+        {/* 共有モニター：オンライン授業の「画面共有」。段階に応じて中身と唯一のCTAが切り替わる。
+            ボタン類はすべてここに集約し、下の入力欄は変身しない */}
         <View style={styles.dockRow}>
           {printItems.length > 0 && (() => {
             const marked = printItems.filter((it) => it.teacherMark !== undefined).length
             const wrongs = printItems.filter((it) => it.teacherMark === false)
             const explained = wrongs.filter((it) => it.redPen !== undefined).length
-            const dockLabel =
-              printStage === 'grading' ? `丸付け ${marked}/${printItems.length}`
+            const monitorAsk = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
+            const chip =
+              printStage === 'grading' ? (composeMode === 'return' ? '丸付けおわり' : `丸付け ${marked}/${printItems.length}`)
               : printStage === 'redpen' ? `赤ペン ${explained}/${wrongs.length}`
-              : printStage === 'check' ? '答え合わせ中'
+              : printStage === 'check' ? (pendingCheckCount > 0 ? `のこり${pendingCheckCount}` : '見直しおわり')
               : '添削ずみ'
+            const cta =
+              printStage === 'grading' ? (composeMode === 'return' ? 'たしかめる' : '丸付けをつづける')
+              : printStage === 'redpen' ? 'ノートを見る'
+              : printStage === 'check' ? (pendingCheckCount > 0 ? '答え合わせをする' : 'たしかめる')
+              : '振り返りを見る'
             return (
               <Animated.View style={{ flex: 1, transform: [{ scale: dockScale }] }}>
-                <TouchableOpacity style={styles.printDock} onPress={openNote} activeOpacity={0.8}>
-                  <Image source={require('../assets/print.webp')} style={{ width: 15, height: 15 }} resizeMode="contain" />
-                  <Text style={styles.printDockText} numberOfLines={1}>共有中：ノート</Text>
-                  <View style={styles.printDockChip}><Text style={styles.printDockChipText}>{dockLabel}</Text></View>
+                <TouchableOpacity style={styles.monitor} onPress={openNote} activeOpacity={0.8}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <Image source={require('../assets/print.webp')} style={{ width: 15, height: 15 }} resizeMode="contain" />
+                    <Text style={styles.monitorLabel}>画面共有</Text>
+                    <View style={styles.printDockChip}><Text style={styles.printDockChipText}>{chip}</Text></View>
+                    <Text style={styles.monitorCta}>{cta} ›</Text>
+                  </View>
+                  <View style={{ marginTop: 4 }}>
+                    {printStage === 'redpen' && monitorAsk ? (
+                      <>
+                        <Text style={styles.monitorQuestion}><Text style={{ fontWeight: '700' }}>問{monitorAsk.i + 1}</Text> {monitorAsk.it.question}</Text>
+                        <Text style={styles.monitorAnswer} numberOfLines={1}>✎ {monitorAsk.it.studentAnswer}</Text>
+                      </>
+                    ) : (
+                      <>
+                        {printItems.slice(0, 2).map((it, i) => {
+                          const m = it.finalMark ?? it.teacherMark
+                          return (
+                            <Text key={i} style={styles.monitorLine} numberOfLines={1}>
+                              <Text style={{ fontWeight: '700', color: m === undefined ? c.border : m ? '#059669' : '#e11d48' }}>{m === undefined ? '・' : m ? '○' : '✕'}</Text>
+                              {' '}{it.question}
+                            </Text>
+                          )
+                        })}
+                        <Text style={[styles.monitorLine, { color: c.faint }]}>…</Text>
+                      </>
+                    )}
+                  </View>
                 </TouchableOpacity>
               </Animated.View>
             )
           })()}
           <TouchableOpacity style={styles.previewDock} onPress={() => router.push('/preview')} activeOpacity={0.8}>
             <Feather name="book-open" size={14} color={c.textMid} />
-            <Text style={styles.previewBarText}>教材を見る</Text>
+            <Text style={styles.previewBarText}>教材</Text>
           </TouchableOpacity>
         </View>
 
@@ -667,29 +701,67 @@ export default function ChatScreen() {
           )}
         </ScrollView>
 
-        {/* アクションバー：丸付け・答え合わせはボタン、赤ペンラリー中はチャット入力欄になる */}
+        {/* 入力欄：常にチャットの入力欄（変身しない）。ボタン類は共有モニターへ。
+            送れないときは無効化して、理由をプレースホルダーで言う */}
         {printStage !== 'done' && (
           <View style={styles.actionBar}>
-            {studentTyping ? (
-              <Text style={styles.actionWaiting}>{student.name}が書いています…</Text>
-            ) : printStage === 'grading' ? (
-              composeMode === 'return' ? (
+            {(() => {
+              const composerAsk = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
+              const canCompose = !studentTyping && !redpenSending && (composeMode === 'return' || composeMode === 'checkDone' || (composeMode === 'rally' && !!composerAsk))
+              const placeholder = studentTyping
+                ? `${student.name}が書いています…`
+                : composeMode === 'rally'
+                  ? (composerAsk ? 'ひとことで教えてあげよう…' : 'ノートを返しています…')
+                  : composeMode === 'return'
+                    ? '一言そえてノートを返そう…'
+                    : composeMode === 'checkDone'
+                      ? '見直しの結果を伝えよう…'
+                      : printStage === 'grading'
+                        ? 'ノートの丸付けがおわったら返せるよ'
+                        : '答え合わせがおわったら伝えられるよ'
+              const guide = !studentTyping && composeMode === 'return'
+                ? 'ノートを返すよ。一言そえてあげよう（そのまま送ってもOK）'
+                : !studentTyping && composeMode === 'checkDone'
+                  ? '見直しの結果を伝えてあげよう（そのまま送ってもOK）'
+                  : null
+              const handleSend = () => { if (composeMode === 'rally') sendRedpenChat(); else sendTeacherLine() }
+              return (
                 <View>
-                  <Text style={[styles.hintNote, { marginBottom: 6 }]}>ノートを返すよ。一言そえてあげよう（そのまま送ってもOK）</Text>
+                  {/* 虎の巻：入力の補助なので入力欄のそばに残す */}
+                  {canCompose && composeMode === 'rally' && composerAsk && (composerAsk.it.choices?.length ?? 0) > 0 && (
+                    <View style={{ marginBottom: 8, gap: 6 }}>
+                      <TouchableOpacity onPress={() => setShowRedpenHints((v) => !v)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Image source={require('../assets/toranomaki.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                        <Text style={styles.hintToggleText}>虎の巻を開く {showRedpenHints ? '▲' : '▼'}</Text>
+                      </TouchableOpacity>
+                      {showRedpenHints && (
+                        <>
+                          <Text style={styles.hintNote}>1つが正解、2つが誤りです。タップすると入力欄に写せます</Text>
+                          {composerAsk.it.choices!.map((choice, k) => (
+                            <TouchableOpacity key={k} onPress={() => setRedpenInput(choice)} style={styles.hintItem}>
+                              <Text style={styles.hintItemText}>{choice}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </>
+                      )}
+                    </View>
+                  )}
+                  {guide && <Text style={[styles.hintNote, { marginBottom: 6 }]}>{guide}</Text>}
                   <View style={styles.inputRow}>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, !canCompose && { backgroundColor: c.bgSub }]}
+                      editable={canCompose}
                       value={redpenInput}
                       onChangeText={setRedpenInput}
-                      placeholder="一言そえて返そう…"
+                      placeholder={placeholder}
                       placeholderTextColor={c.faint}
                       multiline
                       maxLength={200}
                     />
                     <BouncyPressable
-                      style={[styles.sendBtn, { backgroundColor: c.primaryStrong }, !redpenInput.trim() && styles.sendBtnDisabled]}
-                      onPress={sendTeacherLine}
-                      disabled={!redpenInput.trim()}
+                      style={[styles.sendBtn, composeMode !== 'rally' && { backgroundColor: c.primaryStrong }, (!canCompose || !redpenInput.trim()) && styles.sendBtnDisabled]}
+                      onPress={handleSend}
+                      disabled={!canCompose || !redpenInput.trim()}
                       haptic="light"
                     >
                       <Text style={styles.sendBtnText}>送信</Text>
@@ -699,99 +771,8 @@ export default function ChatScreen() {
                     <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> {redpenError}</Text>
                   )}
                 </View>
-              ) : (
-                <BouncyPressable style={[styles.actionBtn, { backgroundColor: student.colorStrong }]} onPress={openNote} haptic="light">
-                  <Text style={styles.actionBtnText}>ノートを丸付けする</Text>
-                </BouncyPressable>
               )
-            ) : printStage === 'redpen' ? (
-              (() => {
-                const current = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
-                if (!current) return <Text style={styles.actionWaiting}>ノートを返しています…</Text>
-                return (
-                  <View>
-                    {/* いま聞かれている問題を入力欄の上に常時表示（セリフで引用を切り詰めない） */}
-                    <View style={styles.rallyContext}>
-                      <Text style={styles.rallyContextText}><Text style={{ fontWeight: '700' }}>問{current.i + 1}</Text> {current.it.question}</Text>
-                      <Text style={styles.rallyContextAnswer}>✎ {current.it.studentAnswer}</Text>
-                    </View>
-                    {(current.it.choices?.length ?? 0) > 0 && (
-                      <View style={{ marginBottom: 8, gap: 6 }}>
-                        <TouchableOpacity
-                          onPress={() => setShowRedpenHints((v) => !v)}
-                          style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                        >
-                          <Image source={require('../assets/toranomaki.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
-                          <Text style={styles.hintToggleText}>虎の巻を開く {showRedpenHints ? '▲' : '▼'}</Text>
-                        </TouchableOpacity>
-                        {showRedpenHints && (
-                          <>
-                            <Text style={styles.hintNote}>1つが正解、2つが誤りです。タップすると入力欄に写せます</Text>
-                            {current.it.choices!.map((choice, k) => (
-                              <TouchableOpacity key={k} onPress={() => setRedpenInput(choice)} style={styles.hintItem}>
-                                <Text style={styles.hintItemText}>{choice}</Text>
-                              </TouchableOpacity>
-                            ))}
-                          </>
-                        )}
-                      </View>
-                    )}
-                    <View style={styles.inputRow}>
-                      <TextInput
-                        style={styles.input}
-                        value={redpenInput}
-                        onChangeText={setRedpenInput}
-                        placeholder="ひとことで教えてあげよう…"
-                        placeholderTextColor={c.faint}
-                        multiline
-                        maxLength={200}
-                      />
-                      <BouncyPressable
-                        style={[styles.sendBtn, (!redpenInput.trim() || redpenSending) && styles.sendBtnDisabled]}
-                        onPress={sendRedpenChat}
-                        disabled={!redpenInput.trim() || redpenSending}
-                        haptic="light"
-                      >
-                        <Text style={styles.sendBtnText}>送信</Text>
-                      </BouncyPressable>
-                    </View>
-                    {redpenError && (
-                      <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> {redpenError}</Text>
-                    )}
-                  </View>
-                )
-              })()
-            ) : composeMode === 'checkDone' ? (
-              <View>
-                <Text style={[styles.hintNote, { marginBottom: 6 }]}>見直しの結果を伝えてあげよう（そのまま送ってもOK）</Text>
-                <View style={styles.inputRow}>
-                  <TextInput
-                    style={styles.input}
-                    value={redpenInput}
-                    onChangeText={setRedpenInput}
-                    placeholder="見直しの結果を伝えよう…"
-                    placeholderTextColor={c.faint}
-                    multiline
-                    maxLength={200}
-                  />
-                  <BouncyPressable
-                    style={[styles.sendBtn, { backgroundColor: c.primaryStrong }, !redpenInput.trim() && styles.sendBtnDisabled]}
-                    onPress={sendTeacherLine}
-                    disabled={!redpenInput.trim()}
-                    haptic="light"
-                  >
-                    <Text style={styles.sendBtnText}>送信</Text>
-                  </BouncyPressable>
-                </View>
-                {redpenError && (
-                  <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> {redpenError}</Text>
-                )}
-              </View>
-            ) : (
-              <BouncyPressable style={[styles.actionBtn, { backgroundColor: '#f59e0b' }]} onPress={openNote} haptic="light">
-                <Text style={styles.actionBtnText}>答え合わせをする</Text>
-              </BouncyPressable>
-            )}
+            })()}
           </View>
         )}
 
@@ -900,7 +881,7 @@ export default function ChatScreen() {
                       {/* 生徒のメモ（先生の説明の書き取り。直しは青ペン） */}
                       {memo !== undefined && !needsGradeDecision && (
                         <View style={styles.memoBlock}>
-                          <Text style={styles.memoLabel}>メモ</Text>
+                          <Text style={styles.memoLabel}>先生から教わったこと</Text>
                           <Text style={styles.memoText}>{memo}</Text>
                         </View>
                       )}
@@ -1020,18 +1001,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6,
     backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: c.border,
   },
-  printDock: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 10,
-    paddingVertical: 7, paddingHorizontal: 8,
+  monitor: {
+    backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fcd34d', borderRadius: 12,
+    paddingVertical: 7, paddingHorizontal: 10,
   },
-  printDockText: { fontSize: 12, fontWeight: '700', color: '#92400e', flexShrink: 1 },
+  monitorLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: '#92400e' },
+  monitorCta: { marginLeft: 'auto', fontSize: 11, fontWeight: '700', color: c.primary },
+  monitorQuestion: { fontSize: 11.5, color: c.textMid, lineHeight: 16 },
+  monitorAnswer: { fontFamily: font.hand, fontSize: 13, color: c.text, lineHeight: 19 },
+  monitorLine: { fontSize: 11, color: c.textSub, lineHeight: 16 },
   printDockChip: { backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: '#fde68a', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
   printDockChipText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
   previewDock: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: 10,
-    paddingVertical: 7, paddingHorizontal: 8,
+    width: 60, alignItems: 'center', justifyContent: 'center', gap: 3,
+    backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: 12,
+    paddingVertical: 7, paddingHorizontal: 6,
   },
   previewBarText: { fontSize: 13, fontWeight: '700', color: c.link },
 
@@ -1131,7 +1115,7 @@ const styles = StyleSheet.create({
   bigMarkBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   bigMarkBtnText: { fontSize: 24, fontWeight: '700', color: c.borderStrong },
   memoBlock: { marginTop: 10, borderTopWidth: 1, borderTopColor: '#fcd34d', borderStyle: 'dashed', paddingTop: 8 },
-  memoLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 2, color: c.faint, marginBottom: 2 },
+  memoLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, color: c.faint, marginBottom: 2 },
   memoText: { fontFamily: font.hand, fontSize: 14, lineHeight: 22, color: '#1e40af' },
   notebookLineText: { fontSize: 13, color: c.text, lineHeight: 20, fontWeight: '600', marginTop: 2 },
   notebookPenMark: { color: c.textSub, fontWeight: '400' },
