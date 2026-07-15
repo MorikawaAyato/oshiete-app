@@ -593,54 +593,42 @@ export default function ChatScreen() {
           <View style={{ width: 60 }} />
         </View>
 
-        {/* 共有モニター：オンライン授業の「画面共有」。段階に応じて中身と唯一のCTAが切り替わる。
-            ボタン類はすべてここに集約し、下の入力欄は変身しない */}
+        {/* 共有モニター：段階ごとに「必要な1つ」だけを映す小さなスクリーン（ダーク画面＋LIVEドット） */}
         <View style={styles.dockRow}>
           {printItems.length > 0 && (() => {
             const marked = printItems.filter((it) => it.teacherMark !== undefined).length
-            const wrongs = printItems.filter((it) => it.teacherMark === false)
-            const explained = wrongs.filter((it) => it.redPen !== undefined).length
             const monitorAsk = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
+            if (printStage === 'redpen' && monitorAsk) {
+              return (
+                <Animated.View style={{ flex: 1, transform: [{ scale: dockScale }] }}>
+                  <TouchableOpacity style={styles.monitor} onPress={openNote} activeOpacity={0.85}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+                      <View style={[styles.liveDot, { marginTop: 5 }]} />
+                      <Text style={[styles.monitorQuestion, { flex: 1 }]}><Text style={{ fontWeight: '700', color: '#f1f5f9' }}>問{monitorAsk.i + 1}</Text> {monitorAsk.it.question}</Text>
+                      <Text style={styles.monitorChevron}>›</Text>
+                    </View>
+                    <Text style={styles.monitorAnswer} numberOfLines={1}>✎ {monitorAsk.it.studentAnswer}</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              )
+            }
+            const main =
+              printStage === 'grading' ? (composeMode === 'return' ? 'ノートをたしかめる' : '丸付けをつづける')
+              : printStage === 'redpen' ? 'ノートを返しています…'
+              : printStage === 'check' ? (pendingCheckCount > 0 ? '答え合わせをする' : '見直しをたしかめる')
+              : '今日の振り返りを見る'
             const chip =
-              printStage === 'grading' ? (composeMode === 'return' ? '丸付けおわり' : `丸付け ${marked}/${printItems.length}`)
-              : printStage === 'redpen' ? `赤ペン ${explained}/${wrongs.length}`
-              : printStage === 'check' ? (pendingCheckCount > 0 ? `のこり${pendingCheckCount}` : '見直しおわり')
-              : '添削ずみ'
-            const cta =
-              printStage === 'grading' ? (composeMode === 'return' ? 'たしかめる' : '丸付けをつづける')
-              : printStage === 'redpen' ? 'ノートを見る'
-              : printStage === 'check' ? (pendingCheckCount > 0 ? '答え合わせをする' : 'たしかめる')
-              : '振り返りを見る'
+              printStage === 'grading' ? (composeMode === 'return' ? null : `${marked}/${printItems.length}`)
+              : printStage === 'check' && pendingCheckCount > 0 ? `のこり${pendingCheckCount}`
+              : printStage === 'done' ? '添削ずみ'
+              : null
             return (
               <Animated.View style={{ flex: 1, transform: [{ scale: dockScale }] }}>
-                <TouchableOpacity style={styles.monitor} onPress={openNote} activeOpacity={0.8}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                    <Image source={require('../assets/print.webp')} style={{ width: 15, height: 15 }} resizeMode="contain" />
-                    <Text style={styles.monitorLabel}>画面共有</Text>
-                    <View style={styles.printDockChip}><Text style={styles.printDockChipText}>{chip}</Text></View>
-                    <Text style={styles.monitorCta}>{cta} ›</Text>
-                  </View>
-                  <View style={{ marginTop: 4 }}>
-                    {printStage === 'redpen' && monitorAsk ? (
-                      <>
-                        <Text style={styles.monitorQuestion}><Text style={{ fontWeight: '700' }}>問{monitorAsk.i + 1}</Text> {monitorAsk.it.question}</Text>
-                        <Text style={styles.monitorAnswer} numberOfLines={1}>✎ {monitorAsk.it.studentAnswer}</Text>
-                      </>
-                    ) : (
-                      <>
-                        {printItems.slice(0, 2).map((it, i) => {
-                          const m = it.finalMark ?? it.teacherMark
-                          return (
-                            <Text key={i} style={styles.monitorLine} numberOfLines={1}>
-                              <Text style={{ fontWeight: '700', color: m === undefined ? c.border : m ? '#059669' : '#e11d48' }}>{m === undefined ? '・' : m ? '○' : '✕'}</Text>
-                              {' '}{it.question}
-                            </Text>
-                          )
-                        })}
-                        <Text style={[styles.monitorLine, { color: c.faint }]}>…</Text>
-                      </>
-                    )}
-                  </View>
+                <TouchableOpacity style={[styles.monitor, { flexDirection: 'row', alignItems: 'center', gap: 6 }]} onPress={openNote} activeOpacity={0.85}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.monitorMain} numberOfLines={1}>{main}</Text>
+                  {chip && <View style={styles.monitorChip}><Text style={styles.monitorChipText}>{chip}</Text></View>}
+                  <Text style={styles.monitorChevron}>›</Text>
                 </TouchableOpacity>
               </Animated.View>
             )
@@ -999,14 +987,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: c.border,
   },
   monitor: {
-    backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fcd34d', borderRadius: 12,
-    paddingVertical: 7, paddingHorizontal: 10,
+    backgroundColor: '#1e293b', borderWidth: 1, borderColor: 'rgba(148,163,184,0.35)', borderRadius: 12,
+    paddingVertical: 8, paddingHorizontal: 10,
   },
-  monitorLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: '#92400e' },
-  monitorCta: { marginLeft: 'auto', fontSize: 11, fontWeight: '700', color: c.primary },
-  monitorQuestion: { fontSize: 11.5, color: c.textMid, lineHeight: 16 },
-  monitorAnswer: { fontFamily: font.hand, fontSize: 13, color: c.text, lineHeight: 19 },
-  monitorLine: { fontSize: 11, color: c.textSub, lineHeight: 16 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34d399' },
+  monitorMain: { flex: 1, fontSize: 12, fontWeight: '700', color: '#f1f5f9' },
+  monitorChip: { backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
+  monitorChipText: { fontSize: 10, fontWeight: '700', color: '#fcd34d' },
+  monitorChevron: { fontSize: 13, color: '#64748b', fontWeight: '700' },
+  monitorQuestion: { fontSize: 11.5, color: '#cbd5e1', lineHeight: 16 },
+  monitorAnswer: { fontFamily: font.hand, fontSize: 13, color: '#fde68a', lineHeight: 19, marginTop: 2, paddingLeft: 12 },
   printDockChip: { backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: '#fde68a', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
   printDockChipText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
   previewDock: {
