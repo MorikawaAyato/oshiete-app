@@ -300,10 +300,11 @@ export default function ChatScreen() {
     const beats: string[] = [...(opts?.leadBeats ?? [])]
     if (opts?.noMismatch) beats.push(okCount === items.length ? student.perfectLine : student.noMismatchLine)
     beats.push(student.printThanks)
-    // 先生の採点そのものの正確さも伝える（○にした問題が本当に合っていたかの不安を残さない）
+    // 先生の採点そのものの正確さも伝える。一致が少なかった日は祝わず、見直した事実を淡々と言う
     const accurate = items.filter((it) => it.teacherMark === (it.truth === 'correct')).length
+    const reviewed = items.length - accurate
     beats.push(
-      `今日の宿題は ○が${okCount}問・✕が${items.length - okCount}問。先生の採点は ${accurate === items.length ? 'ぜんぶ模範解答とぴったりでした！' : `${items.length}問中${accurate}問が模範解答とぴったりでした！`}${retryCount > 0 ? ` まちがえた${retryCount}問は、次の宿題でもういちど挑戦しますね！` : ''}`
+      `今日の宿題は ○が${okCount}問・✕が${items.length - okCount}問。${reviewed === 0 ? '先生の採点はぜんぶ模範解答とぴったりでした！' : `採点ぴったりが${accurate}問、答え合わせでいっしょに見直したのが${reviewed}問でした。`}${retryCount > 0 ? ` まちがえた${retryCount}問は、次の宿題でもういちど挑戦しますね！` : ''}`
     )
     pushBeats(beats)
   }
@@ -438,12 +439,20 @@ export default function ChatScreen() {
     advanceToPending(updated, i)
   }
 
-  // 第3段の締め：○→✕にひっくり返した問題のひとことを反映して授業を締める
+  // 第3段の締め：○→✕のひとことを反映し、見直しの結果を先生の一言で伝えてから授業を締める
   const finishCheck = () => {
     const items = printItems.map((it, i) => {
       const note = (flipNoteDrafts[i] ?? '').trim()
       return it.teacherMark === true && it.finalMark === false && note ? { ...it, flipNote: note } : it
     })
+    const okFlips = items.filter((it) => it.teacherMark === false && it.finalMark === true).length
+    const xFlips = items.filter((it) => it.teacherMark === true && it.finalMark === false).length
+    const relearns = items.filter((it) => it.redPenFinal === 'relearn').length
+    const parts: string[] = []
+    if (okFlips > 0) parts.push(`${okFlips}問はきみの答えで合ってたよ、ごめんね`)
+    if (xFlips > 0) parts.push(`${xFlips}問は✕に直させてもらったよ`)
+    if (relearns > 0) parts.push('先生のメモは模範解答のほうで覚えてね')
+    setChatMessages((prev) => [...prev, { role: 'user', text: parts.length > 0 ? `見直したよ。${parts.join('。')}！` : '見直したよ。これでばっちり！' }])
     finishLesson(items)
   }
 
@@ -647,6 +656,11 @@ export default function ChatScreen() {
                 if (!current) return <Text style={styles.actionWaiting}>ノートを返しています…</Text>
                 return (
                   <View>
+                    {/* いま聞かれている問題を入力欄の上に常時表示（セリフで引用を切り詰めない） */}
+                    <View style={styles.rallyContext}>
+                      <Text style={styles.rallyContextText}><Text style={{ fontWeight: '700' }}>問{current.i + 1}</Text> {current.it.question}</Text>
+                      <Text style={styles.rallyContextAnswer}>✎ {current.it.studentAnswer}</Text>
+                    </View>
                     {(current.it.choices?.length ?? 0) > 0 && (
                       <View style={{ marginBottom: 8, gap: 6 }}>
                         <TouchableOpacity
@@ -996,6 +1010,9 @@ const styles = StyleSheet.create({
   actionBtn: { borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
   actionBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
   actionWaiting: { fontSize: 12, color: c.faint, textAlign: 'center', paddingVertical: 6 },
+  rallyContext: { borderWidth: 1, borderColor: c.border, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.7)', paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8 },
+  rallyContextText: { fontSize: 11.5, color: c.textSub, lineHeight: 17 },
+  rallyContextAnswer: { fontFamily: font.hand, fontSize: 13, color: c.textMid, lineHeight: 20, marginTop: 1 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   input: {
     flex: 1, backgroundColor: c.bg, borderRadius: 12,
