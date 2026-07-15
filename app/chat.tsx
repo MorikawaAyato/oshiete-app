@@ -410,10 +410,12 @@ export default function ChatScreen() {
     setShowPrint(true)
   }
 
-  // 丸付け：○✕をつけたら自動で次のページへ（1画面1判断）
+  // 丸付け：○✕をつけたら自動で次のページへ（1画面1判断）。
+  // つけ直し（見直し）のときは送らない。スタンプの余韻を見せてから送る
   const markAndAdvance = (i: number, val: boolean) => {
+    const wasUnmarked = printItems[i]?.teacherMark === undefined
     setPrintItems((prev) => prev.map((it, j) => (j === i ? { ...it, teacherMark: val } : it)))
-    if (i < printItems.length - 1) setTimeout(() => setNotePage(i + 1), 280)
+    if (wasUnmarked && i < printItems.length - 1) setTimeout(() => setNotePage(i + 1), 550)
   }
 
   // 答え合わせ：まだ判断が済んでいない次のページへ送る
@@ -717,10 +719,10 @@ export default function ChatScreen() {
               const showAnswers = printStage === 'done'
               const mark = it.finalMark ?? it.teacherMark
               const memo = it.redPen ?? it.flipNote
-              // 訂正線：説明（メモ）を受けて直した答案。答え合わせで○に戻れば線も消える
-              const corrected = memo !== undefined && mark === false
               const needsGradeDecision = isCheck && hasGradeMismatch(it)
               const needsRedpenDecision = isCheck && it.redPenVerdict === 'diverge'
+              // 訂正線：説明（メモ）を受けて直した答案。採点を見直し中のページには引かない（○かもしれない答案を消して見せない）
+              const corrected = memo !== undefined && mark === false && !(needsGradeDecision && it.finalMark === undefined)
               const showModel = showAnswers || needsGradeDecision || needsRedpenDecision
               const flipPending = needsGradeDecision && it.teacherMark === true && it.finalMark === false
               const reviewChip = !showAnswers ? null
@@ -785,7 +787,8 @@ export default function ChatScreen() {
                         {reviewChip && <View style={[styles.reviewBadge, { backgroundColor: reviewChip.bg }]}><Text style={[styles.reviewBadgeText, { color: reviewChip.fg }]}>{reviewChip.t}</Text></View>}
                       </View>
                       {/* 生徒の答案（手書き）。メモで訂正した答案には訂正線が入る */}
-                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 6 }}>
+                      <Text style={[styles.memoLabel, { marginTop: 10 }]}>答案</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 2 }}>
                         <Text style={[styles.handAnswer, { flex: 1 }, corrected && styles.handAnswerCorrected]}>{it.studentAnswer}</Text>
                         {mark !== undefined && (
                           <StampText active style={[styles.pageMark, { color: mark ? '#059669' : '#e11d48' }]}>{mark ? '○' : '✕'}</StampText>
@@ -803,7 +806,7 @@ export default function ChatScreen() {
                         </View>
                       )}
                       {/* 生徒のメモ（先生の説明の書き取り。直しは青ペン） */}
-                      {memo !== undefined && (
+                      {memo !== undefined && !needsGradeDecision && (
                         <View style={styles.memoBlock}>
                           <Text style={styles.memoLabel}>メモ</Text>
                           <Text style={styles.memoText}>{memo}</Text>
