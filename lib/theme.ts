@@ -52,6 +52,8 @@ export const c = {
 export const font = {
   round: 'ZenMaruGothic_700Bold',
   roundHeavy: 'ZenMaruGothic_900Black',
+  hand: 'KleeOne_400Regular', // 生徒の手書き（答案・ノートのメモ）
+  handBold: 'KleeOne_600SemiBold',
 } as const
 
 // ボタン3階層。1画面に primary（塗り）はひとつだけ置く。

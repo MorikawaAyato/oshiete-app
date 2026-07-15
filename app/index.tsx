@@ -523,7 +523,7 @@ export default function HomeScreen() {
             <View style={styles.hwBadgeIconWrap}><Image source={require('../assets/sunadokei.webp')} style={styles.hwBadgeIcon} resizeMode="contain" /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.hwBadgeTitle}>復習まちの問題が {reviewPendingCount}問</Text>
-              <Text style={styles.hwBadgeSub} numberOfLines={1}>次のプリントに入って、もういちど出てきます</Text>
+              <Text style={styles.hwBadgeSub} numberOfLines={1}>次の宿題に入って、もういちど出てきます</Text>
             </View>
           </View>
         )}

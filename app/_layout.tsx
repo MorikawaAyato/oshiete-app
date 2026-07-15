@@ -3,6 +3,8 @@ import * as SecureStore from 'expo-secure-store'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { useEffect } from 'react'
 import { useFonts, ZenMaruGothic_700Bold, ZenMaruGothic_900Black } from '@expo-google-fonts/zen-maru-gothic'
+// 手書き風（教科書体）。生徒が書くもの（答案・ノートのメモ）だけに使う
+import { KleeOne_400Regular, KleeOne_600SemiBold } from '@expo-google-fonts/klee-one'
 import { AppProvider } from '@/lib/AppContext'
 
 const tokenCache = {
@@ -37,7 +39,7 @@ function AppStack() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({ ZenMaruGothic_700Bold, ZenMaruGothic_900Black })
+  const [fontsLoaded] = useFonts({ ZenMaruGothic_700Bold, ZenMaruGothic_900Black, KleeOne_400Regular, KleeOne_600SemiBold })
   if (!fontsLoaded) return null
 
   // Clerkキー未設定時（開発中）はAuth不要でそのままアプリを表示
