@@ -320,12 +320,9 @@ export default function ChatScreen() {
     }
   }
 
-  // 第1段の締め：採点してプリントを返す。✕があれば赤ペンのラリーへ、無ければ答え合わせへ。
-  // 無言で突き返さないよう、先生の一言を自動で添える
-  const returnPrint = () => {
-    setShowPrint(false)
-    setChatMessages((prev) => [...prev, { role: 'user', text: 'まるつけできたよ。ノート、返すね！' }])
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+  // 第1段の締め：返却の処理。✕があれば赤ペンのラリーへ、無ければ答え合わせへ。
+  // 返却の一言はユーザが送る（アプリは先生の言葉を代筆しない。下書きまで）
+  const performReturn = () => {
     const wrongs = printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false)
     if (wrongs.length > 0 && student) {
       setPrintStage('redpen')
@@ -333,6 +330,52 @@ export default function ChatScreen() {
     } else {
       goCheck(printItems)
     }
+  }
+
+  // チャット入力の用途：返却の一言／赤ペンのラリー／見直しの報告
+  const lessonAllMarked = printItems.length > 0 && printItems.every((it) => it.teacherMark !== undefined)
+  const pendingCheckCount = printItems.filter((p) => (hasGradeMismatch(p) && p.finalMark === undefined) || (p.redPenVerdict === 'diverge' && p.redPenFinal === undefined)).length
+  const composeMode: 'return' | 'rally' | 'checkDone' | null =
+    printStage === 'grading' && lessonAllMarked ? 'return'
+    : printStage === 'redpen' ? 'rally'
+    : printStage === 'check' && printItems.length > 0 && pendingCheckCount === 0 ? 'checkDone'
+    : null
+
+  // 見直し報告の下書き（結果から組み立てる。そのまま送っても、書き換えてもいい）
+  const checkSummaryDraft = () => {
+    const okFlips = printItems.filter((it) => it.teacherMark === false && it.finalMark === true).length
+    const xFlips = printItems.filter((it) => it.teacherMark === true && it.finalMark === false).length
+    const relearns = printItems.filter((it) => it.redPenFinal === 'relearn').length
+    const parts: string[] = []
+    if (okFlips > 0) parts.push(`${okFlips}問はきみの答えで合ってたよ、ごめんね`)
+    if (xFlips > 0) parts.push(`${xFlips}問は✕に直させてもらったよ`)
+    if (relearns > 0) parts.push('先生のメモは模範解答のほうで覚えてね')
+    return parts.length > 0 ? `見直したよ。${parts.join('。')}！` : '見直したよ。これでばっちり！'
+  }
+
+  // 入力欄への下書きは用途が切り替わった瞬間に1回だけ入れる（ユーザの編集は上書きしない）
+  const prefillRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (composeMode === prefillRef.current) return
+    prefillRef.current = composeMode
+    if (composeMode === 'return') setRedpenInput('まるつけできたよ。ノート、返すね！')
+    else if (composeMode === 'checkDone') setRedpenInput(checkSummaryDraft())
+    else setRedpenInput('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [composeMode])
+
+  // 返却・見直し報告の送信（先生の発言は必ず先生が押して送る）
+  const sendTeacherLine = () => {
+    if (!student || studentTyping) return
+    const text = redpenInput.trim()
+    if (!text) return
+    if (containsNG(text)) { setRedpenError('その内容は送信できません'); return }
+    setRedpenError(null)
+    setRedpenInput('')
+    setChatMessages((prev) => [...prev, { role: 'user', text }])
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+    if (composeMode === 'return') performReturn()
+    else if (composeMode === 'checkDone') finishLesson(printItems)
   }
 
   // 赤ペンラリー：✕の問題を生徒が1問ずつ聞いてくる。先生の返信で次の問いへ（相づちは定型＝AI待ちゼロ）
@@ -438,19 +481,6 @@ export default function ChatScreen() {
     advanceToPending(updated, i)
   }
 
-  // 第3段の締め：見直しの結果を先生の一言で伝えてから授業を締める
-  const finishCheck = () => {
-    const items = printItems
-    const okFlips = items.filter((it) => it.teacherMark === false && it.finalMark === true).length
-    const xFlips = items.filter((it) => it.teacherMark === true && it.finalMark === false).length
-    const relearns = items.filter((it) => it.redPenFinal === 'relearn').length
-    const parts: string[] = []
-    if (okFlips > 0) parts.push(`${okFlips}問はきみの答えで合ってたよ、ごめんね`)
-    if (xFlips > 0) parts.push(`${xFlips}問は✕に直させてもらったよ`)
-    if (relearns > 0) parts.push('先生のメモは模範解答のほうで覚えてね')
-    setChatMessages((prev) => [...prev, { role: 'user', text: parts.length > 0 ? `見直したよ。${parts.join('。')}！` : '見直したよ。これでばっちり！' }])
-    finishLesson(items)
-  }
 
   const handleBack = () => {
     if (chatMessages.length > 0 && printStage !== 'done') {
@@ -643,9 +673,37 @@ export default function ChatScreen() {
             {studentTyping ? (
               <Text style={styles.actionWaiting}>{student.name}が書いています…</Text>
             ) : printStage === 'grading' ? (
-              <BouncyPressable style={[styles.actionBtn, { backgroundColor: student.colorStrong }]} onPress={openNote} haptic="light">
-                <Text style={styles.actionBtnText}>ノートを丸付けする</Text>
-              </BouncyPressable>
+              composeMode === 'return' ? (
+                <View>
+                  <Text style={[styles.hintNote, { marginBottom: 6 }]}>ノートを返すよ。一言そえてあげよう（そのまま送ってもOK）</Text>
+                  <View style={styles.inputRow}>
+                    <TextInput
+                      style={styles.input}
+                      value={redpenInput}
+                      onChangeText={setRedpenInput}
+                      placeholder="一言そえて返そう…"
+                      placeholderTextColor={c.faint}
+                      multiline
+                      maxLength={200}
+                    />
+                    <BouncyPressable
+                      style={[styles.sendBtn, { backgroundColor: c.primaryStrong }, !redpenInput.trim() && styles.sendBtnDisabled]}
+                      onPress={sendTeacherLine}
+                      disabled={!redpenInput.trim()}
+                      haptic="light"
+                    >
+                      <Text style={styles.sendBtnText}>送信</Text>
+                    </BouncyPressable>
+                  </View>
+                  {redpenError && (
+                    <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> {redpenError}</Text>
+                  )}
+                </View>
+              ) : (
+                <BouncyPressable style={[styles.actionBtn, { backgroundColor: student.colorStrong }]} onPress={openNote} haptic="light">
+                  <Text style={styles.actionBtnText}>ノートを丸付けする</Text>
+                </BouncyPressable>
+              )
             ) : printStage === 'redpen' ? (
               (() => {
                 const current = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
@@ -703,6 +761,32 @@ export default function ChatScreen() {
                   </View>
                 )
               })()
+            ) : composeMode === 'checkDone' ? (
+              <View>
+                <Text style={[styles.hintNote, { marginBottom: 6 }]}>見直しの結果を伝えてあげよう（そのまま送ってもOK）</Text>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={styles.input}
+                    value={redpenInput}
+                    onChangeText={setRedpenInput}
+                    placeholder="見直しの結果を伝えよう…"
+                    placeholderTextColor={c.faint}
+                    multiline
+                    maxLength={200}
+                  />
+                  <BouncyPressable
+                    style={[styles.sendBtn, { backgroundColor: c.primaryStrong }, !redpenInput.trim() && styles.sendBtnDisabled]}
+                    onPress={sendTeacherLine}
+                    disabled={!redpenInput.trim()}
+                    haptic="light"
+                  >
+                    <Text style={styles.sendBtnText}>送信</Text>
+                  </BouncyPressable>
+                </View>
+                {redpenError && (
+                  <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> {redpenError}</Text>
+                )}
+              </View>
             ) : (
               <BouncyPressable style={[styles.actionBtn, { backgroundColor: '#f59e0b' }]} onPress={openNote} haptic="light">
                 <Text style={styles.actionBtnText}>答え合わせをする</Text>
@@ -871,15 +955,15 @@ export default function ChatScreen() {
                   </ScrollView>
                   <View style={styles.notebookModalFooter}>
                     {isGrading ? (
-                      <BouncyPressable onPress={() => { if (allMarked) returnPrint() }} style={[styles.returnBtn, !allMarked && styles.returnBtnDisabled]} haptic="success">
+                      <BouncyPressable onPress={() => { if (allMarked) setShowPrint(false) }} style={[styles.returnBtn, !allMarked && styles.returnBtnDisabled]} haptic="success">
                         <Text style={[styles.gradeBtnText, !allMarked && styles.gradeBtnTextDisabled]}>
-                          {allMarked ? '丸付けしてノートを返す' : <>すべての問題に <Text style={styles.gradeMarkO}>○</Text> か <Text style={styles.gradeMarkX}>✕</Text> をつけてね</>}
+                          {allMarked ? '丸付けおわり！チャットで返す' : <>すべての問題に <Text style={styles.gradeMarkO}>○</Text> か <Text style={styles.gradeMarkX}>✕</Text> をつけてね</>}
                         </Text>
                       </BouncyPressable>
                     ) : isCheck ? (
-                      <BouncyPressable onPress={() => { if (canFinishCheck) finishCheck() }} style={[styles.returnBtn, !canFinishCheck && styles.returnBtnDisabled]} haptic="success">
+                      <BouncyPressable onPress={() => { if (canFinishCheck) setShowPrint(false) }} style={[styles.returnBtn, !canFinishCheck && styles.returnBtnDisabled]} haptic="success">
                         <Text style={[styles.gradeBtnText, !canFinishCheck && styles.gradeBtnTextDisabled]}>
-                          {canFinishCheck ? '答え合わせをおわる' : 'のこりの項目に答えてあげてね'}
+                          {canFinishCheck ? '答え合わせおわり！チャットで伝える' : 'のこりの項目に答えてあげてね'}
                         </Text>
                       </BouncyPressable>
                     ) : (
