@@ -593,52 +593,6 @@ export default function ChatScreen() {
           <View style={{ width: 60 }} />
         </View>
 
-        {/* 共有モニター：段階ごとに「必要な1つ」だけを映す小さなスクリーン（ダーク画面＋LIVEドット） */}
-        <View style={styles.dockRow}>
-          {printItems.length > 0 && (() => {
-            const marked = printItems.filter((it) => it.teacherMark !== undefined).length
-            const monitorAsk = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
-            if (printStage === 'redpen' && monitorAsk) {
-              return (
-                <Animated.View style={{ flex: 1, transform: [{ scale: dockScale }] }}>
-                  <TouchableOpacity style={styles.monitor} onPress={openNote} activeOpacity={0.85}>
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
-                      <View style={[styles.liveDot, { marginTop: 5 }]} />
-                      <Text style={[styles.monitorQuestion, { flex: 1 }]}><Text style={{ fontWeight: '700', color: '#f1f5f9' }}>問{monitorAsk.i + 1}</Text> {monitorAsk.it.question}</Text>
-                      <Text style={styles.monitorChevron}>›</Text>
-                    </View>
-                    <Text style={styles.monitorAnswer} numberOfLines={1}>✎ {monitorAsk.it.studentAnswer}</Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              )
-            }
-            const main =
-              printStage === 'grading' ? (composeMode === 'return' ? 'ノートをたしかめる' : '丸付けをつづける')
-              : printStage === 'redpen' ? 'ノートを返しています…'
-              : printStage === 'check' ? (pendingCheckCount > 0 ? '答え合わせをする' : '見直しをたしかめる')
-              : '今日の振り返りを見る'
-            const chip =
-              printStage === 'grading' ? (composeMode === 'return' ? null : `${marked}/${printItems.length}`)
-              : printStage === 'check' && pendingCheckCount > 0 ? `のこり${pendingCheckCount}`
-              : printStage === 'done' ? '添削ずみ'
-              : null
-            return (
-              <Animated.View style={{ flex: 1, transform: [{ scale: dockScale }] }}>
-                <TouchableOpacity style={[styles.monitor, { flexDirection: 'row', alignItems: 'center', gap: 6 }]} onPress={openNote} activeOpacity={0.85}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.monitorMain} numberOfLines={1}>{main}</Text>
-                  {chip && <View style={styles.monitorChip}><Text style={styles.monitorChipText}>{chip}</Text></View>}
-                  <Text style={styles.monitorChevron}>›</Text>
-                </TouchableOpacity>
-              </Animated.View>
-            )
-          })()}
-          <TouchableOpacity style={styles.previewDock} onPress={() => router.push('/preview')} activeOpacity={0.8}>
-            <Feather name="book-open" size={14} color={c.textMid} />
-            <Text style={styles.previewBarText}>教材</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* チャット（生徒のセリフ＋プリントカード） */}
         <ScrollView
           ref={scrollRef}
@@ -678,9 +632,6 @@ export default function ChatScreen() {
           {printStage === 'done' && !studentTyping && (
             <View style={styles.endedActions}>
               <Text style={styles.endedLabel}>今日の授業は終わりました！</Text>
-              <TouchableOpacity style={styles.reviewBtn} onPress={openNote}>
-                <Text style={styles.reviewBtnText}>今日の振り返りを見る</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={styles.finishBtn} onPress={handleBack}>
                 <Text style={styles.finishBtnText}>ホームに戻る</Text>
               </TouchableOpacity>
@@ -688,78 +639,124 @@ export default function ChatScreen() {
           )}
         </ScrollView>
 
-        {/* 入力欄：常にチャットの入力欄（変身しない）。ボタン類は共有モニターへ。
-            送れないときは無効化して、理由をプレースホルダーで言う */}
-        {printStage !== 'done' && (
-          <View style={styles.actionBar}>
-            {(() => {
-              const composerAsk = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
-              const canCompose = !studentTyping && !redpenSending && (composeMode === 'return' || composeMode === 'checkDone' || (composeMode === 'rally' && !!composerAsk))
-              const placeholder = studentTyping
-                ? `${student.name}が書いています…`
-                : composeMode === 'rally'
-                  ? (composerAsk ? 'ひとことで教えてあげよう…' : 'ノートを返しています…')
-                  : composeMode === 'return' || composeMode === 'checkDone'
-                    ? (composeDraft ?? '')
-                      : printStage === 'grading'
-                        ? 'ノートの丸付けがおわったら返せるよ'
-                        : '答え合わせがおわったら伝えられるよ'
-              const guide = !studentTyping && composeMode === 'return'
-                ? 'そのまま送信でこの言葉が届くよ。書けば自分の言葉になるよ'
-                : !studentTyping && composeMode === 'checkDone'
-                  ? '見直しの結果だよ。そのまま送信でもOK、書けば自分の言葉に'
-                  : null
-              const handleSend = () => { if (composeMode === 'rally') sendRedpenChat(); else sendTeacherLine() }
+        {/* 手元ゾーン：届いたノート（作業中の答案）＋入力欄。上＝相手、下＝自分の手元 */}
+        <View style={styles.actionBar}>
+          {/* 届いたノート：段階ごとに「必要な1つ」だけ。タップで開く（受け取ったファイルを開く操作） */}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {printItems.length > 0 && (() => {
+              const marked = printItems.filter((it) => it.teacherMark !== undefined).length
+              const stripAsk = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
+              if (printStage === 'redpen' && stripAsk) {
+                return (
+                  <Animated.View style={{ flex: 1, transform: [{ scale: dockScale }] }}>
+                    <TouchableOpacity style={styles.noteStrip} onPress={openNote} activeOpacity={0.8}>
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+                        <Image source={require('../assets/print.webp')} style={{ width: 15, height: 15, marginTop: 1 }} resizeMode="contain" />
+                        <Text style={[styles.noteStripQuestion, { flex: 1 }]}><Text style={{ fontWeight: '700', color: c.textStrong }}>問{stripAsk.i + 1}</Text> {stripAsk.it.question}</Text>
+                        <Text style={styles.noteStripChevron}>›</Text>
+                      </View>
+                      <Text style={styles.noteStripAnswer} numberOfLines={1}>✎ {stripAsk.it.studentAnswer}</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                )
+              }
+              const main =
+                printStage === 'grading' ? (composeMode === 'return' ? 'ノートをたしかめる' : '丸付けをつづける')
+                : printStage === 'redpen' ? 'ノートを返しています…'
+                : printStage === 'check' ? (pendingCheckCount > 0 ? '答え合わせをする' : '見直しをたしかめる')
+                : '今日の振り返りを見る'
+              const chip =
+                printStage === 'grading' ? (composeMode === 'return' ? null : `${marked}/${printItems.length}`)
+                : printStage === 'check' && pendingCheckCount > 0 ? `のこり${pendingCheckCount}`
+                : printStage === 'done' ? '添削ずみ'
+                : null
               return (
-                <View>
-                  {/* 虎の巻：入力の補助なので入力欄のそばに残す */}
-                  {canCompose && composeMode === 'rally' && composerAsk && (composerAsk.it.choices?.length ?? 0) > 0 && (
-                    <View style={{ marginBottom: 8, gap: 6 }}>
-                      <TouchableOpacity onPress={() => setShowRedpenHints((v) => !v)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Image source={require('../assets/toranomaki.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
-                        <Text style={styles.hintToggleText}>虎の巻を開く {showRedpenHints ? '▲' : '▼'}</Text>
-                      </TouchableOpacity>
-                      {showRedpenHints && (
-                        <>
-                          <Text style={styles.hintNote}>1つが正解、2つが誤りです。タップすると入力欄に写せます</Text>
-                          {composerAsk.it.choices!.map((choice, k) => (
-                            <TouchableOpacity key={k} onPress={() => setRedpenInput(choice)} style={styles.hintItem}>
-                              <Text style={styles.hintItemText}>{choice}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </>
-                      )}
-                    </View>
-                  )}
-                  {guide && <Text style={[styles.hintNote, { marginBottom: 6 }]}>{guide}</Text>}
-                  <View style={styles.inputRow}>
-                    <TextInput
-                      style={[styles.input, !canCompose && { backgroundColor: c.bgSub }]}
-                      editable={canCompose}
-                      value={redpenInput}
-                      onChangeText={setRedpenInput}
-                      placeholder={placeholder}
-                      placeholderTextColor={c.faint}
-                      multiline
-                      maxLength={200}
-                    />
-                    <BouncyPressable
-                      style={[styles.sendBtn, composeMode !== 'rally' && { backgroundColor: c.primaryStrong }, (!canCompose || (composeMode === 'rally' ? !redpenInput.trim() : !redpenInput.trim() && !composeDraft)) && styles.sendBtnDisabled]}
-                      onPress={handleSend}
-                      disabled={!canCompose || (composeMode === 'rally' ? !redpenInput.trim() : !redpenInput.trim() && !composeDraft)}
-                      haptic="light"
-                    >
-                      <Text style={styles.sendBtnText}>送信</Text>
-                    </BouncyPressable>
-                  </View>
-                  {redpenError && (
-                    <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> {redpenError}</Text>
-                  )}
-                </View>
+                <Animated.View style={{ flex: 1, transform: [{ scale: dockScale }] }}>
+                  <TouchableOpacity style={[styles.noteStrip, { flexDirection: 'row', alignItems: 'center', gap: 6 }]} onPress={openNote} activeOpacity={0.8}>
+                    <Image source={require('../assets/print.webp')} style={{ width: 15, height: 15 }} resizeMode="contain" />
+                    <Text style={styles.noteStripMain} numberOfLines={1}>{main}</Text>
+                    {chip && <View style={styles.printDockChip}><Text style={styles.printDockChipText}>{chip}</Text></View>}
+                    <Text style={styles.noteStripChevron}>›</Text>
+                  </TouchableOpacity>
+                </Animated.View>
               )
             })()}
+            <TouchableOpacity style={styles.previewDock} onPress={() => router.push('/preview')} activeOpacity={0.8}>
+              <Feather name="book-open" size={14} color={c.textMid} />
+              <Text style={styles.previewBarText}>教材</Text>
+            </TouchableOpacity>
           </View>
-        )}
+          {printStage !== 'done' && (
+            <View style={{ marginTop: 8 }}>
+              {(() => {
+                const composerAsk = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
+                const canCompose = !studentTyping && !redpenSending && (composeMode === 'return' || composeMode === 'checkDone' || (composeMode === 'rally' && !!composerAsk))
+                const placeholder = studentTyping
+                  ? `${student.name}が書いています…`
+                  : composeMode === 'rally'
+                    ? (composerAsk ? 'ひとことで教えてあげよう…' : 'ノートを返しています…')
+                    : composeMode === 'return' || composeMode === 'checkDone'
+                      ? (composeDraft ?? '')
+                        : printStage === 'grading'
+                          ? 'ノートの丸付けがおわったら返せるよ'
+                          : '答え合わせがおわったら伝えられるよ'
+                const guide = !studentTyping && composeMode === 'return'
+                  ? 'そのまま送信でこの言葉が届くよ。書けば自分の言葉になるよ'
+                  : !studentTyping && composeMode === 'checkDone'
+                    ? '見直しの結果だよ。そのまま送信でもOK、書けば自分の言葉に'
+                    : null
+                const handleSend = () => { if (composeMode === 'rally') sendRedpenChat(); else sendTeacherLine() }
+                return (
+                  <View>
+                    {/* 虎の巻：入力の補助なので入力欄のそばに残す */}
+                    {canCompose && composeMode === 'rally' && composerAsk && (composerAsk.it.choices?.length ?? 0) > 0 && (
+                      <View style={{ marginBottom: 8, gap: 6 }}>
+                        <TouchableOpacity onPress={() => setShowRedpenHints((v) => !v)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Image source={require('../assets/toranomaki.webp')} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                          <Text style={styles.hintToggleText}>虎の巻を開く {showRedpenHints ? '▲' : '▼'}</Text>
+                        </TouchableOpacity>
+                        {showRedpenHints && (
+                          <>
+                            <Text style={styles.hintNote}>1つが正解、2つが誤りです。タップすると入力欄に写せます</Text>
+                            {composerAsk.it.choices!.map((choice, k) => (
+                              <TouchableOpacity key={k} onPress={() => setRedpenInput(choice)} style={styles.hintItem}>
+                                <Text style={styles.hintItemText}>{choice}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </>
+                        )}
+                      </View>
+                    )}
+                    {guide && <Text style={[styles.hintNote, { marginBottom: 6 }]}>{guide}</Text>}
+                    <View style={styles.inputRow}>
+                      <TextInput
+                        style={[styles.input, !canCompose && { backgroundColor: c.bgSub }]}
+                        editable={canCompose}
+                        value={redpenInput}
+                        onChangeText={setRedpenInput}
+                        placeholder={placeholder}
+                        placeholderTextColor={c.faint}
+                        multiline
+                        maxLength={200}
+                      />
+                      <BouncyPressable
+                        style={[styles.sendBtn, composeMode !== 'rally' && { backgroundColor: c.primaryStrong }, (!canCompose || (composeMode === 'rally' ? !redpenInput.trim() : !redpenInput.trim() && !composeDraft)) && styles.sendBtnDisabled]}
+                        onPress={handleSend}
+                        disabled={!canCompose || (composeMode === 'rally' ? !redpenInput.trim() : !redpenInput.trim() && !composeDraft)}
+                        haptic="light"
+                      >
+                        <Text style={styles.sendBtnText}>送信</Text>
+                      </BouncyPressable>
+                    </View>
+                    {redpenError && (
+                      <Text style={styles.ngWarning}><Feather name="alert-triangle" size={12} color={c.danger} /> {redpenError}</Text>
+                    )}
+                  </View>
+                )
+              })()}
+            </View>
+          )}
+        </View>
 
         {/* 学習ノート（1問1ページ）：丸付け→メモ→答え合わせ→振り返りが同じページに積もっていく */}
         <Modal
@@ -986,17 +983,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6,
     backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: c.border,
   },
-  monitor: {
-    backgroundColor: '#1e293b', borderWidth: 1, borderColor: 'rgba(148,163,184,0.35)', borderRadius: 12,
+  noteStrip: {
+    flex: 1, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 12,
     paddingVertical: 8, paddingHorizontal: 10,
   },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34d399' },
-  monitorMain: { flex: 1, fontSize: 12, fontWeight: '700', color: '#f1f5f9' },
-  monitorChip: { backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
-  monitorChipText: { fontSize: 10, fontWeight: '700', color: '#fcd34d' },
-  monitorChevron: { fontSize: 13, color: '#64748b', fontWeight: '700' },
-  monitorQuestion: { fontSize: 11.5, color: '#cbd5e1', lineHeight: 16 },
-  monitorAnswer: { fontFamily: font.hand, fontSize: 13, color: '#fde68a', lineHeight: 19, marginTop: 2, paddingLeft: 12 },
+  noteStripMain: { flex: 1, fontSize: 12, fontWeight: '700', color: c.textStrong },
+  noteStripQuestion: { fontSize: 11.5, color: c.textSub, lineHeight: 16 },
+  noteStripAnswer: { fontFamily: font.hand, fontSize: 13, color: c.textMid, lineHeight: 19, marginTop: 2, paddingLeft: 12 },
+  noteStripChevron: { fontSize: 13, color: c.faint, fontWeight: '700' },
   printDockChip: { backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: '#fde68a', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
   printDockChipText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
   previewDock: {
