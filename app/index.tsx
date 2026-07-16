@@ -1246,7 +1246,7 @@ export default function HomeScreen() {
                       const hasAny = !!e || hasExam
                       const selected = journalDay === key
                       return (
-                        <TouchableOpacity key={`d${day}`} disabled={!hasAny} activeOpacity={0.7}
+                        <TouchableOpacity key={`d${day}`} activeOpacity={0.6}
                           onPress={() => setJournalDay(selected ? null : key)}
                           style={[styles.journalCell, selected ? styles.journalCellSel : isToday && styles.journalCellToday]}>
                           <Text style={[styles.journalDay, hasAny && styles.journalDayActive, selected && { color: 'white' }]}>{day}</Text>
