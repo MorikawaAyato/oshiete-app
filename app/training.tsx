@@ -6,9 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useApp } from '@/lib/AppContext'
-import { TEACHER_TITLES, getUnlockedTitleCount } from '@/lib/teacherProfile'
 import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, splitUnits, getUnitStatuses, logWork } from '@/lib/storage'
-import { gradeExam } from '@/lib/api'
 import type { HistoryItem, QACard } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { c, font } from '@/lib/theme'
@@ -16,10 +14,6 @@ import { Feather } from '@expo/vector-icons'
 
 const PRINCIPAL_IMAGE = require('../assets/tora_koutyou.webp')
 const TITLE_RE = /^この(教材|文書|画像|写真)は[、，]?\s*/u
-
-// 昇進試験（ウェブ側と同じ条件）
-const EXAM_QUESTION_COUNT = 5
-const EXAM_PASS_COUNT = 4
 
 // 研修（フラッシュカード）
 const DRILL_SESSION_SIZE = 10
@@ -164,55 +158,10 @@ export default function TrainingScreen() {
     setDrillRevealed(false)
   }
 
-  // 昇進試験の進行状態（採点時に別解を判定できるよう、各カードに出典教材の事実リストを添える）
-  const examCardPool = () =>
-    history.flatMap((h) => (h.factsheet?.cards ?? []).map((card) => ({ ...card, facts: h.factsheet?.facts ?? [] })))
-
-  const [examOpen, setExamOpen] = useState(false)
-  const [examQuestions, setExamQuestions] = useState<(QACard & { facts: string[] })[]>([])
-  const [examStep, setExamStep] = useState(0)
-  const [examAnswers, setExamAnswers] = useState<string[]>([])
-  const [examGrading, setExamGrading] = useState(false)
-  const [examResults, setExamResults] = useState<{ correct: boolean; comment: string }[] | null>(null)
-  const [examError, setExamError] = useState<string | null>(null)
   const [showPrincipalAvatar, setShowPrincipalAvatar] = useState(false)
 
-  const startExam = () => {
-    const pool = examCardPool()
-    if (pool.length < EXAM_QUESTION_COUNT) return
-    const shuffled = shuffleCards(pool)
-    setExamQuestions(shuffled.slice(0, EXAM_QUESTION_COUNT))
-    setExamAnswers(Array(EXAM_QUESTION_COUNT).fill(''))
-    setExamStep(0)
-    setExamResults(null)
-    setExamError(null)
-    setExamOpen(true)
-  }
-
-  const submitExam = async () => {
-    setExamGrading(true)
-    setExamError(null)
-    try {
-      const res = await gradeExam(examQuestions.map((cd, i) => ({ q: cd.q, a: cd.a, statement: cd.statement, facts: cd.facts, userAnswer: (examAnswers[i] ?? '').trim() })))
-      if (!res.results) throw new Error(res.error)
-      setExamResults(res.results)
-      void logWork('exam') // 業務日誌へ（合否によらず受験を記録）
-      if (res.results.filter((r) => r.correct).length >= EXAM_PASS_COUNT) {
-        const unlockedCount = getUnlockedTitleCount(teacherProfile)
-        const nextTitle = TEACHER_TITLES[unlockedCount]
-        if (nextTitle) setTeacherProfile({ ...teacherProfile, title: nextTitle, unlockedTitleCount: unlockedCount + 1 })
-      }
-    } catch {
-      setExamError('採点に失敗しました。通信環境を確認してもう一度お試しください。')
-    } finally {
-      setExamGrading(false)
-    }
-  }
-
-  const nextTitle = TEACHER_TITLES[getUnlockedTitleCount(teacherProfile)]
   const allCards = history.flatMap((h) => h.factsheet?.cards ?? [])
   const materialsWithCards = history.filter((h) => (h.factsheet?.cards?.length ?? 0) > 0)
-  const canExam = !!nextTitle && allCards.length >= EXAM_QUESTION_COUNT
   const teacherCall = teacherProfile.name ? `${teacherProfile.name}先生` : '先生'
   // 「まだ」のカード残数（全体・教材ごと）。研修に戻ってくる理由を可視化する
   const pendingCountOf = (cards: QACard[]) => cards.filter((cd) => drillPendingKeys.has(drillKey(cd))).length
@@ -224,8 +173,6 @@ export default function TrainingScreen() {
       ? `${teacherCall}、よく来たね。「まだ」のカードが${allPending}枚残っておるぞ。逃げずに、一枚ずつ潰していきなさい。`
       : hasDoneUnits
       ? `${teacherCall}、よく来たね。教えた知識も、時間がたてばさびる。完了した授業のカードをめくって、みがき直しておきなさい。`
-      : canExam
-      ? `${teacherCall}、よく来たね。研修は嘘をつかん。研修で鍛えたら、次の昇進試験に挑みなさい。待っておるぞ。`
       : `${teacherCall}、よく来たね。教えるとは、二度学ぶことだ。カードをめくって、教えの引き出しを増やしなさい。`
   const drillActive = drillCards.length > 0
 
@@ -243,37 +190,40 @@ export default function TrainingScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
         {!drillActive ? (
           <>
-            {/* 校長との1on1：機能カードと同列に見えないよう、カードの器には入れず
-                「部屋に浮かぶチャットメッセージ」として表示する */}
-            <View style={styles.callBar}>
-              <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.8} style={{ position: 'relative' }}>
-                <Image source={PRINCIPAL_IMAGE} style={styles.callAvatar} />
-                <View style={styles.callAvatarDot} />
-              </TouchableOpacity>
-              <View style={{ flex: 1 }}>
-                <View style={styles.callNameRow}>
-                  <Text style={styles.callName}>校長先生</Text>
+            {/* 校長との1on1：研修ルームの主役。あたたかい応接ふうのカードで大きく見せる */}
+            <View style={styles.principalHero}>
+              <View style={styles.principalHeroHead}>
+                <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.8} style={{ position: 'relative' }}>
+                  <Image source={PRINCIPAL_IMAGE} style={styles.principalHeroAvatar} />
+                  <View style={styles.callAvatarDot} />
+                </TouchableOpacity>
+                <View>
+                  <Text style={styles.principalHeroName}>校長先生</Text>
                   <View style={styles.connectedPill}>
                     <EqBars />
                     <Text style={styles.connectedText}>接続中</Text>
                   </View>
                 </View>
-                <View style={[styles.principalBubble, styles.principalBubbleFull]}>
-                  <Text style={styles.principalLine}>{principalLine}</Text>
-                </View>
+              </View>
+              <View style={styles.principalHeroBubble}>
+                <Text style={styles.principalLine}>{principalLine}</Text>
               </View>
             </View>
 
-            {/* 一問一答研修：ふだんの練習（軽い側） */}
+            {/* 一問一答研修：研修ルームの中心機能。ヒーローカードにする */}
             <View style={styles.card}>
-              <Text style={styles.eyebrowLight}>ふだんの練習</Text>
-              <View style={styles.sectionTitleRow}>
-                <Text style={styles.sectionTitle}>一問一答研修</Text>
-                {allPending > 0 && (
-                  <View style={styles.pendingBadge}>
-                    <Text style={styles.pendingBadgeText}>まだ {allPending}枚</Text>
-                  </View>
-                )}
+              <View style={styles.sectionHeroRow}>
+                <View style={styles.sectionHeroIcon}>
+                  <Feather name="award" size={20} color="#d97706" />
+                </View>
+                <View style={styles.sectionTitleRow}>
+                  <Text style={styles.sectionTitle}>一問一答研修</Text>
+                  {allPending > 0 && (
+                    <View style={styles.pendingBadge}>
+                      <Text style={styles.pendingBadgeText}>まだ {allPending}枚</Text>
+                    </View>
+                  )}
+                </View>
               </View>
               <Text style={styles.sectionDesc}>授業の前のならしにも、おわった授業のわすれ防止にも。カードをめくって自分の言葉で答え、「おぼえた／まだ」をつけていきます。「まだ」のカードと、完了した授業のしばらく触れていないカードが優先で出ます。</Text>
               {allCards.length === 0 ? (
@@ -307,36 +257,6 @@ export default function TrainingScreen() {
                     <Text style={styles.primaryBtnText}>研修をはじめる（最大{DRILL_SESSION_SIZE}問）</Text>
                   </TouchableOpacity>
                 </>
-              )}
-            </View>
-
-            {/* 昇進試験：大一番（重い側）。証書ふうのダークカードで研修と格を分ける。
-                研修→試験の順序は校長のセリフとアイブロウが語るので、接続テキストは置かない */}
-            <View style={styles.examCard}>
-              <Text style={styles.eyebrowDark}>大一番</Text>
-              <Text style={styles.examTitle}>昇進試験</Text>
-              {nextTitle ? (
-                <>
-                  <Text style={styles.examDesc}>
-                    全教材から校長先生が{EXAM_QUESTION_COUNT}問出題。{EXAM_PASS_COUNT}問正解で合格・昇進です。
-                  </Text>
-                  {/* 賭け金：何が懸かっているかを常設（次の称号名は伏せたまま） */}
-                  <View style={styles.stakeRow}>
-                    <Text style={styles.stakeLabel}>現在の称号</Text>
-                    <Text style={styles.stakeCurrent} numberOfLines={1}>{teacherProfile.title}</Text>
-                    <Text style={styles.stakeArrow}>→</Text>
-                    <Text style={styles.stakeNext}>？？？</Text>
-                  </View>
-                  {canExam ? (
-                    <TouchableOpacity style={styles.examGoldBtn} onPress={startExam}>
-                      <Text style={styles.examGoldBtnText}>校長先生の試験を受ける</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <Text style={styles.examLockedText}>教材を取り込んで授業をすると受験できます（カード{EXAM_QUESTION_COUNT}枚以上）</Text>
-                  )}
-                </>
-              ) : (
-                <Text style={styles.examDesc}>「{teacherProfile.title}」は最高位です。これからも生徒たちをよろしく頼むよ。</Text>
               )}
             </View>
           </>
@@ -452,95 +372,6 @@ export default function TrainingScreen() {
         </View>
       </Modal>
 
-      {/* 昇進試験（校長室） */}
-      <Modal visible={examOpen} transparent animationType="slide" onRequestClose={() => setExamOpen(false)}>
-        <KeyboardAvoidingView style={styles.sheetContainer} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <Pressable style={styles.sheetOverlay} onPress={() => { if (!examGrading) setExamOpen(false) }} />
-          <View style={styles.sheetBottom}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>昇進試験</Text>
-              <TouchableOpacity onPress={() => setExamOpen(false)}>
-                <Text style={styles.sheetClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              {examGrading ? (
-                <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-                  <Image source={PRINCIPAL_IMAGE} style={[styles.principalAvatar, { marginBottom: 10 }]} />
-                  <Text style={styles.examMsgText}>校長先生が採点しています...</Text>
-                </View>
-              ) : examResults ? (
-                <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-                  {(() => {
-                    const correctCount = examResults.filter((r) => r.correct).length
-                    const passed = correctCount >= EXAM_PASS_COUNT
-                    return (
-                      <>
-                        <Text style={styles.examVerdict}>{passed ? '合格！' : 'もう一歩...！'}</Text>
-                        <Text style={styles.examScore}>
-                          {correctCount} / {examResults.length} 問正解
-                          {passed ? ` — 「${teacherProfile.title}」に昇進しました！` : `（合格は${EXAM_PASS_COUNT}問）。また挑戦してくださいね。`}
-                        </Text>
-                        {examResults.map((r, i) => (
-                          <View key={i} style={styles.examResultCard}>
-                            <Text style={styles.examResultQ}>{r.correct ? <Text style={styles.markO}>○</Text> : <Text style={styles.markX}>✕</Text>} 問{i + 1}: {examQuestions[i]?.q}</Text>
-                            <Text style={styles.examResultA}>あなたの答え: {(examAnswers[i] ?? '').trim() || '（空欄）'}</Text>
-                            {!r.correct && <Text style={styles.examResultModel}>模範解答: {examQuestions[i]?.a}</Text>}
-                            {!!r.comment && <Text style={styles.examResultComment}>{r.comment}</Text>}
-                          </View>
-                        ))}
-                        <TouchableOpacity style={styles.examCloseBtn} onPress={() => setExamOpen(false)}>
-                          <Text style={styles.primaryBtnText}>校長室を出る</Text>
-                        </TouchableOpacity>
-                      </>
-                    )
-                  })()}
-                </View>
-              ) : examQuestions.length > 0 ? (
-                <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-                  <View style={styles.examSpeech}>
-                    <Image source={PRINCIPAL_IMAGE} style={styles.principalAvatarSmall} />
-                    <Text style={styles.examSpeechText}>
-                      {examStep === 0
-                        ? `それでは始めよう。全${examQuestions.length}問、${EXAM_PASS_COUNT}問正解で次の称号に昇進だ。自分の言葉で答えなさい。`
-                        : 'つぎの問題だ。'}
-                    </Text>
-                  </View>
-                  <Text style={styles.examProgress}>問 {examStep + 1} / {examQuestions.length}</Text>
-                  <Text style={styles.examQuestion}>{examQuestions[examStep]?.q}</Text>
-                  <TextInput
-                    style={styles.examInput}
-                    value={examAnswers[examStep] ?? ''}
-                    onChangeText={(t) => setExamAnswers((prev) => prev.map((a, i) => (i === examStep ? t : a)))}
-                    placeholder="自分の言葉で答えてみよう"
-                    placeholderTextColor={c.faint}
-                    multiline
-                    maxLength={300}
-                  />
-                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                    {examStep > 0 && (
-                      <TouchableOpacity style={styles.examNavBtn} onPress={() => setExamStep((s) => s - 1)}>
-                        <Text style={styles.examNavBtnText}>← 前の問題</Text>
-                      </TouchableOpacity>
-                    )}
-                    {examStep < examQuestions.length - 1 ? (
-                      <TouchableOpacity style={styles.examNextBtn} onPress={() => setExamStep((s) => s + 1)}>
-                        <Text style={styles.primaryBtnText}>次の問題 →</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity style={[styles.examNextBtn, styles.markBtnRow]} onPress={() => void submitExam()}>
-                        <Feather name="send" size={14} color="#fff" />
-                        <Text style={styles.primaryBtnText}>答案を提出する</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  {!!examError && <Text style={styles.examErrorText}>{examError}</Text>}
-                </View>
-              ) : null}
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </SafeAreaView>
   )
 }
@@ -563,6 +394,18 @@ const styles = StyleSheet.create({
   principalAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fde68a' },
   principalAvatarSmall: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fde68a' },
   // 1on1のチャット風バー（カードの器に入れず、部屋に浮かぶメッセージとして表示）
+  // 校長ヒーロー（研修ルームの主役。あたたかい応接カード）
+  principalHero: { backgroundColor: '#fffbeb', borderRadius: 24, borderWidth: 1, borderColor: '#fde68a', padding: 20 },
+  principalHeroHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  principalHeroAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: 'white' },
+  principalHeroName: { fontSize: 14, fontWeight: '900', color: c.text, marginBottom: 2 },
+  principalHeroBubble: {
+    alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.8)', borderWidth: 1, borderColor: '#fde68a',
+    borderRadius: 16, borderTopLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 12,
+  },
+  // 研修カードのヒーロー見出し（アイコン＋タイトル）
+  sectionHeroRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  sectionHeroIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: '#fef3c7', alignItems: 'center', justifyContent: 'center' },
   callBar: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 4 },
   callAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: c.border },
   callAvatarDot: {

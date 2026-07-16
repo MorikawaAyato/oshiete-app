@@ -11,7 +11,7 @@ import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons'
 import PawGlyph from '@/components/PawGlyph'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
-import { TEACHER_AVATARS, TEACHER_TITLES, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, getUnlockedTitleCount, normalizeAvatarId } from '@/lib/teacherProfile'
+import { TEACHER_AVATARS, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, normalizeAvatarId } from '@/lib/teacherProfile'
 import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail } from '@/lib/api'
 import { needsFactsheetUpgrade } from '@/lib/factsheet'
 import {
@@ -35,9 +35,6 @@ const MAX_IMAGES = 3
 // あとから質問メール（間隔反復）：授業の2日後〜2週間以内のRecapが対象
 const FOLLOWUP_MIN_AGE_MS = 2 * 24 * 60 * 60 * 1000
 const FOLLOWUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
-
-// 昇進試験：校長先生が一問一答バンクから出題する短答記述式テスト。合格で次の称号が解放される
-const EXAM_QUESTION_COUNT = 5
 
 // 先生アバターを円で表示すると耳の高いキャラ（うさぎ・きつね）は耳が見切れるため、
 // そのキャラだけ画像をごくわずかに下げて耳を収める（表示サイズに対する縦オフセット比）
@@ -71,7 +68,8 @@ export default function HomeScreen() {
   const [pendingImages, setPendingImages] = useState<ImageData[]>([])
   const [studentSheet, setStudentSheet] = useState<'profile' | 'picker' | null>(null)
   const [teacherSheet, setTeacherSheet] = useState(false)
-  const [workLog, setWorkLog] = useState<WorkLog>({}) // 業務日誌（先生証シート内のカレンダー）
+  const [workLog, setWorkLog] = useState<WorkLog>({}) // 業務日誌（ヘッダーの独立シート）
+  const [journalOpen, setJournalOpen] = useState(false)
   const [journalMonth, setJournalMonth] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } })
   const [showTeacherAvatar, setShowTeacherAvatar] = useState(false)
   const [showStudentAvatar, setShowStudentAvatar] = useState(false)
@@ -161,17 +159,6 @@ export default function HomeScreen() {
       } catch { /* メールは任意機能。失敗時は次回起動時に再挑戦 */ }
     })()
   }, [])
-
-  // 昇進試験は研修タブ（/training）に移設。ここは受験可否の表示と遷移だけ担う
-  const examCardPool = () => history.flatMap((h) => h.factsheet?.cards ?? [])
-
-  const goToTraining = () => {
-    setShowInbox(false)
-    setExpandedMailId(null)
-    setTeacherSheet(false)
-    router.push('/training')
-  }
-
 
   useEffect(() => {
     if (!teacherSheet) {
@@ -528,6 +515,12 @@ export default function HomeScreen() {
                   <Text style={styles.mailBadgeText}>{unreadCount}</Text>
                 </View>
               )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.teacherIconBtn} onPress={() => { const d = new Date(); setJournalMonth({ y: d.getFullYear(), m: d.getMonth() }); void loadWorkLog().then(setWorkLog); setJournalOpen(true) }}>
+              <View style={styles.teacherIconCircle}>
+                <Feather name="calendar" size={18} color={c.sky} />
+              </View>
+              <Text style={styles.teacherIconLabel}>日誌</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
               <View style={styles.teacherIconCircle}>
@@ -1038,11 +1031,6 @@ export default function HomeScreen() {
                           <Text style={styles.inboxOpenBtnText}>この教材をひらいて教えてあげる</Text>
                         </TouchableOpacity>
                       )}
-                      {isExpanded && msg.examInvite && examCardPool().length >= EXAM_QUESTION_COUNT && !!TEACHER_TITLES[getUnlockedTitleCount(teacherProfile)] && (
-                        <TouchableOpacity onPress={goToTraining} style={[styles.inboxOpenBtn, { backgroundColor: '#d97706' }]}>
-                          <Text style={styles.inboxOpenBtnText}>昇進試験を受ける</Text>
-                        </TouchableOpacity>
-                      )}
                     </View>
                   </TouchableOpacity>
                 )
@@ -1084,9 +1072,6 @@ export default function HomeScreen() {
                         : <Text style={styles.tcNameEmpty}>（名前未設定）</Text>
                       }
                     </Text>
-                    <View style={styles.tcTitleBadge}>
-                      <Text style={styles.tcTitleText}>{teacherProfile.title}</Text>
-                    </View>
                   </View>
                   <View style={styles.tcChip} />
                   <View style={styles.tcEditHint}>
@@ -1132,7 +1117,20 @@ export default function HomeScreen() {
               )}
             </Animated.View>
 
-            {/* 業務日誌：その日にした仕事のスタンプ（出来事の記録のみ。連続日数などの数字は出さない） */}
+            <TouchableOpacity style={[styles.sheetCloseBtn, styles.tcCloseBtn]} onPress={() => setTeacherSheet(false)}>
+              <Text style={styles.tcCloseBtnText}>閉じる</Text>
+            </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 業務日誌シート：メール・先生証と並ぶ独立の面。その日にした仕事のスタンプ（出来事の記録のみ） */}
+      <Modal visible={journalOpen} transparent animationType="slide" onRequestClose={() => setJournalOpen(false)}>
+        <View style={styles.studentSheetContainer}>
+          <Pressable style={styles.studentSheetOverlay} onPress={() => setJournalOpen(false)} />
+          <View style={styles.studentSheetBottom}>
+            <View style={styles.studentSheetHandle} />
             {(() => {
               const startPad = new Date(journalMonth.y, journalMonth.m, 1).getDay()
               const daysInMonth = new Date(journalMonth.y, journalMonth.m + 1, 0).getDate()
@@ -1140,7 +1138,7 @@ export default function HomeScreen() {
               const isCurrentMonth = journalMonth.y === now.getFullYear() && journalMonth.m === now.getMonth()
               const cells: (number | null)[] = [...Array(startPad).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
               return (
-                <View style={styles.journalCard}>
+                <View style={{ paddingHorizontal: 4, paddingTop: 4 }}>
                   <View style={styles.journalHeader}>
                     <Text style={styles.journalTitle}>業務日誌</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -1165,27 +1163,23 @@ export default function HomeScreen() {
                         <View key={`d${day}`} style={[styles.journalCell, isToday && styles.journalCellToday]}>
                           <Text style={[styles.journalDay, !!e && styles.journalDayActive]}>{day}</Text>
                           <View style={styles.journalDots}>
-                            {e?.lesson ? <View style={[styles.journalDot, { backgroundColor: '#f472b6' }]} /> : null}
-                            {e?.drill ? <View style={[styles.journalDot, { backgroundColor: '#fcd34d' }]} /> : null}
-                            {e?.exam ? <View style={[styles.journalDot, { backgroundColor: '#7dd3fc' }]} /> : null}
+                            {e?.lesson ? <View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /> : null}
+                            {e?.drill ? <View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /> : null}
                           </View>
                         </View>
                       )
                     })}
                   </View>
                   <View style={styles.journalLegend}>
-                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#f472b6' }]} /><Text style={styles.journalLegendText}>授業</Text></View>
-                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#fcd34d' }]} /><Text style={styles.journalLegendText}>研修</Text></View>
-                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#7dd3fc' }]} /><Text style={styles.journalLegendText}>昇進試験</Text></View>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /><Text style={styles.journalLegendText}>授業</Text></View>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /><Text style={styles.journalLegendText}>研修</Text></View>
                   </View>
                 </View>
               )
             })()}
-
-            <TouchableOpacity style={[styles.sheetCloseBtn, styles.tcCloseBtn]} onPress={() => setTeacherSheet(false)}>
-              <Text style={styles.tcCloseBtnText}>閉じる</Text>
+            <TouchableOpacity style={styles.sheetCloseBtn} onPress={() => setJournalOpen(false)}>
+              <Text style={styles.sheetCloseBtnText}>閉じる</Text>
             </TouchableOpacity>
-            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -1570,23 +1564,22 @@ const styles = StyleSheet.create({
   // 先生証シート
   tcSheetBottom: { backgroundColor: c.ink, paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0, maxHeight: '92%' },
 
-  // 業務日誌（先生証シート内のカレンダー）
-  journalCard: { marginHorizontal: 24, marginBottom: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', padding: 14 },
-  journalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  journalTitle: { fontSize: 10, fontWeight: '700', letterSpacing: 3, color: 'rgba(255,255,255,0.6)' },
-  journalNav: { fontSize: 15, color: 'rgba(255,255,255,0.5)', paddingHorizontal: 6 },
-  journalMonth: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.8)', fontVariant: ['tabular-nums'] },
-  journalGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  journalWeekday: { width: '14.28%', textAlign: 'center', fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.35)', marginBottom: 3 },
-  journalCell: { width: '14.28%', alignItems: 'center', paddingVertical: 2, borderRadius: 8, gap: 1 },
-  journalCellToday: { backgroundColor: 'rgba(255,255,255,0.1)' },
-  journalDay: { fontSize: 10, color: 'rgba(255,255,255,0.35)', fontVariant: ['tabular-nums'] },
-  journalDayActive: { color: 'rgba(255,255,255,0.85)', fontWeight: '700' },
-  journalDots: { flexDirection: 'row', gap: 2, height: 5 },
-  journalDot: { width: 5, height: 5, borderRadius: 2.5 },
-  journalLegend: { flexDirection: 'row', justifyContent: 'center', gap: 14, marginTop: 10 },
+  // 業務日誌（ヘッダーの独立シート。明るい配色）
+  journalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  journalTitle: { fontSize: 13, fontWeight: '900', letterSpacing: 1, color: c.text },
+  journalNav: { fontSize: 16, color: c.faint, paddingHorizontal: 6 },
+  journalMonth: { fontSize: 12, fontWeight: '700', color: c.textMid, fontVariant: ['tabular-nums'] },
+  journalGrid: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: c.bgSub, borderRadius: 16, borderWidth: 1, borderColor: c.border, padding: 10 },
+  journalWeekday: { width: '14.28%', textAlign: 'center', fontSize: 9, fontWeight: '700', color: c.faint, marginBottom: 4 },
+  journalCell: { width: '14.28%', alignItems: 'center', paddingVertical: 3, borderRadius: 8, gap: 1 },
+  journalCellToday: { backgroundColor: c.pinkTint },
+  journalDay: { fontSize: 11, color: c.faint, fontVariant: ['tabular-nums'] },
+  journalDayActive: { color: c.textMid, fontWeight: '700' },
+  journalDots: { flexDirection: 'row', gap: 2, height: 6 },
+  journalDot: { width: 6, height: 6, borderRadius: 3 },
+  journalLegend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 12 },
   journalLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  journalLegendText: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.5)' },
+  journalLegendText: { fontSize: 10, fontWeight: '600', color: c.textSub },
   tcCardContainer: {
     width: 240, height: 353, alignSelf: 'center', marginVertical: 24,
     overflow: 'hidden', borderRadius: 22,
