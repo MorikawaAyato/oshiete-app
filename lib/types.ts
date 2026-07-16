@@ -2,7 +2,6 @@ export type ChatMessage = {
   role: 'user' | 'mana'
   text: string
   noteRef?: number // ノートの引用カード（この問題の話、をその場で見せる）
-  action?: 'check' // 行動リンク（答え合わせをはじめる）
 }
 
 // 生徒メモリ（教材×生徒ごとに前回授業の記憶を保持、最新1件）
@@ -47,7 +46,7 @@ export type Factsheet = {
 }
 
 // プリント授業の1問。truth（答案の正誤）は生成時にサーバが決め打ちしており、
-// 丸付けとのズレ照合はこの値との突き合わせだけで完結する（採点AI不要）
+// 振り返りの「模範解答とちがう答案」の強調はこの値の表示だけで完結する（採点AI不要）
 export type PrintItem = {
   cardIndex: number // バンク上の位置
   cardKey: string // drillKey。進度ストア・研修と同じ同一性
@@ -56,18 +55,19 @@ export type PrintItem = {
   studentAnswer: string
   truth: 'correct' | 'wrong'
   choices?: string[] // 虎の巻（赤ペンのひとこと解説の候補。1つが正しい）
-  isReview?: boolean // 復習枠（前回✕・研修「まだ」）からの出題
-  teacherMark?: boolean // 第1段：先生の丸付け（模範解答なし）
-  redPen?: string // 第2段：✕の問題への先生のひとこと解説
-  redPenVerdict?: 'match' | 'diverge' // 返却時の一括判定（判定対象＝正誤一致の✕のみ）
-  finalMark?: boolean // 第3段：答え合わせ後の最終○✕
-  redPenFinal?: 'relearn' | 'ok' // 説明ズレへの先生の1タップ判定
+  teacherMark?: boolean // 先生の丸付け（模範解答なし）。授業の中の判定はこの○✕だけ
+  redPen?: string // ✕の問題への先生のひとこと解説
 }
 
-export type PrintStage = 'grading' | 'redpen' | 'check' | 'done'
+export type PrintStage = 'grading' | 'redpen' | 'done'
 
-// カード進度：プリント授業の背骨。drillKeyをキーに「触れたか・直近の結果・復習待ちか」を記録
-export type CardProgress = { seen: number; lastAt: number; lastResult?: boolean; pending?: boolean }
+// カード進度：drillKeyをキーに「触れたか・直近の結果」を記録（初回挨拶の判定・研修「まだ」の解消に使う）
+export type CardProgress = { seen: number; lastAt: number; lastResult?: boolean }
+
+// 単元ステータス：未実施（エントリなし）／実施済み（tried）／完了（done）。
+// 「完了」は集計値ではなく先生の判断の記録（振り返りを見て決める）
+export type UnitStatus = 'tried' | 'done'
+export type UnitProgress = { count: number; status: Record<number, UnitStatus> }
 
 export type HistoryItem = {
   id: string

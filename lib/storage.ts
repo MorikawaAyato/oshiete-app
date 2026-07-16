@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { CardProgress, Factsheet, HistoryItem, PreviewContent, QACard, Recap } from './types'
+import type { CardProgress, Factsheet, HistoryItem, PreviewContent, QACard, Recap, UnitProgress, UnitStatus } from './types'
 
 export type MailMessage = {
   id: string
@@ -19,8 +19,8 @@ export function drillKey(card: QACard): string {
   return card.statement.replace(/[\s　]/g, '')
 }
 
-// カード進度：プリント授業の背骨。宿題は独立システムではなく
-// 「pending のカードが次回プリントの復習枠に入る」ことで実現される
+// カード進度：カードに触れた記録（初回挨拶の判定・研修「まだ」の解消に使う。
+// 復習の単位はカードではなく授業単元＝UNIT_PROGRESS_KEY側）
 const CARD_PROGRESS_KEY = 'oshiete_card_progress'
 
 export async function loadCardProgress(): Promise<Record<string, CardProgress>> {
@@ -37,6 +37,66 @@ export async function saveCardProgress(map: Record<string, CardProgress>): Promi
     const entries = Object.entries(map)
     const kept = entries.length > 800 ? entries.sort((a, b) => b[1].lastAt - a[1].lastAt).slice(0, 800) : entries
     await AsyncStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(Object.fromEntries(kept)))
+  } catch {}
+}
+
+// ─── 授業単元 ───
+// 教材のカードを順番どおり最大UNIT_SIZE問ずつに均等分割する（例：21枚→5,4,4,4,4）。
+// 分割はカード順で固定し、「授業①」の中身がいつ開いても同じになるようにする
+export const UNIT_SIZE = 5
+
+export function splitUnits(count: number): { start: number; size: number }[] {
+  if (count <= 0) return []
+  const unitCount = Math.ceil(count / UNIT_SIZE)
+  const base = Math.floor(count / unitCount)
+  const extra = count % unitCount
+  const units: { start: number; size: number }[] = []
+  let start = 0
+  for (let i = 0; i < unitCount; i++) {
+    const size = base + (i < extra ? 1 : 0)
+    units.push({ start, size })
+    start += size
+  }
+  return units
+}
+
+// 単元の表示名（授業①②…）。㉑以降は数字にフォールバック
+export function unitLabel(i: number): string {
+  return i < 20 ? String.fromCharCode(0x2460 + i) : String(i + 1)
+}
+
+// 次にやる単元の既定値：カード順で最初の「完了でない」単元（全部完了なら先頭）
+export function defaultUnitIndex(cardCount: number, statuses: Record<number, UnitStatus>): number {
+  const unitCount = splitUnits(cardCount).length
+  for (let i = 0; i < unitCount; i++) if (statuses[i] !== 'done') return i
+  return 0
+}
+
+// 単元ステータスの保存。カード枚数が変わった教材（バンク再生成など）は区切りがズレるためリセットする
+const UNIT_PROGRESS_KEY = 'oshiete_unit_progress'
+
+export async function loadUnitProgressMap(): Promise<Record<string, UnitProgress>> {
+  try {
+    const raw = await AsyncStorage.getItem(UNIT_PROGRESS_KEY)
+    return raw ? (JSON.parse(raw) as Record<string, UnitProgress>) : {}
+  } catch {
+    return {}
+  }
+}
+
+export async function getUnitStatuses(historyId: string | null, cardCount: number): Promise<Record<number, UnitStatus>> {
+  if (!historyId) return {}
+  const entry = (await loadUnitProgressMap())[historyId]
+  return entry && entry.count === cardCount ? entry.status : {}
+}
+
+export async function setUnitStatus(historyId: string, cardCount: number, unitIndex: number, status: UnitStatus): Promise<void> {
+  try {
+    const map = await loadUnitProgressMap()
+    const prev = map[historyId]
+    const statusMap = prev && prev.count === cardCount ? prev.status : {}
+    map[historyId] = { count: cardCount, status: { ...statusMap, [unitIndex]: status } }
+    await AsyncStorage.setItem(UNIT_PROGRESS_KEY, JSON.stringify(map))
   } catch {}
 }
 

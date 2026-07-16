@@ -19,9 +19,10 @@ import {
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
   loadFollowupSent, saveFollowupSent, loadTeacherName,
   loadDrillPending, drillKey,
+  splitUnits, unitLabel, defaultUnitIndex, loadUnitProgressMap,
 } from '@/lib/storage'
 import type { MailMessage } from '@/lib/storage'
-import type { HistoryItem, Recap } from '@/lib/types'
+import type { HistoryItem, Recap, UnitProgress, UnitStatus } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 import StampText from '@/components/StampText'
@@ -53,6 +54,7 @@ export default function HomeScreen() {
     thumbnails, setThumbnails,
     currentHistoryId, setCurrentHistoryId,
     pendingMaterialAnimation, setPendingMaterialAnimation,
+    setLessonUnit,
     resetChatSession,
   } = useApp()
 
@@ -62,6 +64,8 @@ export default function HomeScreen() {
   const [previewLoading, setPreviewLoading] = useState(false)
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [drillPendingKeys, setDrillPendingKeys] = useState<Set<string>>(new Set()) // 研修導線の「まだN」用
+  const [unitProgress, setUnitProgress] = useState<Record<string, UnitProgress>>({}) // 単元マップ（授業①〜の完了状況）
+  const [homeUnitIdx, setHomeUnitIdx] = useState<number | null>(null) // 選択中の単元（null=おまかせ＝最初の未完了）
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<ImageData[]>([])
   const [studentSheet, setStudentSheet] = useState<'profile' | 'picker' | null>(null)
@@ -101,6 +105,7 @@ export default function HomeScreen() {
       loadMail().then(setMailMessages)
       loadHistory().then(setHistory) // 研修導線の「まだN」等を最新化
       loadDrillPending().then(setDrillPendingKeys)
+      loadUnitProgressMap().then(setUnitProgress) // 授業から戻ったら単元マップを最新化
       if (pendingAnimRef.current) {
         setPendingMaterialAnimation(false)
         triggerMaterialAnimation()
@@ -444,6 +449,21 @@ export default function HomeScreen() {
     }
   }
 
+  // 教材を切り替えたらホームの単元選択をリセット（既定＝最初の未完了単元）
+  useEffect(() => { setHomeUnitIdx(null) }, [currentHistoryId])
+
+  // 単元マップ：選択中教材のカードを授業①〜に分け、選択単元（既定=最初の未完了）を解決する。
+  // カード枚数が変わった教材（バンク再生成など）は区切りがズレるためステータスをリセット扱いにする
+  const unitInfo = (() => {
+    const cards = history.find((h) => h.id === currentHistoryId)?.factsheet?.cards ?? []
+    const units = splitUnits(cards.length)
+    if (units.length === 0) return null
+    const entry = currentHistoryId ? unitProgress[currentHistoryId] : undefined
+    const statuses: Record<number, UnitStatus> = entry && entry.count === cards.length ? entry.status : {}
+    const selected = Math.min(homeUnitIdx ?? defaultUnitIndex(cards.length, statuses), units.length - 1)
+    return { units, statuses, selected, doneCount: units.filter((_, i) => statuses[i] === 'done').length }
+  })()
+
   // 履歴に保存されたタイトルを優先（アップロード直後と履歴選択時でタイトルが食い違わないように）
   const shortTitle = (() => {
     const saved = history.find((h) => h.id === currentHistoryId)?.title
@@ -679,16 +699,57 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 </View>
 
+                {/* 単元マップ：教材のカードを授業①〜に分けて、どこまで完了したかを見せる。
+                    「完了」は先生の判断の記録（振り返りの中で決める）。次にやる単元はタップで選べる */}
+                {unitInfo && (
+                  <View style={styles.unitMap}>
+                    <View style={styles.unitMapHeader}>
+                      <Text style={styles.unitMapEyebrow}>授業をえらぶ</Text>
+                      <Text style={styles.unitMapCount}>完了 {unitInfo.doneCount} / {unitInfo.units.length}</Text>
+                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 2 }}>
+                      {unitInfo.units.map((u, i) => {
+                        const st = unitInfo.statuses[i]
+                        const sel = i === unitInfo.selected
+                        return (
+                          <TouchableOpacity
+                            key={i}
+                            onPress={() => setHomeUnitIdx(i)}
+                            style={[styles.unitChip,
+                              st === 'done' && styles.unitChipDone,
+                              st === 'tried' && styles.unitChipTried,
+                              sel && styles.unitChipSel]}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={[styles.unitChipText,
+                              st === 'done' && { color: '#059669' },
+                              st === 'tried' && { color: '#b45309' },
+                              sel && { color: c.primaryStrong }]}>授業{unitLabel(i)}</Text>
+                            {st === 'done' && <Text style={{ fontSize: 11, color: '#10b981' }}>✓</Text>}
+                            {st === 'tried' && <Text style={{ fontSize: 9, fontWeight: '600', color: '#b45309' }}>もう一度</Text>}
+                            <Text style={styles.unitChipSize}>{u.size}問</Text>
+                          </TouchableOpacity>
+                        )
+                      })}
+                    </ScrollView>
+                  </View>
+                )}
+
                 {/* CTAはカードの内側：このカード一式＝授業のしごと、という単位にする */}
                 <BouncyPressable
                   style={[styles.startBtn, !selectedStudentId && styles.startBtnDisabled]}
-                  onPress={() => selectedStudentId ? router.push('/chat') : showToast()}
+                  onPress={() => {
+                    if (!selectedStudentId) { showToast(); return }
+                    // 選択中の単元を授業画面へ引き継ぐ（未選択なら最初の未完了単元）
+                    setLessonUnit(unitInfo ? unitInfo.selected : null)
+                    router.push('/chat')
+                  }}
                   haptic="medium"
                 >
                   {selectedStudentId ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Ionicons name="chatbubble-ellipses-outline" size={16} color="white" />
-                      <Text style={styles.startBtnText}>授業をする</Text>
+                      <Text style={styles.startBtnText}>{unitInfo && unitInfo.units.length > 1 ? `授業${unitLabel(unitInfo.selected)}をする` : '授業をする'}</Text>
                     </View>
                   ) : (
                     <Text style={[styles.startBtnText, styles.startBtnTextDisabled]}>生徒を選んでからスタート →</Text>
@@ -1190,6 +1251,22 @@ const styles = StyleSheet.create({
   },
   lessonStudentPickText: { fontSize: 13, fontWeight: '700', color: c.primary, textAlign: 'center' },
   lessonStudentPickSub: { fontSize: 10, color: c.primary },
+
+  // 単元マップ（授業①〜・完了 n/m・タップで選択）
+  unitMap: { borderTopWidth: 1, borderTopColor: c.bgSub, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 2 },
+  unitMapHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  unitMapEyebrow: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: c.faint },
+  unitMapCount: { fontSize: 10, fontWeight: '700', color: c.faint },
+  unitChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderColor: c.border, backgroundColor: 'white',
+    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5,
+  },
+  unitChipDone: { borderColor: '#a7f3d0', backgroundColor: '#ecfdf5' },
+  unitChipTried: { borderColor: '#fde68a', backgroundColor: '#fffbeb' },
+  unitChipSel: { borderColor: c.primary, backgroundColor: c.pinkTint },
+  unitChipText: { fontSize: 11, fontWeight: '700', color: c.textSub },
+  unitChipSize: { fontSize: 9, fontWeight: '600', color: c.faint },
 
   // 授業スタートボタン
   startBtn: {

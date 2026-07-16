@@ -65,25 +65,13 @@ export async function gradeExam(
 // プリント授業：答案（正誤つき）と虎の巻（ひとこと解説の候補）の生成
 export async function fetchPrint(
   studentId: string,
-  items: { question: string; modelAnswer: string; isReview?: boolean }[],
+  items: { question: string; modelAnswer: string }[],
   misconceptions: string[],
 ): Promise<{ items?: { studentAnswer: string; truth: 'correct' | 'wrong'; choices?: string[] }[]; error?: string }> {
   const res = await fetch(`${API_BASE}/api/print`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ studentId, items, misconceptions }),
-  })
-  return res.json()
-}
-
-// 赤ペン（先生の解説）の一括判定。ズレた解説だけ答え合わせで生徒から聞き返される
-export async function judgeRedpen(
-  items: { question: string; modelAnswer: string; explanation: string }[],
-): Promise<{ verdicts?: ('match' | 'diverge')[]; error?: string }> {
-  const res = await fetch(`${API_BASE}/api/redpen`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ items }),
   })
   return res.json()
 }

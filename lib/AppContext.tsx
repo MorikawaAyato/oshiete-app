@@ -16,6 +16,8 @@ type PrintSession = {
   messages: ChatMessage[]
   items: PrintItem[]
   stage: PrintStage
+  unitIndex?: number // 今回の授業の単元（振り返り後の完了判断の反映先）
+  unitDecided?: boolean // 振り返りで完了/また今度を選んだか
 }
 
 type AppState = {
@@ -42,6 +44,10 @@ type AppState = {
   setPrintItems: (v: PrintItem[] | ((prev: PrintItem[]) => PrintItem[])) => void
   printStage: PrintStage
   setPrintStage: (v: PrintStage) => void
+  lessonUnit: number | null
+  setLessonUnit: (v: number | null) => void
+  unitDecided: boolean
+  setUnitDecided: (v: boolean) => void
   resetChatSession: () => void
 }
 
@@ -100,6 +106,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [printItems, setPrintItems] = useState<PrintItem[]>([])
   const [printStage, setPrintStage] = useState<PrintStage>('grading')
+  const [lessonUnit, setLessonUnit] = useState<number | null>(null) // 今回の授業の単元index
+  const [unitDecided, setUnitDecided] = useState(true) // 振り返りで完了/また今度を選んだか
 
   // 授業セッションの復元（アプリ強制終了後もプリント授業を再開できる）
   const sessionLoaded = useRef(false)
@@ -115,7 +123,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setCurrentHistoryId(s.currentHistoryId ?? null)
             setChatMessages(s.messages)
             setPrintItems(s.items)
-            setPrintStage(s.stage ?? 'grading')
+            // 旧版の「答え合わせ」段で保存されたセッションは終了扱いで引き継ぐ
+            setPrintStage((s.stage as string) === 'check' ? 'done' : (s.stage ?? 'grading'))
+            setLessonUnit(typeof s.unitIndex === 'number' ? s.unitIndex : null)
+            setUnitDecided(s.unitDecided ?? true)
           }
         } catch {}
       }
@@ -132,14 +143,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const session: PrintSession = {
       imageDescription, notes, currentHistoryId,
       messages: chatMessages, items: printItems, stage: printStage,
+      ...(lessonUnit !== null ? { unitIndex: lessonUnit } : {}),
+      unitDecided,
     }
     AsyncStorage.setItem(PRINT_SESSION_KEY, JSON.stringify(session)).catch(() => {})
-  }, [chatMessages, printItems, printStage, imageDescription, notes, currentHistoryId])
+  }, [chatMessages, printItems, printStage, imageDescription, notes, currentHistoryId, lessonUnit, unitDecided])
 
   const resetChatSession = () => {
     setChatMessages([])
     setPrintItems([])
     setPrintStage('grading')
+    setLessonUnit(null)
+    setUnitDecided(true)
   }
 
   return (
@@ -156,6 +171,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         chatMessages, setChatMessages,
         printItems, setPrintItems,
         printStage, setPrintStage,
+        lessonUnit, setLessonUnit,
+        unitDecided, setUnitDecided,
         resetChatSession,
       }}
     >
