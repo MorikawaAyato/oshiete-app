@@ -301,11 +301,10 @@ export default function ChatScreen() {
     const beats: string[] = [...(opts?.leadBeats ?? [])]
     if (opts?.noMismatch) beats.push(okCount === items.length ? student.perfectLine : student.noMismatchLine)
     beats.push(student.printThanks)
-    // 先生の採点そのものの正確さも伝える。一致が少なかった日は祝わず、見直した事実を淡々と言う
-    const accurate = items.filter((it) => it.teacherMark === (it.truth === 'correct')).length
-    const reviewed = items.length - accurate
+    // 生徒は自分の結果だけを言う（先生の採点の正確さを生徒が評価・報告しない。
+    // 採点が合っていたかは、先生自身が答え合わせ・振り返りで模範解答をめくって確かめる）
     beats.push(
-      `今日の宿題は ○が${okCount}問・✕が${items.length - okCount}問。${reviewed === 0 ? '先生の採点はぜんぶ模範解答とぴったりでした！' : `採点ぴったりが${accurate}問、答え合わせでいっしょに見直したのが${reviewed}問でした。`}${retryCount > 0 ? ` まちがえた${retryCount}問は、次の宿題でもういちど挑戦しますね！` : ''}`
+      `今日は ○が${okCount}問・✕が${items.length - okCount}問でした！${retryCount > 0 ? `まちがえた${retryCount}問は、次の宿題でもういちど挑戦しますね！` : 'ぜんぶばっちりです！'}`
     )
     pushBeats(beats)
   }
@@ -757,12 +756,14 @@ export default function ChatScreen() {
               const needsRedpenDecision = isCheck && it.redPenVerdict === 'diverge'
               // 訂正線：メモを受けて直した答案（振り返りでは最終✕すべて）。見直し中のページには引かない
               const corrected = mark === false && (memo !== undefined || showAnswers) && !(needsGradeDecision && it.finalMark === undefined)
-              const showModel = showAnswers || needsGradeDecision || needsRedpenDecision
-              const reviewChip = !showAnswers ? null
-                : it.redPenFinal === 'relearn' ? { t: '覚え直し', bg: '#fde68a', fg: '#92400e' }
+              // 答え合わせ中は全ページで模範解答を見られる（他の問いが合っていたかを先生自身が確かめる）
+              const showModel = showAnswers || isCheck
+              // 出来事の記録だけをバッジにする（先生への評価はしない）。何も起きなかったページは無印
+              const reviewChip =
+                it.redPenFinal === 'relearn' ? { t: '覚え直し', bg: '#fde68a', fg: '#92400e' }
                 : it.teacherMark !== undefined && it.finalMark !== undefined && it.teacherMark !== it.finalMark
                   ? (it.finalMark ? { t: '見直して○', bg: '#bae6fd', fg: '#075985' } : { t: '見直して✕', bg: '#fecdd3', fg: '#9f1239' })
-                  : { t: '採点ぴったり', bg: '#a7f3d0', fg: '#065f46' }
+                  : null
               const allMarked = printItems.every((p) => p.teacherMark !== undefined)
               const pendingChecks = printItems.filter((p) => (hasGradeMismatch(p) && p.finalMark === undefined) || (p.redPenVerdict === 'diverge' && p.redPenFinal === undefined)).length
               const canFinishCheck = pendingChecks === 0
@@ -803,6 +804,11 @@ export default function ChatScreen() {
                     {isGrading && (
                       <Text style={styles.notebookGradeHint}>
                         模範解答は見ずに、先生の記憶だけで採点します。<Text style={styles.gradeMarkO}>○</Text> か <Text style={styles.gradeMarkX}>✕</Text> をつけると次のページへ進みます。
+                      </Text>
+                    )}
+                    {isCheck && (
+                      <Text style={styles.notebookGradeHint}>
+                        どのページでも赤い<Text style={styles.modelAnswerWord}>答</Text>を見られるよ。気になるページは、めくってたしかめてOK。
                       </Text>
                     )}
                     {showAnswers && (
