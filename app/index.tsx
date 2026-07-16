@@ -759,21 +759,29 @@ export default function HomeScreen() {
                   </View>
                 )}
 
-                {/* CTAはカードの内側：このカード一式＝授業のしごと、という単位にする */}
+                {/* CTAはカードの内側：このカード一式＝授業のしごと、という単位にする。
+                    カードバンク生成中（unitInfoなし）は授業を始められないので押せない */}
                 <BouncyPressable
-                  style={[styles.startBtn, !selectedStudentId && styles.startBtnDisabled]}
+                  style={[styles.startBtn, (!selectedStudentId || !unitInfo) && styles.startBtnDisabled]}
+                  disabled={!unitInfo}
                   onPress={() => {
+                    if (!unitInfo) return
                     if (!selectedStudentId) { showToast(); return }
-                    // 選択中の単元を授業画面へ引き継ぐ（未選択なら最初の未完了単元）
-                    setLessonUnit(unitInfo ? unitInfo.selected : null)
+                    // 選択中の単元を授業画面へ引き継ぐ
+                    setLessonUnit(unitInfo.selected)
                     router.push('/chat')
                   }}
                   haptic="medium"
                 >
-                  {selectedStudentId ? (
+                  {!unitInfo ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <ActivityIndicator color={c.primary} size="small" />
+                      <Text style={[styles.startBtnText, styles.startBtnTextDisabled]}>授業を準備しています…</Text>
+                    </View>
+                  ) : selectedStudentId ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Ionicons name="chatbubble-ellipses-outline" size={16} color="white" />
-                      <Text style={styles.startBtnText}>{unitInfo && unitInfo.units.length > 1 ? `授業${unitLabel(unitInfo.selected)}をする` : '授業をする'}</Text>
+                      <Text style={styles.startBtnText}>{unitInfo.units.length > 1 ? `授業${unitLabel(unitInfo.selected)}をする` : '授業をする'}</Text>
                     </View>
                   ) : (
                     <Text style={[styles.startBtnText, styles.startBtnTextDisabled]}>生徒を選んでからスタート →</Text>
