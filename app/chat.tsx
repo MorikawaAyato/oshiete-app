@@ -672,9 +672,6 @@ export default function ChatScreen() {
               const memo = it.redPen
               // 訂正線：メモを受けて直した答案（振り返りでは✕すべて）
               const corrected = mark === false && (memo !== undefined || showAnswers)
-              // 振り返りの強調：○をつけた答案が模範解答と食い違っているページだけ（見逃しの気づき）。
-              // ✕のページは「ちがう」ことを先生がもう見抜いているので出さない（メモと模範解答のくらべに集中させる）
-              const divergent = showAnswers && it.truth === 'wrong' && it.teacherMark === true
               const allMarked = printItems.every((p) => p.teacherMark !== undefined)
               const deciding = showAnswers && !unitDecided
               // 表示中のページは既読扱い（setSeenPagesの反映を待たない）
@@ -693,7 +690,7 @@ export default function ChatScreen() {
                       </TouchableOpacity>
                     )}
                   </View>
-                  {/* ページ送り：番号は採点状態で色づき、模範解答とちがう答案のページには印（輪）がつく */}
+                  {/* ページ送り：番号は採点状態で色づく */}
                   <View style={styles.pageNav}>
                     <TouchableOpacity onPress={() => setNotePage(Math.max(0, page - 1))} disabled={page === 0} hitSlop={6}>
                       <Text style={[styles.pageNavArrow, page === 0 && styles.pageNavArrowDisabled]}>‹ 前</Text>
@@ -701,12 +698,10 @@ export default function ChatScreen() {
                     <View style={{ flexDirection: 'row', gap: 6 }}>
                       {printItems.map((p, j) => {
                         const m = p.teacherMark
-                        const dv = showAnswers && p.truth === 'wrong' && p.teacherMark === true
                         return (
                           <TouchableOpacity key={j} onPress={() => setNotePage(j)}
                             style={[styles.pageDot,
-                              j === page ? styles.pageDotActive : m === undefined ? null : m ? styles.pageDotOk : styles.pageDotNg,
-                              dv && styles.pageDotDiverge]}>
+                              j === page ? styles.pageDotActive : m === undefined ? null : m ? styles.pageDotOk : styles.pageDotNg]}>
                             <Text style={[styles.pageDotText,
                               j === page ? { color: '#fff' } : m === undefined ? null : m ? { color: '#059669' } : { color: '#e11d48' }]}>{j + 1}</Text>
                           </TouchableOpacity>
@@ -725,14 +720,10 @@ export default function ChatScreen() {
                     )}
                     {showAnswers && (
                       <Text style={styles.notebookGradeHint}>
-                        自分の採点・メモを、赤い<Text style={styles.modelAnswerWord}>模範解答</Text>と見くらべて振り返ろう。<Text style={styles.modelAnswerWord}>○なのに模範解答とちがう答案</Text>には印がついているよ。
+                        自分の採点・メモを、赤い<Text style={styles.modelAnswerWord}>模範解答</Text>と見くらべて振り返ろう。
                       </Text>
                     )}
                     <View style={[styles.notebookPaper, { marginBottom: 12 }]}>
-                      {/* ちがいの印はページの先頭に置く（下までスクロールしなくても気づけるように） */}
-                      {divergent && (
-                        <View style={[styles.divergeTag, { marginTop: 0, marginBottom: 10 }]}><Text style={styles.divergeTagText}>この答案は、模範解答とちがうよ</Text></View>
-                      )}
                       <Text style={styles.printQuestion}>
                         <Text style={{ fontWeight: '700' }}>問{page + 1} </Text>{it.question}
                       </Text>
@@ -762,7 +753,7 @@ export default function ChatScreen() {
                           <Text style={styles.memoText}>{memo}</Text>
                         </View>
                       )}
-                      {/* 模範解答（振り返りで現れる）。ちがいの印はページ先頭に出す（先生の採点の正誤は言わない） */}
+                      {/* 模範解答（振り返りで現れる）。ちがいの判定はしない：見くらべて気づくのは先生の仕事 */}
                       {showAnswers && (
                         <Text style={[styles.notebookReference, { marginTop: 10 }]}>
                           <Text style={styles.notebookReferenceMark}>模範解答 </Text>{it.modelAnswer}
@@ -978,7 +969,6 @@ const styles = StyleSheet.create({
   pageDotActive: { backgroundColor: '#334155' },
   pageDotOk: { backgroundColor: '#d1fae5' },
   pageDotNg: { backgroundColor: '#ffe4e6' },
-  pageDotDiverge: { borderWidth: 2, borderColor: '#fda4af' }, // 振り返り：模範解答とちがう答案のページの印
   pageDotText: { fontSize: 11, fontWeight: '700', color: c.faint },
   handAnswer: { fontFamily: font.hand, fontSize: 17, lineHeight: 26, color: c.textStrong },
   handAnswerCorrected: { color: c.faint, textDecorationLine: 'line-through', textDecorationColor: '#fb7185' },
@@ -1039,12 +1029,6 @@ const styles = StyleSheet.create({
   hintItemText: { fontSize: 13, color: c.text, lineHeight: 19 },
   ngWarning: { fontSize: 12, color: c.danger, textAlign: 'center', paddingBottom: 8 },
 
-  // 振り返り：模範解答とちがう答案の事実表示
-  divergeTag: {
-    marginTop: 10, borderWidth: 1, borderColor: '#fecdd3', backgroundColor: '#fff1f2',
-    borderRadius: 10, paddingVertical: 6, paddingHorizontal: 10, alignItems: 'center',
-  },
-  divergeTagText: { fontSize: 12, fontWeight: '700', color: '#f43f5e' },
   decideHint: { fontSize: 11, color: c.textSub, textAlign: 'center' },
 
   decisionRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
