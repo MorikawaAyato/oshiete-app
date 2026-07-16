@@ -713,10 +713,14 @@ export default function ChatScreen() {
                     )}
                     {showAnswers && (
                       <Text style={styles.notebookGradeHint}>
-                        自分の採点・メモを、赤い<Text style={styles.modelAnswerWord}>答</Text>と見くらべて振り返ろう。<Text style={styles.modelAnswerWord}>模範解答とちがう答案</Text>のページには印がついているよ。
+                        自分の採点・メモを、赤い<Text style={styles.modelAnswerWord}>模範解答</Text>と見くらべて振り返ろう。<Text style={styles.modelAnswerWord}>模範解答とちがう答案</Text>のページには印がついているよ。
                       </Text>
                     )}
                     <View style={[styles.notebookPaper, { marginBottom: 12 }]}>
+                      {/* ちがいの印はページの先頭に置く（下までスクロールしなくても気づけるように） */}
+                      {divergent && (
+                        <View style={[styles.divergeTag, { marginTop: 0, marginBottom: 10 }]}><Text style={styles.divergeTagText}>この答案は、模範解答とちがうよ</Text></View>
+                      )}
                       <Text style={styles.printQuestion}>
                         <Text style={{ fontWeight: '700' }}>問{page + 1} </Text>{it.question}
                       </Text>
@@ -746,14 +750,11 @@ export default function ChatScreen() {
                           <Text style={styles.memoText}>{memo}</Text>
                         </View>
                       )}
-                      {/* 模範解答（振り返りで現れる）。答案とちがう場合は事実として印をつける（先生の採点の正誤は言わない） */}
+                      {/* 模範解答（振り返りで現れる）。ちがいの印はページ先頭に出す（先生の採点の正誤は言わない） */}
                       {showAnswers && (
                         <Text style={[styles.notebookReference, { marginTop: 10 }]}>
-                          <Text style={styles.notebookReferenceMark}>答 </Text>{it.modelAnswer}
+                          <Text style={styles.notebookReferenceMark}>模範解答 </Text>{it.modelAnswer}
                         </Text>
-                      )}
-                      {divergent && (
-                        <View style={styles.divergeTag}><Text style={styles.divergeTagText}>この答案は、模範解答とちがうよ</Text></View>
                       )}
                     </View>
                   </ScrollView>
