@@ -52,7 +52,7 @@ function NotePlaceholder({ style }: { style?: object }) {
   const [w, setW] = useState(0)
   const imgH = w * TEXT_ASSET_RATIO
   const boxH = w / 1.7 // lessonThumb の aspectRatio
-  const top = boxH / 2 - 0.40 * imgH // 「テキスト」の位置（画像の縦40%）をボックス中央へ
+  const top = boxH / 2 - 0.44 * imgH // ノートの中心（画像の縦44%）をボックス中央へ
   return (
     <View style={[style, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
       {w > 0 && <Image source={TEXT_ASSET} style={{ position: 'absolute', left: 0, width: w, height: imgH, top, opacity: 0.9 }} resizeMode="cover" />}
