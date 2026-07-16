@@ -10,9 +10,10 @@ import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
 import { fetchPrint, fetchFactsheet } from '@/lib/api'
 import {
-  loadFactsheet, updateHistoryFactsheet, saveRecapToHistory,
+  loadFactsheet, updateHistoryFactsheet, saveRecapToHistory, loadHistory,
   loadCardProgress, saveCardProgress, loadDrillPending, saveDrillPending, drillKey,
   splitUnits, defaultUnitIndex, getUnitStatuses, setUnitStatus, logWork,
+  ensureExamDay, examMailFor, examDateLabel, addMail,
 } from '@/lib/storage'
 import type { PrintItem, Recap } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
@@ -265,7 +266,15 @@ export default function ChatScreen() {
       // 単元はまず「実施済み」になる。「完了」に上げるかは振り返りのあとの先生の判断
       if (currentHistoryId && lessonUnit !== null) {
         const cardCount = (await loadFactsheet(currentHistoryId))?.cards?.length ?? 0
-        if (cardCount > 0) await setUnitStatus(currentHistoryId, cardCount, lessonUnit, 'tried')
+        if (cardCount > 0) {
+          await setUnitStatus(currentHistoryId, cardCount, lessonUnit, 'tried')
+          // 小テストの予定がまだ無い教材（試験日導入前の教材）はここで立てる
+          const entry = await ensureExamDay(currentHistoryId, splitUnits(cardCount).length)
+          if (entry) {
+            const title = (await loadHistory()).find((h) => h.id === currentHistoryId)?.title ?? '教材'
+            await addMail(examMailFor(student, { id: currentHistoryId, title }, 'propose', examDateLabel(entry.date), 1))
+          }
+        }
       }
       // 生徒プロフィールの記録（Recap）はプリント結果から機械生成（AIコール不要）
       if (currentHistoryId) {
@@ -594,7 +603,7 @@ export default function ChatScreen() {
                 const placeholder = studentTyping
                   ? `${student.name}が書いています…`
                   : composeMode === 'rally'
-                    ? (composerAsk ? 'ひとことで教えてあげよう…' : 'ノートを返しています…')
+                    ? (composerAsk ? '教えてあげよう…' : 'ノートを返しています…')
                     : composeMode === 'return'
                       ? (composeDraft ?? '')
                       : 'ノートの丸付けがおわったら返せるよ'

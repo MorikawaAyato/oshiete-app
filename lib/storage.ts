@@ -132,6 +132,87 @@ export async function logWork(kind: WorkKind): Promise<void> {
   } catch {}
 }
 
+// ─── 生徒の小テスト（試験日） ───
+// 教材ごとに固定の期日が自動で決まり、先生は変更できない（動かせる締切は締切にならない。
+// 生徒の学校行事は先生の決定領域の外）。期日が来たら結果メールが届き、全単元完了なら大成功、
+// 未完了なら追試日が自動で立つ（責めない・行き止まらない）。教材が消えたら試験日も消える
+export type ExamEntry = { date: string; round: number; doneAt?: number }
+const EXAM_DAYS_KEY = 'oshiete_exam_days'
+const EXAM_SUCCESS_KEY = 'oshiete_exam_success_count'
+
+export async function loadExamDays(): Promise<Record<string, ExamEntry>> {
+  try {
+    const raw = await AsyncStorage.getItem(EXAM_DAYS_KEY)
+    return raw ? (JSON.parse(raw) as Record<string, ExamEntry>) : {}
+  } catch {
+    return {}
+  }
+}
+
+export async function saveExamDays(map: Record<string, ExamEntry>): Promise<void> {
+  try { await AsyncStorage.setItem(EXAM_DAYS_KEY, JSON.stringify(map)) } catch {}
+}
+
+// 生徒のテスト大成功（期日までに全単元完了）の累計。教材を消しても実績は残る
+export async function loadExamSuccessCount(): Promise<number> {
+  try { return Number(await AsyncStorage.getItem(EXAM_SUCCESS_KEY)) || 0 } catch { return 0 }
+}
+
+export async function bumpExamSuccessCount(): Promise<void> {
+  try { await AsyncStorage.setItem(EXAM_SUCCESS_KEY, String((await loadExamSuccessCount()) + 1)) } catch {}
+}
+
+export function todayDateKey(): string { const d = new Date(); return workDateKey(d.getFullYear(), d.getMonth(), d.getDate()) }
+export function dateKeyAfterDays(days: number): string { const d = new Date(); d.setDate(d.getDate() + days); return workDateKey(d.getFullYear(), d.getMonth(), d.getDate()) }
+export function examDateLabel(key: string): string { const p = key.split('-'); return `${Number(p[1])}月${Number(p[2])}日` }
+
+// 期日の自動決定：残り単元数×2日（本番は5〜14日、追試は4〜10日に丸め）
+export function makeExamEntry(unitCount: number, round: number): ExamEntry {
+  const days = round === 1 ? Math.min(14, Math.max(5, unitCount * 2)) : Math.min(10, Math.max(4, unitCount * 2))
+  return { date: dateKeyAfterDays(days), round }
+}
+
+// 小テストの予定を立てる（まだ無ければ）。作った場合はエントリを返す（呼び出し側がお知らせメールを送る）
+export async function ensureExamDay(historyId: string, unitCount: number): Promise<ExamEntry | null> {
+  if (unitCount <= 0) return null
+  const map = await loadExamDays()
+  if (map[historyId]) return null
+  const entry = makeExamEntry(unitCount, 1)
+  map[historyId] = entry
+  await saveExamDays(map)
+  return entry
+}
+
+// 小テストのお知らせ・結果メール（生徒のトーンに合わせた定型。AIコールなし）
+export function examMailFor(student: { id: string; name: string }, item: { id: string; title: string }, kind: 'propose' | 'full' | 'partial' | 'none', dateLabel: string, round: number): MailMessage {
+  const title = item.title.replace(/^この(教材|文書|画像|写真)は[、，]?\s*/u, '').slice(0, 24)
+  const sowal = student.id === 'sowal'
+  let subject: string
+  let content: string
+  if (kind === 'propose') {
+    subject = 'こんど小テストがあります…！'
+    content = sowal
+      ? `先生、あの...【${dateLabel}】に「${title}」の小テストがあるんです...🐾 それまでに、授業ぜんぶおねがいします...！`
+      : `先生、じつは【${dateLabel}】に「${title}」の小テストがあるんです…！それまでに、授業ぜんぶおねがいします！がんばります😊`
+  } else if (kind === 'full') {
+    subject = 'テストの結果、聞いてください！！'
+    content = sowal
+      ? `今日の「${title}」の小テスト...ぜんぶ書けました...！先生に教えてもらったところ、ぜんぶ出ました🐾 ほんとうにありがとうございました...！`
+      : `今日の「${title}」の小テスト、ぜんぶ書けました！！先生に教えてもらったところ、ぜんぶ出ました✨ ほんとうにありがとうございました！😊`
+  } else if (kind === 'partial') {
+    subject = '小テスト、がんばりました…！'
+    content = sowal
+      ? `今日、「${title}」の小テストがありました...。教えてもらったところは、ばっちり書けました🐾 のこりはむずかしかったです...。でも【${dateLabel}】に追試があるんです。こんどこそ、ぜんぶ教えてほしいです...！`
+      : `今日、「${title}」の小テストがありました！教えてもらったところは、ばっちり書けました！のこりはむずかしかったです…。でも【${dateLabel}】に追試があるんです。こんどこそ、ぜんぶ教えてほしいです…！`
+  } else {
+    subject = '小テスト、むずかしかったです…'
+    content = sowal
+      ? `今日、「${title}」の小テストがありました...。まだ教えてもらっていないところばかりで、むずかしかったです...。【${dateLabel}】に追試があるので、こんどこそおねがいします...🐾`
+      : `今日、「${title}」の小テストがありました…。まだ教えてもらっていないところばかりで、むずかしかったです…。【${dateLabel}】に追試があるので、こんどこそおねがいします…！`
+  }
+  return { id: `exam-${kind}-${item.id}-${round}-${Date.now()}`, type: 'student', from: student.name, studentId: student.id, subject, content, timestamp: new Date().toISOString(), read: false, historyId: item.id }
+}
+
 const MAIL_KEY = 'senseigokko_mail'
 
 const WELCOME_MAIL: MailMessage = {
@@ -264,6 +345,11 @@ export async function saveToHistory(
 export async function deleteFromHistory(id: string): Promise<void> {
   const history = await loadHistory()
   await AsyncStorage.setItem(KEY, JSON.stringify(history.filter((h) => h.id !== id)))
+  // 教材が消えたら、その教材の小テストの予定も消す（読み出し側の存在チェックとの二重防御）
+  try {
+    const exams = await loadExamDays()
+    if (exams[id]) { delete exams[id]; await saveExamDays(exams) }
+  } catch {}
 }
 
 export async function renameHistoryItem(id: string, newTitle: string): Promise<void> {

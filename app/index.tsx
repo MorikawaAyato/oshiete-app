@@ -19,10 +19,12 @@ import {
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
   loadFollowupSent, saveFollowupSent, loadTeacherName,
   loadDrillPending, drillKey,
-  splitUnits, unitLabel, defaultUnitIndex, loadUnitProgressMap,
+  splitUnits, unitLabel, defaultUnitIndex, loadUnitProgressMap, getUnitStatuses,
   loadWorkLog, workDateKey,
+  loadExamDays, saveExamDays, makeExamEntry, ensureExamDay, examMailFor, examDateLabel, todayDateKey,
+  loadExamSuccessCount, bumpExamSuccessCount,
 } from '@/lib/storage'
-import type { MailMessage, WorkLog } from '@/lib/storage'
+import type { ExamEntry, MailMessage, WorkLog } from '@/lib/storage'
 import type { HistoryItem, Recap, UnitProgress, UnitStatus } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -71,6 +73,8 @@ export default function HomeScreen() {
   const [workLog, setWorkLog] = useState<WorkLog>({}) // 業務日誌（ヘッダーの独立シート）
   const [journalOpen, setJournalOpen] = useState(false)
   const [journalMonth, setJournalMonth] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } })
+  const [examDays, setExamDays] = useState<Record<string, ExamEntry>>({}) // 生徒の小テストの予定
+  const [examSuccess, setExamSuccess] = useState(0) // 生徒のテスト大成功の累計（先生証の実績）
   const [showTeacherAvatar, setShowTeacherAvatar] = useState(false)
   const [showStudentAvatar, setShowStudentAvatar] = useState(false)
   const [cardFlipped, setCardFlipped] = useState(false)
@@ -107,6 +111,7 @@ export default function HomeScreen() {
       loadHistory().then(setHistory) // 研修導線の「まだN」等を最新化
       loadDrillPending().then(setDrillPendingKeys)
       loadUnitProgressMap().then(setUnitProgress) // 授業から戻ったら単元マップを最新化
+      loadExamDays().then(setExamDays) // 小テストの予定（授業中に新規作成されることがある）
       if (pendingAnimRef.current) {
         setPendingMaterialAnimation(false)
         triggerMaterialAnimation()
@@ -117,6 +122,47 @@ export default function HomeScreen() {
   useEffect(() => {
     loadHistory().then(setHistory)
     loadMail().then(setMailMessages)
+  }, [])
+
+  // 小テストの当日処理：期日が来た教材に結果メールを届け、未完了なら追試日を自動で立てる。
+  // 教材が消えている試験日はここで掃除する（削除時の消し忘れの保険）
+  const examChecked = useRef(false)
+  useEffect(() => {
+    if (examChecked.current) return
+    examChecked.current = true
+    void (async () => {
+      try {
+        const [items, map] = await Promise.all([loadHistory(), loadExamDays()])
+        const today = todayDateKey()
+        const student = STUDENTS.find((s) => s.id === selectedStudentId) ?? STUDENTS[0]
+        const mails: MailMessage[] = []
+        let changed = false
+        for (const [hid, entry] of Object.entries(map)) {
+          const item = items.find((h) => h.id === hid)
+          if (!item) { delete map[hid]; changed = true; continue }
+          if (entry.doneAt || entry.date > today) continue
+          const cards = item.factsheet?.cards ?? []
+          const units = splitUnits(cards.length)
+          const statuses = await getUnitStatuses(hid, cards.length)
+          const doneCount = units.filter((_, i) => statuses[i] === 'done').length
+          if (units.length > 0 && doneCount === units.length) {
+            map[hid] = { ...entry, doneAt: Date.now() }
+            await bumpExamSuccessCount()
+            mails.push(examMailFor(student, item, 'full', '', entry.round))
+          } else {
+            const next = makeExamEntry(Math.max(1, units.length - doneCount), entry.round + 1)
+            map[hid] = next
+            mails.push(examMailFor(student, item, doneCount === 0 ? 'none' : 'partial', examDateLabel(next.date), next.round))
+          }
+          changed = true
+        }
+        if (changed) await saveExamDays(map)
+        for (const m of mails) await addMail(m)
+        if (mails.length > 0) setMailMessages(await loadMail())
+        setExamDays(await loadExamDays())
+        setExamSuccess(await loadExamSuccessCount())
+      } catch { /* メールは任意機能。失敗は無視 */ }
+    })()
   }, [])
 
   // あとから質問メール：授業の数日後、生徒がつまずきを思い出して質問してくる（起動ごとに最大1通）
@@ -231,7 +277,20 @@ export default function HomeScreen() {
       const res = await fetchFactsheet(desc, notesText)
       if (res.factsheet) {
         await updateHistoryFactsheet(histId, res.factsheet)
-        setHistory(await loadHistory())
+        const items = await loadHistory()
+        setHistory(items)
+        // カードバンクが揃った＝授業の予定が立つ。生徒の小テストの日取りもここで決まる
+        const cardCount = res.factsheet.cards?.length ?? 0
+        if (cardCount > 0) {
+          const entry = await ensureExamDay(histId, splitUnits(cardCount).length)
+          if (entry) {
+            const student = STUDENTS.find((s) => s.id === selectedStudentId) ?? STUDENTS[0]
+            const title = items.find((h) => h.id === histId)?.title ?? '教材'
+            await addMail(examMailFor(student, { id: histId, title }, 'propose', examDateLabel(entry.date), 1))
+            setMailMessages(await loadMail())
+            setExamDays(await loadExamDays())
+          }
+        }
       }
     } catch { /* ファクトシートは任意。失敗は無視 */ }
   }
@@ -749,6 +808,12 @@ export default function HomeScreen() {
                     <Text style={styles.unitDetail}>
                       ▸ 授業{unitLabel(unitInfo.selected)}（{unitInfo.units[unitInfo.selected].size}問）・{unitInfo.statuses[unitInfo.selected] === 'done' ? '完了' : unitInfo.statuses[unitInfo.selected] === 'tried' ? '未完了' : '未開始'}
                     </Text>
+                    {/* 生徒の小テスト：固定の期日（先生は変更できない。全部教えて送り出すのが目標） */}
+                    {(() => {
+                      const entry = currentHistoryId ? examDays[currentHistoryId] : undefined
+                      if (!entry || entry.doneAt) return null
+                      return <Text style={styles.unitExam}>📝 生徒の小テスト：{examDateLabel(entry.date)}{entry.round > 1 ? '（追試）' : ''}</Text>
+                    })()}
                   </View>
                 )}
 
@@ -1072,6 +1137,12 @@ export default function HomeScreen() {
                         : <Text style={styles.tcNameEmpty}>（名前未設定）</Text>
                       }
                     </Text>
+                    {/* 実績：期日までに全単元を教えきり、生徒が小テストで大成功した回数（出来事の記録） */}
+                    {examSuccess > 0 && (
+                      <View style={styles.tcTitleBadge}>
+                        <Text style={styles.tcTitleText}>生徒のテスト大成功　{examSuccess}回</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.tcChip} />
                   <View style={styles.tcEditHint}>
@@ -1137,6 +1208,12 @@ export default function HomeScreen() {
               const now = new Date()
               const isCurrentMonth = journalMonth.y === now.getFullYear() && journalMonth.m === now.getMonth()
               const cells: (number | null)[] = [...Array(startPad).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+              // 生徒の小テストの予定日（存在する教材のものだけ）。未来の月にも印がつくので月送りは制限しない
+              const examMarks = new Set(
+                Object.entries(examDays)
+                  .filter(([hid, e]) => !e.doneAt && history.some((h) => h.id === hid))
+                  .map(([, e]) => e.date)
+              )
               return (
                 <View style={{ paddingHorizontal: 4, paddingTop: 4 }}>
                   <View style={styles.journalHeader}>
@@ -1146,8 +1223,8 @@ export default function HomeScreen() {
                         <Text style={styles.journalNav}>‹</Text>
                       </TouchableOpacity>
                       <Text style={styles.journalMonth}>{journalMonth.y}年{journalMonth.m + 1}月</Text>
-                      <TouchableOpacity onPress={() => setJournalMonth(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 }))} hitSlop={8} disabled={isCurrentMonth}>
-                        <Text style={[styles.journalNav, isCurrentMonth && { opacity: 0.2 }]}>›</Text>
+                      <TouchableOpacity onPress={() => setJournalMonth(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 }))} hitSlop={8}>
+                        <Text style={styles.journalNav}>›</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1157,14 +1234,17 @@ export default function HomeScreen() {
                     ))}
                     {cells.map((day, i) => {
                       if (day === null) return <View key={`pad${i}`} style={styles.journalCell} />
-                      const e = workLog[workDateKey(journalMonth.y, journalMonth.m, day)]
+                      const key = workDateKey(journalMonth.y, journalMonth.m, day)
+                      const e = workLog[key]
+                      const hasExam = examMarks.has(key)
                       const isToday = isCurrentMonth && day === now.getDate()
                       return (
                         <View key={`d${day}`} style={[styles.journalCell, isToday && styles.journalCellToday]}>
-                          <Text style={[styles.journalDay, !!e && styles.journalDayActive]}>{day}</Text>
+                          <Text style={[styles.journalDay, (!!e || hasExam) && styles.journalDayActive]}>{day}</Text>
                           <View style={styles.journalDots}>
                             {e?.lesson ? <View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /> : null}
                             {e?.drill ? <View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /> : null}
+                            {hasExam ? <View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }]} /> : null}
                           </View>
                         </View>
                       )
@@ -1173,6 +1253,7 @@ export default function HomeScreen() {
                   <View style={styles.journalLegend}>
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /><Text style={styles.journalLegendText}>授業</Text></View>
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /><Text style={styles.journalLegendText}>研修</Text></View>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }]} /><Text style={styles.journalLegendText}>生徒の小テスト</Text></View>
                   </View>
                 </View>
               )
@@ -1349,6 +1430,7 @@ const styles = StyleSheet.create({
   unitNodeSel: { borderWidth: 2, borderColor: c.primaryStrong, backgroundColor: c.primaryStrong },
   unitNodeText: { fontSize: 12, fontWeight: '700', color: c.textSub },
   unitDetail: { marginTop: 7, fontSize: 11, fontWeight: '700', color: c.textSub },
+  unitExam: { marginTop: 4, fontSize: 11, fontWeight: '700', color: c.link },
 
   // 授業スタートボタン
   startBtn: {
