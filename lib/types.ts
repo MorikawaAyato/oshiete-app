@@ -1,6 +1,8 @@
 export type ChatMessage = {
   role: 'user' | 'mana'
   text: string
+  noteRef?: number // ノートの引用カード（この問題の話、をその場で見せる）
+  action?: 'check' // 行動リンク（答え合わせをはじめる）
 }
 
 // 生徒メモリ（教材×生徒ごとに前回授業の記憶を保持、最新1件）

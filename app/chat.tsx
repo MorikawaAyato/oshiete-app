@@ -167,14 +167,16 @@ export default function ChatScreen() {
   const [redpenSending, setRedpenSending] = useState(false) // 返却（赤ペン一括判定）の通信中
   const [redpenError, setRedpenError] = useState<string | null>(null)
 
-  // 生徒のセリフを入力中演出を挟んで1通ずつ届けるタイマー（画面を離れたら破棄）
+  // 生徒のセリフを入力中演出を挟んで1通ずつ届けるタイマー（画面を離れたら破棄）。
+  // 文字列のほか、ノートの引用カード（noteRef）や行動リンク（action）つきのセリフも配信できる
+  type Beat = string | { text: string; noteRef?: number; action?: 'check' }
   const beatTimers = useRef<ReturnType<typeof setTimeout>[]>([])
-  const pushBeats = (texts: string[]) => {
-    texts.forEach((t, i) => {
+  const pushBeats = (beats: Beat[]) => {
+    beats.forEach((b, i) => {
       beatTimers.current.push(setTimeout(() => setStudentTyping(true), i * 2000 + 500))
       beatTimers.current.push(setTimeout(() => {
         setStudentTyping(false)
-        setChatMessages(prev => [...prev, { role: 'mana', text: t }])
+        setChatMessages(prev => [...prev, typeof b === 'string' ? { role: 'mana', text: b } : { role: 'mana', ...b }])
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
       }, i * 2000 + 1800))
     })
@@ -316,7 +318,7 @@ export default function ChatScreen() {
       finishLesson(items, { noMismatch: true })
     } else {
       setPrintStage('check')
-      if (student) pushBeats([student.checkRequest])
+      if (student) pushBeats([{ text: student.checkRequest, action: 'check' }])
     }
   }
 
@@ -326,7 +328,7 @@ export default function ChatScreen() {
     const wrongs = printItems.map((it, i) => ({ it, i })).filter(({ it }) => it.teacherMark === false)
     if (wrongs.length > 0 && student) {
       setPrintStage('redpen')
-      pushBeats([student.redpenRequest, fillAsk(student.redpenAsk, wrongs[0].i + 1, wrongs[0].it.question)])
+      pushBeats([student.redpenRequest, { text: fillAsk(student.redpenAsk, wrongs[0].i + 1, wrongs[0].it.question), noteRef: wrongs[0].i }])
     } else {
       goCheck(printItems)
     }
@@ -394,7 +396,7 @@ export default function ChatScreen() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
     const next = items.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
     if (next) {
-      pushBeats([fillAsk(student.redpenAskNext, next.i + 1, next.it.question)])
+      pushBeats([{ text: fillAsk(student.redpenAskNext, next.i + 1, next.it.question), noteRef: next.i }])
     } else {
       void completeRedpen(items)
     }
@@ -426,7 +428,7 @@ export default function ChatScreen() {
       finishLesson(items, { noMismatch: true, leadBeats: [student.redpenClose] })
     } else {
       setPrintStage('check')
-      pushBeats([student.redpenClose, student.checkRequest])
+      pushBeats([student.redpenClose, { text: student.checkRequest, action: 'check' }])
     }
   }
 
@@ -590,7 +592,10 @@ export default function ChatScreen() {
               <Text style={styles.stageText}>{stageLabel}</Text>
             </View>
           </View>
-          <View style={{ width: 60 }} />
+          <TouchableOpacity onPress={() => router.push('/preview')} style={styles.headerMaterialBtn}>
+            <Feather name="book-open" size={13} color={c.link} />
+            <Text style={styles.headerMaterialText}>教材</Text>
+          </TouchableOpacity>
         </View>
 
         {/* チャット（生徒のセリフ＋プリントカード） */}
@@ -611,14 +616,31 @@ export default function ChatScreen() {
                   msg.role === 'user' ? styles.bubbleTextUser : styles.bubbleTextMana,
                   { maxWidth: msg.role === 'user' ? '75%' : '80%' },
                 ]}>
+                  {/* ノートの引用カード：どの問題の話かをその場で見せ、タップでそのページに飛ぶ */}
+                  {msg.role === 'mana' && msg.noteRef !== undefined && printItems[msg.noteRef] && (
+                    <TouchableOpacity
+                      onPress={() => { setNotePage(msg.noteRef!); setShowPrint(true) }}
+                      style={styles.quoteCard}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.quoteCardQ}><Text style={{ fontWeight: '700' }}>問{msg.noteRef + 1}</Text> {printItems[msg.noteRef].question}</Text>
+                      <Text style={styles.quoteCardA} numberOfLines={1}>✎ {printItems[msg.noteRef].studentAnswer}</Text>
+                    </TouchableOpacity>
+                  )}
                   <Text style={[styles.msgText, msg.role === 'user' && styles.msgTextUser]}>
                     {msg.text}
                   </Text>
+                  {/* 行動リンク：この会話の流れの中から答え合わせをはじめる */}
+                  {msg.role === 'mana' && msg.action === 'check' && printStage === 'check' && (
+                    <TouchableOpacity onPress={openNote} style={styles.checkLinkBtn} activeOpacity={0.85}>
+                      <Text style={styles.checkLinkBtnText}>答え合わせをはじめる ›</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
               {/* プリントカードは「提出の瞬間」の位置に固定（毎回チャットの後ろに現れて目線を奪わない）。
                   以後のアクセスは共有ドックが受け持つ */}
-              {i === 0 && printItems.length > 0 && renderPrintCard(printStage === 'grading' ? 'タップして丸付けする' : 'ノートを見る')}
+              {i === 0 && printItems.length > 0 && renderPrintCard(printStage === 'grading' ? (composeMode === 'return' ? 'ノートをたしかめる' : 'タップして丸付けする') : 'ノートを見る')}
             </Fragment>
           ))}
           {/* 添削済みのプリントは「返却の瞬間」として最後にもう一度届く */}
@@ -641,53 +663,8 @@ export default function ChatScreen() {
 
         {/* 手元ゾーン：届いたノート（作業中の答案）＋入力欄。上＝相手、下＝自分の手元 */}
         <View style={styles.actionBar}>
-          {/* 届いたノート：段階ごとに「必要な1つ」だけ。タップで開く（受け取ったファイルを開く操作） */}
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {printItems.length > 0 && (() => {
-              const marked = printItems.filter((it) => it.teacherMark !== undefined).length
-              const stripAsk = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
-              if (printStage === 'redpen' && stripAsk) {
-                return (
-                  <Animated.View style={{ flex: 1, transform: [{ scale: dockScale }] }}>
-                    <TouchableOpacity style={styles.noteStrip} onPress={openNote} activeOpacity={0.8}>
-                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
-                        <Image source={require('../assets/print.webp')} style={{ width: 15, height: 15, marginTop: 1 }} resizeMode="contain" />
-                        <Text style={[styles.noteStripQuestion, { flex: 1 }]}><Text style={{ fontWeight: '700', color: c.textStrong }}>問{stripAsk.i + 1}</Text> {stripAsk.it.question}</Text>
-                        <Text style={styles.noteStripChevron}>›</Text>
-                      </View>
-                      <Text style={styles.noteStripAnswer} numberOfLines={1}>✎ {stripAsk.it.studentAnswer}</Text>
-                    </TouchableOpacity>
-                  </Animated.View>
-                )
-              }
-              const main =
-                printStage === 'grading' ? (composeMode === 'return' ? 'ノートをたしかめる' : '丸付けをつづける')
-                : printStage === 'redpen' ? 'ノートを返しています…'
-                : printStage === 'check' ? (pendingCheckCount > 0 ? '答え合わせをする' : '見直しをたしかめる')
-                : '今日の振り返りを見る'
-              const chip =
-                printStage === 'grading' ? (composeMode === 'return' ? null : `${marked}/${printItems.length}`)
-                : printStage === 'check' && pendingCheckCount > 0 ? `のこり${pendingCheckCount}`
-                : printStage === 'done' ? '添削ずみ'
-                : null
-              return (
-                <Animated.View style={{ flex: 1, transform: [{ scale: dockScale }] }}>
-                  <TouchableOpacity style={[styles.noteStrip, { flexDirection: 'row', alignItems: 'center', gap: 6 }]} onPress={openNote} activeOpacity={0.8}>
-                    <Image source={require('../assets/print.webp')} style={{ width: 15, height: 15 }} resizeMode="contain" />
-                    <Text style={styles.noteStripMain} numberOfLines={1}>{main}</Text>
-                    {chip && <View style={styles.printDockChip}><Text style={styles.printDockChipText}>{chip}</Text></View>}
-                    <Text style={styles.noteStripChevron}>›</Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              )
-            })()}
-            <TouchableOpacity style={styles.previewDock} onPress={() => router.push('/preview')} activeOpacity={0.8}>
-              <Feather name="book-open" size={14} color={c.textMid} />
-              <Text style={styles.previewBarText}>教材</Text>
-            </TouchableOpacity>
-          </View>
           {printStage !== 'done' && (
-            <View style={{ marginTop: 8 }}>
+            <View>
               {(() => {
                 const composerAsk = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
                 const canCompose = !studentTyping && !redpenSending && (composeMode === 'return' || composeMode === 'checkDone' || (composeMode === 'rally' && !!composerAsk))
@@ -983,6 +960,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6,
     backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: c.border,
   },
+  quoteCard: {
+    backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8,
+  },
+  quoteCardQ: { fontSize: 11, color: c.textSub, lineHeight: 15 },
+  quoteCardA: { fontFamily: font.hand, fontSize: 12, color: c.textMid, lineHeight: 18, marginTop: 1 },
+  checkLinkBtn: { alignSelf: 'flex-start', backgroundColor: '#f59e0b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, marginTop: 8 },
+  checkLinkBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  headerMaterialBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 5,
+  },
+  headerMaterialText: { fontSize: 12, fontWeight: '700', color: c.link },
   noteStrip: {
     flex: 1, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 12,
     paddingVertical: 8, paddingHorizontal: 10,
