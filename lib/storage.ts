@@ -132,7 +132,7 @@ export async function logWork(kind: WorkKind): Promise<void> {
   } catch {}
 }
 
-// ─── 生徒の小テスト（試験日） ───
+// ─── 生徒のテスト（試験日） ───
 // 教材ごとに固定の期日が自動で決まり、先生は変更できない（動かせる締切は締切にならない。
 // 生徒の学校行事は先生の決定領域の外）。期日が来たら結果メールが届き、全単元完了なら大成功、
 // 未完了なら追試日が自動で立つ（責めない・行き止まらない）。教材が消えたら試験日も消える
@@ -172,7 +172,7 @@ export function makeExamEntry(unitCount: number, round: number): ExamEntry {
   return { date: dateKeyAfterDays(days), round }
 }
 
-// 小テストの予定を立てる（まだ無ければ）。作った場合はエントリを返す（呼び出し側がお知らせメールを送る）
+// テストの予定を立てる（まだ無ければ）。作った場合はエントリを返す（呼び出し側がお知らせメールを送る）
 export async function ensureExamDay(historyId: string, unitCount: number): Promise<ExamEntry | null> {
   if (unitCount <= 0) return null
   const map = await loadExamDays()
@@ -183,32 +183,32 @@ export async function ensureExamDay(historyId: string, unitCount: number): Promi
   return entry
 }
 
-// 小テストのお知らせ・結果メール（生徒のトーンに合わせた定型。AIコールなし）
+// テストのお知らせ・結果メール（生徒のトーンに合わせた定型。AIコールなし）
 export function examMailFor(student: { id: string; name: string }, item: { id: string; title: string }, kind: 'propose' | 'full' | 'partial' | 'none', dateLabel: string, round: number): MailMessage {
   const title = item.title.replace(/^この(教材|文書|画像|写真)は[、，]?\s*/u, '').slice(0, 24)
   const sowal = student.id === 'sowal'
   let subject: string
   let content: string
   if (kind === 'propose') {
-    subject = 'こんど小テストがあります…！'
+    subject = 'こんどテストがあります…！'
     content = sowal
-      ? `先生、あの...【${dateLabel}】に「${title}」の小テストがあるんです...🐾 それまでに、授業ぜんぶおねがいします...！`
-      : `先生、じつは【${dateLabel}】に「${title}」の小テストがあるんです…！それまでに、授業ぜんぶおねがいします！がんばります😊`
+      ? `先生、あの...【${dateLabel}】に「${title}」のテストがあるんです...🐾 それまでに、授業ぜんぶおねがいします...！`
+      : `先生、じつは【${dateLabel}】に「${title}」のテストがあるんです…！それまでに、授業ぜんぶおねがいします！がんばります😊`
   } else if (kind === 'full') {
     subject = 'テストの結果、聞いてください！！'
     content = sowal
-      ? `今日の「${title}」の小テスト...ぜんぶ書けました...！先生に教えてもらったところ、ぜんぶ出ました🐾 ほんとうにありがとうございました...！`
-      : `今日の「${title}」の小テスト、ぜんぶ書けました！！先生に教えてもらったところ、ぜんぶ出ました✨ ほんとうにありがとうございました！😊`
+      ? `今日の「${title}」のテスト...ぜんぶ書けました...！先生に教えてもらったところ、ぜんぶ出ました🐾 ほんとうにありがとうございました...！`
+      : `今日の「${title}」のテスト、ぜんぶ書けました！！先生に教えてもらったところ、ぜんぶ出ました✨ ほんとうにありがとうございました！😊`
   } else if (kind === 'partial') {
-    subject = '小テスト、がんばりました…！'
+    subject = 'テスト、がんばりました…！'
     content = sowal
-      ? `今日、「${title}」の小テストがありました...。教えてもらったところは、ばっちり書けました🐾 のこりはむずかしかったです...。でも【${dateLabel}】に追試があるんです。こんどこそ、ぜんぶ教えてほしいです...！`
-      : `今日、「${title}」の小テストがありました！教えてもらったところは、ばっちり書けました！のこりはむずかしかったです…。でも【${dateLabel}】に追試があるんです。こんどこそ、ぜんぶ教えてほしいです…！`
+      ? `今日、「${title}」のテストがありました...。教えてもらったところは、ばっちり書けました🐾 のこりはむずかしかったです...。でも【${dateLabel}】に追試があるんです。こんどこそ、ぜんぶ教えてほしいです...！`
+      : `今日、「${title}」のテストがありました！教えてもらったところは、ばっちり書けました！のこりはむずかしかったです…。でも【${dateLabel}】に追試があるんです。こんどこそ、ぜんぶ教えてほしいです…！`
   } else {
-    subject = '小テスト、むずかしかったです…'
+    subject = 'テスト、むずかしかったです…'
     content = sowal
-      ? `今日、「${title}」の小テストがありました...。まだ教えてもらっていないところばかりで、むずかしかったです...。【${dateLabel}】に追試があるので、こんどこそおねがいします...🐾`
-      : `今日、「${title}」の小テストがありました…。まだ教えてもらっていないところばかりで、むずかしかったです…。【${dateLabel}】に追試があるので、こんどこそおねがいします…！`
+      ? `今日、「${title}」のテストがありました...。まだ教えてもらっていないところばかりで、むずかしかったです...。【${dateLabel}】に追試があるので、こんどこそおねがいします...🐾`
+      : `今日、「${title}」のテストがありました…。まだ教えてもらっていないところばかりで、むずかしかったです…。【${dateLabel}】に追試があるので、こんどこそおねがいします…！`
   }
   return { id: `exam-${kind}-${item.id}-${round}-${Date.now()}`, type: 'student', from: student.name, studentId: student.id, subject, content, timestamp: new Date().toISOString(), read: false, historyId: item.id }
 }
@@ -345,7 +345,7 @@ export async function saveToHistory(
 export async function deleteFromHistory(id: string): Promise<void> {
   const history = await loadHistory()
   await AsyncStorage.setItem(KEY, JSON.stringify(history.filter((h) => h.id !== id)))
-  // 教材が消えたら、その教材の小テストの予定も消す（読み出し側の存在チェックとの二重防御）
+  // 教材が消えたら、その教材のテストの予定も消す（読み出し側の存在チェックとの二重防御）
   try {
     const exams = await loadExamDays()
     if (exams[id]) { delete exams[id]; await saveExamDays(exams) }

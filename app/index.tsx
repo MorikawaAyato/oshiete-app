@@ -73,7 +73,7 @@ export default function HomeScreen() {
   const [workLog, setWorkLog] = useState<WorkLog>({}) // 業務日誌（ヘッダーの独立シート）
   const [journalOpen, setJournalOpen] = useState(false)
   const [journalMonth, setJournalMonth] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } })
-  const [examDays, setExamDays] = useState<Record<string, ExamEntry>>({}) // 生徒の小テストの予定
+  const [examDays, setExamDays] = useState<Record<string, ExamEntry>>({}) // 生徒のテストの予定
   const [examSuccess, setExamSuccess] = useState(0) // 生徒のテスト大成功の累計（先生証の実績）
   const [showTeacherAvatar, setShowTeacherAvatar] = useState(false)
   const [showStudentAvatar, setShowStudentAvatar] = useState(false)
@@ -111,7 +111,7 @@ export default function HomeScreen() {
       loadHistory().then(setHistory) // 研修導線の「まだN」等を最新化
       loadDrillPending().then(setDrillPendingKeys)
       loadUnitProgressMap().then(setUnitProgress) // 授業から戻ったら単元マップを最新化
-      loadExamDays().then(setExamDays) // 小テストの予定（授業中に新規作成されることがある）
+      loadExamDays().then(setExamDays) // テストの予定（授業中に新規作成されることがある）
       if (pendingAnimRef.current) {
         setPendingMaterialAnimation(false)
         triggerMaterialAnimation()
@@ -124,7 +124,7 @@ export default function HomeScreen() {
     loadMail().then(setMailMessages)
   }, [])
 
-  // 小テストの当日処理：期日が来た教材に結果メールを届け、未完了なら追試日を自動で立てる。
+  // テストの当日処理：期日が来た教材に結果メールを届け、未完了なら追試日を自動で立てる。
   // 教材が消えている試験日はここで掃除する（削除時の消し忘れの保険）
   const examChecked = useRef(false)
   useEffect(() => {
@@ -279,7 +279,7 @@ export default function HomeScreen() {
         await updateHistoryFactsheet(histId, res.factsheet)
         const items = await loadHistory()
         setHistory(items)
-        // カードバンクが揃った＝授業の予定が立つ。生徒の小テストの日取りもここで決まる
+        // カードバンクが揃った＝授業の予定が立つ。生徒のテストの日取りもここで決まる
         const cardCount = res.factsheet.cards?.length ?? 0
         if (cardCount > 0) {
           const entry = await ensureExamDay(histId, splitUnits(cardCount).length)
@@ -808,11 +808,11 @@ export default function HomeScreen() {
                     <Text style={styles.unitDetail}>
                       ▸ 授業{unitLabel(unitInfo.selected)}（{unitInfo.units[unitInfo.selected].size}問）・{unitInfo.statuses[unitInfo.selected] === 'done' ? '完了' : unitInfo.statuses[unitInfo.selected] === 'tried' ? '未完了' : '未開始'}
                     </Text>
-                    {/* 生徒の小テスト：固定の期日（先生は変更できない。全部教えて送り出すのが目標） */}
+                    {/* 生徒のテスト：固定の期日（先生は変更できない。全部教えて送り出すのが目標） */}
                     {(() => {
                       const entry = currentHistoryId ? examDays[currentHistoryId] : undefined
                       if (!entry || entry.doneAt) return null
-                      return <Text style={styles.unitExam}>📝 生徒の小テスト：{examDateLabel(entry.date)}{entry.round > 1 ? '（追試）' : ''}</Text>
+                      return <Text style={styles.unitExam}>📝 生徒のテスト：{examDateLabel(entry.date)}{entry.round > 1 ? '（追試）' : ''}</Text>
                     })()}
                   </View>
                 )}
@@ -1137,7 +1137,7 @@ export default function HomeScreen() {
                         : <Text style={styles.tcNameEmpty}>（名前未設定）</Text>
                       }
                     </Text>
-                    {/* 実績：期日までに全単元を教えきり、生徒が小テストで大成功した回数（出来事の記録） */}
+                    {/* 実績：期日までに全単元を教えきり、生徒がテストで大成功した回数（出来事の記録） */}
                     {examSuccess > 0 && (
                       <View style={styles.tcTitleBadge}>
                         <Text style={styles.tcTitleText}>生徒のテスト大成功　{examSuccess}回</Text>
@@ -1208,7 +1208,7 @@ export default function HomeScreen() {
               const now = new Date()
               const isCurrentMonth = journalMonth.y === now.getFullYear() && journalMonth.m === now.getMonth()
               const cells: (number | null)[] = [...Array(startPad).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
-              // 生徒の小テストの予定日（存在する教材のものだけ）。未来の月にも印がつくので月送りは制限しない
+              // 生徒のテストの予定日（存在する教材のものだけ）。未来の月にも印がつくので月送りは制限しない
               const examMarks = new Set(
                 Object.entries(examDays)
                   .filter(([hid, e]) => !e.doneAt && history.some((h) => h.id === hid))
@@ -1253,7 +1253,7 @@ export default function HomeScreen() {
                   <View style={styles.journalLegend}>
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /><Text style={styles.journalLegendText}>授業</Text></View>
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /><Text style={styles.journalLegendText}>研修</Text></View>
-                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }]} /><Text style={styles.journalLegendText}>生徒の小テスト</Text></View>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }]} /><Text style={styles.journalLegendText}>生徒のテスト</Text></View>
                   </View>
                 </View>
               )

@@ -268,7 +268,7 @@ export default function ChatScreen() {
         const cardCount = (await loadFactsheet(currentHistoryId))?.cards?.length ?? 0
         if (cardCount > 0) {
           await setUnitStatus(currentHistoryId, cardCount, lessonUnit, 'tried')
-          // 小テストの予定がまだ無い教材（試験日導入前の教材）はここで立てる
+          // テストの予定がまだ無い教材（試験日導入前の教材）はここで立てる
           const entry = await ensureExamDay(currentHistoryId, splitUnits(cardCount).length)
           if (entry) {
             const title = (await loadHistory()).find((h) => h.id === currentHistoryId)?.title ?? '教材'
