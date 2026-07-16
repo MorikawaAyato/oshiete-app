@@ -43,6 +43,23 @@ const FOLLOWUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 const AVATAR_NUDGE: Record<string, number> = { usagi: 0.07, kitsune: 0.05, neko: 0.03 }
 const avatarNudgeY = (avatarId: string, size: number) => (AVATAR_NUDGE[normalizeAvatarId(avatarId)] ?? 0) * size
 
+// 教材のプレースホルダー（縦長のノート画像）。横長ボックスに入れると縦中央band＝ノート下部が
+// 見えてしまうので、ボックス幅を測ってノートの中心（画像の縦42%あたり）をボックス中央に合わせる
+const TEXT_ASSET = require('../assets/text.webp')
+const TEXT_ASSET_SRC = Image.resolveAssetSource(TEXT_ASSET)
+const TEXT_ASSET_RATIO = TEXT_ASSET_SRC ? TEXT_ASSET_SRC.height / TEXT_ASSET_SRC.width : 1.5 // 縦/横
+function NotePlaceholder({ style }: { style?: object }) {
+  const [w, setW] = useState(0)
+  const imgH = w * TEXT_ASSET_RATIO
+  const boxH = w / 1.7 // lessonThumb の aspectRatio
+  const top = boxH / 2 - 0.40 * imgH // 「テキスト」の位置（画像の縦40%）をボックス中央へ
+  return (
+    <View style={[style, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
+      {w > 0 && <Image source={TEXT_ASSET} style={{ position: 'absolute', left: 0, width: w, height: imgH, top, opacity: 0.9 }} resizeMode="cover" />}
+    </View>
+  )
+}
+
 export default function HomeScreen() {
   const router = useRouter()
   const {
@@ -714,10 +731,9 @@ export default function HomeScreen() {
                       {thumbnails[0] ? (
                         <Image source={{ uri: thumbnails[0] }} style={styles.lessonThumb} />
                       ) : (
-                        // 横長ボックス：正方形画像を cover で中央表示（固定オフセットだと縦位置がずれる）
-                        <View style={[styles.lessonThumb, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]}>
-                          <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
-                        </View>
+                        // 横長ボックスに縦長のノート画像を入れると縦中央band＝ノート下部が見えてしまうので、
+                        // 幅を測ってノートの中心をボックス中央に合わせる（端末サイズによらず中央表示）
+                        <NotePlaceholder style={styles.lessonThumb} />
                       )}
                       {/* さりげないアフォーダンス：タップで開けることを示す */}
                       <View style={styles.lessonThumbOpenBadge}>
