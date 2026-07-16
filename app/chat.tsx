@@ -860,8 +860,8 @@ export default function ChatScreen() {
                           <Text style={styles.notebookReferenceMark}>答 </Text>{it.modelAnswer}
                         </Text>
                       )}
-                      {/* 模範解答と内容が一致している答案：何も聞かれないことの意味を明示して安心させる */}
-                      {(isCheck || showAnswers) && it.truth === 'correct' && mark === true && !needsGradeDecision && !needsRedpenDecision && (
+                      {/* 模範解答と内容が一致している答案：答え合わせ中だけ「何も聞かれない」ことの意味を明示して安心させる */}
+                      {isCheck && it.truth === 'correct' && mark === true && !needsGradeDecision && !needsRedpenDecision && (
                         <Text style={styles.matchLabel}>✓ 模範解答と一致！</Text>
                       )}
                       {/* 答え合わせ：採点のズレ（最終判断は常にユーザ） */}
