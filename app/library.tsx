@@ -11,7 +11,9 @@ import {
   loadHistory, deleteFromHistory, renameHistoryItem, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, moveItemToGroup,
   renameGroupInStorage, deleteGroupFromStorage, updateHistoryPreview,
+  loadUnitProgressMap, splitUnits,
 } from '@/lib/storage'
+import type { UnitProgress } from '@/lib/types'
 import { fetchPreviewContent } from '@/lib/api'
 import type { HistoryItem } from '@/lib/types'
 import { STUDENTS } from '@/lib/students'
@@ -35,6 +37,7 @@ export default function LibraryScreen() {
   } = useApp()
 
   const [history, setHistory] = useState<HistoryItem[]>([])
+  const [unitProgress, setUnitProgress] = useState<Record<string, UnitProgress>>({}) // 授業の達成度（完了単元数）表示用
   const [savedGroups, setSavedGroups] = useState<string[]>([])
   const [actionItem, setActionItem] = useState<HistoryItem | null>(null)
   const [sheetMode, setSheetMode] = useState<SheetMode>('main')
@@ -46,6 +49,7 @@ export default function LibraryScreen() {
   const [createGroupValue, setCreateGroupValue] = useState('')
 
   useEffect(() => {
+    loadUnitProgressMap().then(setUnitProgress)
     Promise.all([loadHistory(), loadSavedGroups()]).then(([h, g]) => {
       setHistory(h)
       // 履歴内のgroupNameがsavedGroupsに含まれていない場合はマージして保存
@@ -207,6 +211,12 @@ export default function LibraryScreen() {
     const lastLesson = Object.entries(item.recaps ?? {}).reduce<{ studentId: string; at: number } | null>(
       (acc, [studentId, r]) => (r.savedAt > (acc?.at ?? 0) ? { studentId, at: r.savedAt } : acc), null)
     const lastStudent = lastLesson ? STUDENTS.find((s) => s.id === lastLesson.studentId) : null
+    // 授業の達成度：この教材の単元のうち完了した数（先生の判断の記録）
+    const cardCount = item.factsheet?.cards?.length ?? 0
+    const units = splitUnits(cardCount)
+    const entry = unitProgress[item.id]
+    const statuses = entry && entry.count === cardCount ? entry.status : {}
+    const doneUnits = units.filter((_, i) => statuses[i] === 'done').length
     return (
       <View style={[styles.card, isActive && styles.cardActive]}>
         <TouchableOpacity onPress={() => viewItem(item)} activeOpacity={0.85}>
@@ -223,16 +233,26 @@ export default function LibraryScreen() {
             <Text style={[styles.cardTitle, isActive && styles.cardTitleActive]} numberOfLines={2}>
               {title}
             </Text>
-            {lastStudent && lastLesson ? (
-              <View style={styles.cardLessonRow}>
-                <Image source={lastStudent.avatar} style={styles.cardLessonAvatar} />
-                <Text style={styles.cardLessonText} numberOfLines={1}>
-                  {new Date(lastLesson.at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
-                </Text>
-              </View>
-            ) : (
-              <Text style={styles.cardDateFaint}>授業はこれから</Text>
-            )}
+            <View style={styles.cardMetaRow}>
+              {lastStudent && lastLesson ? (
+                <View style={styles.cardLessonRow}>
+                  <Image source={lastStudent.avatar} style={styles.cardLessonAvatar} />
+                  <Text style={styles.cardLessonText} numberOfLines={1}>
+                    {new Date(lastLesson.at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.cardDateFaint}>授業はこれから</Text>
+              )}
+              {/* 授業の達成度（完了単元数）。全単元完了は緑で強調 */}
+              {units.length > 0 && (
+                <View style={[styles.progressBadge, doneUnits === units.length && styles.progressBadgeDone]}>
+                  <Text style={[styles.progressBadgeText, doneUnits === units.length && styles.progressBadgeTextDone]}>
+                    {doneUnits === units.length ? '✓ ' : ''}{doneUnits}/{units.length}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         </TouchableOpacity>
         <TouchableOpacity
@@ -671,9 +691,14 @@ const styles = StyleSheet.create({
   cardTitleActive: { color: c.primary },
   cardDate: { fontSize: 9, color: c.textSub, marginTop: 2 },
   cardDateFaint: { fontSize: 9, color: c.faint, marginTop: 2 },
-  cardLessonRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  cardLessonRow: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 1 },
   cardLessonAvatar: { width: 12, height: 12, borderRadius: 6 },
-  cardLessonText: { fontSize: 9, color: c.textSub, flex: 1 },
+  cardLessonText: { fontSize: 9, color: c.textSub, flexShrink: 1 },
+  progressBadge: { marginLeft: 'auto', backgroundColor: c.bgSub, borderRadius: 999, paddingHorizontal: 5, paddingVertical: 1 },
+  progressBadgeDone: { backgroundColor: '#d1fae5' },
+  progressBadgeText: { fontSize: 9, fontWeight: '700', color: c.textSub },
+  progressBadgeTextDone: { color: '#059669' },
   emptySlot: {
     width: CARD_W, aspectRatio: 1, margin: 3, marginLeft: 9,
     borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: c.border,

@@ -392,11 +392,12 @@ export default function ChatScreen() {
   }
 
   // 丸付け：○✕をつけたら自動で次のページへ（1画面1判断）。
-  // つけ直し（見直し）のときは送らない。スタンプの余韻を見せてから送る
+  // つけ直し（見直し）のときは送らない。スタンプのアニメが着地して一拍おいてから送る
+  // （早すぎると「何が起きたかわからない」まま次へ飛んでしまう）
   const markAndAdvance = (i: number, val: boolean) => {
     const wasUnmarked = printItems[i]?.teacherMark === undefined
     setPrintItems((prev) => prev.map((it, j) => (j === i ? { ...it, teacherMark: val } : it)))
-    if (wasUnmarked && i < printItems.length - 1) setTimeout(() => setNotePage(i + 1), 550)
+    if (wasUnmarked && i < printItems.length - 1) setTimeout(() => setNotePage(i + 1), 1100)
   }
 
   // 振り返りの既読ページを記録（全ページを見てから「完了」を判断させる）
