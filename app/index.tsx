@@ -709,6 +709,19 @@ export default function HomeScreen() {
 
                 {/* 単元マップ：教材のカードを授業①〜に分けて、どこまで完了したかを見せる。
                     「完了」は先生の判断の記録（振り返りの中で決める）。次にやる単元はタップで選べる */}
+                {/* カードバンク生成中：点線のゴーストノードで場所を確保しておく（完成時に唐突に現れない） */}
+                {!unitInfo && (
+                  <View style={styles.unitMap}>
+                    <View style={styles.unitMapHeader}>
+                      <Text style={styles.unitMapEyebrow}>授業をえらぶ</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {[0, 1, 2].map((i) => <View key={i} style={styles.unitNodeGhost} />)}
+                      <Text style={styles.unitPreparing}>授業を準備しています…</Text>
+                    </View>
+                    <Text style={[styles.unitDetail, { opacity: 0 }]}>▸</Text>
+                  </View>
+                )}
                 {unitInfo && (
                   <View style={styles.unitMap}>
                     <View style={styles.unitMapHeader}>
@@ -1325,6 +1338,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: c.border, backgroundColor: 'white',
     alignItems: 'center', justifyContent: 'center',
   },
+  unitNodeGhost: {
+    width: 32, height: 32, borderRadius: 16,
+    borderWidth: 1, borderColor: c.borderStrong, borderStyle: 'dashed', backgroundColor: c.bgSub,
+  },
+  unitPreparing: { marginLeft: 4, fontSize: 11, fontWeight: '700', color: c.faint },
   unitNodeDone: { borderColor: '#a7f3d0', backgroundColor: '#ecfdf5' },
   unitNodeTried: { borderColor: '#fde68a', backgroundColor: '#fffbeb' },
   unitNodeSel: { borderWidth: 2, borderColor: c.primaryStrong, backgroundColor: c.primaryStrong },
