@@ -232,7 +232,9 @@ const WELCOME_MAIL: MailMessage = {
 export async function loadMail(): Promise<MailMessage[]> {
   try {
     const raw = await AsyncStorage.getItem(MAIL_KEY)
-    return raw ? (JSON.parse(raw) as MailMessage[]) : [WELCOME_MAIL]
+    const items = raw ? (JSON.parse(raw) as MailMessage[]) : [WELCOME_MAIL]
+    // 旧アプリ名（せんせいごっこ）時代に保存されたようこそメールを現行の文面へ差し替える（既読状態は保持）
+    return items.map((m) => (m.id === 'welcome' ? { ...WELCOME_MAIL, read: m.read } : m))
   } catch {
     return [WELCOME_MAIL]
   }

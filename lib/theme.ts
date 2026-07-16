@@ -1,6 +1,6 @@
 import type { TextStyle, ViewStyle } from 'react-native'
 
-// せんせいごっこ カラートークン
+// オシエテ先生 カラートークン
 // 色は役割ベースでここに一元管理する。画面側では必ずここから参照する。
 export const c = {
   // ニュートラル（スレート）
