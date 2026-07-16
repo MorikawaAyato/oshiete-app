@@ -663,8 +663,9 @@ export default function ChatScreen() {
               const memo = it.redPen
               // 訂正線：メモを受けて直した答案（振り返りでは✕すべて）
               const corrected = mark === false && (memo !== undefined || showAnswers)
-              // 振り返りの強調：答案が模範解答と食い違っているという事実だけを示す（先生の採点には触れない）
-              const divergent = showAnswers && it.truth === 'wrong'
+              // 振り返りの強調：○をつけた答案が模範解答と食い違っているページだけ（見逃しの気づき）。
+              // ✕のページは「ちがう」ことを先生がもう見抜いているので出さない（メモと模範解答のくらべに集中させる）
+              const divergent = showAnswers && it.truth === 'wrong' && it.teacherMark === true
               const allMarked = printItems.every((p) => p.teacherMark !== undefined)
               const deciding = showAnswers && !unitDecided
               return (
@@ -689,7 +690,7 @@ export default function ChatScreen() {
                     <View style={{ flexDirection: 'row', gap: 6 }}>
                       {printItems.map((p, j) => {
                         const m = p.teacherMark
-                        const dv = showAnswers && p.truth === 'wrong'
+                        const dv = showAnswers && p.truth === 'wrong' && p.teacherMark === true
                         return (
                           <TouchableOpacity key={j} onPress={() => setNotePage(j)}
                             style={[styles.pageDot,
@@ -713,7 +714,7 @@ export default function ChatScreen() {
                     )}
                     {showAnswers && (
                       <Text style={styles.notebookGradeHint}>
-                        自分の採点・メモを、赤い<Text style={styles.modelAnswerWord}>模範解答</Text>と見くらべて振り返ろう。<Text style={styles.modelAnswerWord}>模範解答とちがう答案</Text>のページには印がついているよ。
+                        自分の採点・メモを、赤い<Text style={styles.modelAnswerWord}>模範解答</Text>と見くらべて振り返ろう。<Text style={styles.modelAnswerWord}>○なのに模範解答とちがう答案</Text>には印がついているよ。
                       </Text>
                     )}
                     <View style={[styles.notebookPaper, { marginBottom: 12 }]}>
