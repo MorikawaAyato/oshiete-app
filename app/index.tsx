@@ -714,10 +714,9 @@ export default function HomeScreen() {
                       {thumbnails[0] ? (
                         <Image source={{ uri: thumbnails[0] }} style={styles.lessonThumb} />
                       ) : (
+                        // 横長ボックス：正方形画像を cover で中央表示（固定オフセットだと縦位置がずれる）
                         <View style={[styles.lessonThumb, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]}>
-                          <View style={{ position: 'absolute', top: -30, left: 0, right: 0, bottom: -70 }}>
-                            <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
-                          </View>
+                          <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
                         </View>
                       )}
                       {/* さりげないアフォーダンス：タップで開けることを示す */}
@@ -813,7 +812,12 @@ export default function HomeScreen() {
                     {(() => {
                       const entry = currentHistoryId ? examDays[currentHistoryId] : undefined
                       if (!entry || entry.doneAt) return null
-                      return <Text style={styles.unitExam}>📝 生徒のテスト：{examDateLabel(entry.date)}{entry.round > 1 ? '（追試）' : ''}</Text>
+                      return (
+                        <View style={styles.unitExamRow}>
+                          <Feather name="file-text" size={12} color={c.link} />
+                          <Text style={styles.unitExam}>生徒のテスト：{examDateLabel(entry.date)}{entry.round > 1 ? '（追試）' : ''}</Text>
+                        </View>
+                      )
                     })()}
                   </View>
                 )}
@@ -1274,7 +1278,7 @@ export default function HomeScreen() {
                           return (
                             <View key={`ex${hid}`} style={styles.journalDetailRow}>
                               <View style={[styles.journalDot, { backgroundColor: '#0ea5e9', marginTop: 5 }]} />
-                              <Text style={styles.journalDetailText}>📝 {st ? `${st.name}の` : ''}「{matTitle(hid)}」のテスト{en.round > 1 ? '（追試）' : ''}</Text>
+                              <Text style={styles.journalDetailText}>{st ? `${st.name}の` : ''}「{matTitle(hid)}」のテスト{en.round > 1 ? '（追試）' : ''}</Text>
                             </View>
                           )
                         })}
@@ -1468,7 +1472,8 @@ const styles = StyleSheet.create({
   unitNodeSel: { borderWidth: 2, borderColor: c.primaryStrong, backgroundColor: c.primaryStrong },
   unitNodeText: { fontSize: 12, fontWeight: '700', color: c.textSub },
   unitDetail: { marginTop: 7, fontSize: 11, fontWeight: '700', color: c.textSub },
-  unitExam: { marginTop: 4, fontSize: 11, fontWeight: '700', color: c.link },
+  unitExamRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  unitExam: { fontSize: 11, fontWeight: '700', color: c.link },
 
   // 授業スタートボタン
   startBtn: {
