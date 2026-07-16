@@ -863,6 +863,10 @@ export default function ChatScreen() {
                           <Text style={styles.notebookReferenceMark}>答 </Text>{it.modelAnswer}
                         </Text>
                       )}
+                      {/* 模範解答と内容が一致している答案：何も聞かれないことの意味を明示して安心させる */}
+                      {(isCheck || showAnswers) && it.truth === 'correct' && mark === true && !needsGradeDecision && !needsRedpenDecision && (
+                        <Text style={styles.matchLabel}>✓ 模範解答と一致！</Text>
+                      )}
                       {/* 答え合わせ：採点のズレ（最終判断は常にユーザ） */}
                       {needsGradeDecision && (
                         <View style={{ marginTop: 10 }}>
@@ -1112,6 +1116,7 @@ const styles = StyleSheet.create({
   notebookReference: { fontSize: 11, color: '#e11d48', lineHeight: 17, marginTop: 3 },
   notebookReferenceMark: { fontWeight: '700' },
   redpenLine: { fontSize: 11, color: '#be123c', lineHeight: 17, marginTop: 3 },
+  matchLabel: { marginTop: 10, textAlign: 'center', fontSize: 12, fontWeight: '700', color: '#059669' },
   notebookMarkResult: { fontSize: 18, fontWeight: '700', paddingTop: 1 },
   notebookGradeHint: { fontSize: 12, color: c.textSub, lineHeight: 18, paddingTop: 12, paddingBottom: 8 },
   modelAnswerWord: { fontWeight: '700', color: '#e11d48' },
