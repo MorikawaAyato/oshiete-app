@@ -18,10 +18,10 @@ import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
   loadFollowupSent, saveFollowupSent, loadTeacherName,
-  loadDrillPending, loadCardProgress, drillKey,
+  loadDrillPending, drillKey,
 } from '@/lib/storage'
 import type { MailMessage } from '@/lib/storage'
-import type { CardProgress, HistoryItem, Recap } from '@/lib/types'
+import type { HistoryItem, Recap } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 import StampText from '@/components/StampText'
@@ -101,7 +101,6 @@ export default function HomeScreen() {
       loadMail().then(setMailMessages)
       loadHistory().then(setHistory) // 研修導線の「まだN」等を最新化
       loadDrillPending().then(setDrillPendingKeys)
-      loadCardProgress().then(setCardProgress) // 復習待ちチップ用
       if (pendingAnimRef.current) {
         setPendingMaterialAnimation(false)
         triggerMaterialAnimation()
@@ -165,12 +164,6 @@ export default function HomeScreen() {
     router.push('/training')
   }
 
-  // 復習待ち（＝次回プリントの復習枠に入るカード）の数。ホームの予告チップ用
-  const [cardProgress, setCardProgress] = useState<Record<string, CardProgress>>({})
-  const reviewPendingCount = history
-    .flatMap((h) => h.factsheet?.cards ?? [])
-    .filter((cd) => { const k = drillKey(cd); return !!cardProgress[k]?.pending || drillPendingKeys.has(k) })
-    .length
 
   useEffect(() => {
     if (!teacherSheet) {
@@ -516,17 +509,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* 復習待ちの予告：まちがえた問題・研修「まだ」のカードは、次のプリントの復習枠に自動で入る */}
-        {reviewPendingCount > 0 && (
-          <View style={styles.hwBadge}>
-            <View style={styles.hwBadgeIconWrap}><Image source={require('../assets/sunadokei.webp')} style={styles.hwBadgeIcon} resizeMode="contain" /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.hwBadgeTitle}>復習まちの問題が {reviewPendingCount}問</Text>
-              <Text style={styles.hwBadgeSub} numberOfLines={1}>次の宿題に入って、もういちど出てきます</Text>
-            </View>
-          </View>
-        )}
 
         {/* 今日の授業 */}
         <View style={styles.todaySection}>
