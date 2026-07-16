@@ -25,8 +25,8 @@ export default function SignIn() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <Text style={styles.title}>せんせいごっこ</Text>
-        <Text style={styles.subtitle}>ごっこ遊びで、本気の学び。</Text>
+        <Text style={styles.title}>オシエテ先生</Text>
+        <Text style={styles.subtitle}>教えるとおぼえる、せんせいごっこ。</Text>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>ログインして始める</Text>

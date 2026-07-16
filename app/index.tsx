@@ -598,7 +598,7 @@ export default function HomeScreen() {
         {/* ヘッダー */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.appSubtitle}>せんせいごっこ</Text>
+            <Text style={styles.appSubtitle}>オシエテ先生</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
               <TouchableOpacity onPress={() => setShowTeacherAvatar(true)} activeOpacity={0.75}>
                 <View style={{ width: 36, height: 36, borderRadius: 18, overflow: 'hidden', backgroundColor: 'white' }}>

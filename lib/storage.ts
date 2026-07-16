@@ -222,8 +222,8 @@ const MAIL_KEY = 'senseigokko_mail'
 const WELCOME_MAIL: MailMessage = {
   id: 'welcome',
   type: 'notice',
-  from: 'せんせいごっこ',
-  subject: 'ようこそ、せんせいごっこへ！',
+  from: 'オシエテ先生',
+  subject: 'ようこそ、オシエテ先生へ！',
   content: '生徒を選んで、はじめての授業を始めてみましょう ✨',
   timestamp: new Date(0).toISOString(),
   read: false,
