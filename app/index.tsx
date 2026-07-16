@@ -20,8 +20,9 @@ import {
   loadFollowupSent, saveFollowupSent, loadTeacherName,
   loadDrillPending, drillKey,
   splitUnits, unitLabel, defaultUnitIndex, loadUnitProgressMap,
+  loadWorkLog, workDateKey,
 } from '@/lib/storage'
-import type { MailMessage } from '@/lib/storage'
+import type { MailMessage, WorkLog } from '@/lib/storage'
 import type { HistoryItem, Recap, UnitProgress, UnitStatus } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -70,6 +71,8 @@ export default function HomeScreen() {
   const [pendingImages, setPendingImages] = useState<ImageData[]>([])
   const [studentSheet, setStudentSheet] = useState<'profile' | 'picker' | null>(null)
   const [teacherSheet, setTeacherSheet] = useState(false)
+  const [workLog, setWorkLog] = useState<WorkLog>({}) // 業務日誌（先生証シート内のカレンダー）
+  const [journalMonth, setJournalMonth] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } })
   const [showTeacherAvatar, setShowTeacherAvatar] = useState(false)
   const [showStudentAvatar, setShowStudentAvatar] = useState(false)
   const [cardFlipped, setCardFlipped] = useState(false)
@@ -174,6 +177,11 @@ export default function HomeScreen() {
     if (!teacherSheet) {
       flipScaleAnim.setValue(1)
       setCardFlipped(false)
+    } else {
+      // 業務日誌を最新化してから見せる
+      void loadWorkLog().then(setWorkLog)
+      const d = new Date()
+      setJournalMonth({ y: d.getFullYear(), m: d.getMonth() })
     }
   }, [teacherSheet])
 
@@ -1030,6 +1038,7 @@ export default function HomeScreen() {
           <View style={[styles.studentSheetBottom, styles.tcSheetBottom]}>
             <View style={styles.studentSheetHandle} />
 
+            <ScrollView showsVerticalScrollIndicator={false}>
             <Animated.View style={[styles.tcCardContainer, { transform: [{ scaleX: flipScaleAnim }] }]}>
               {!cardFlipped ? (
                 <TouchableOpacity style={styles.tcCard} onPress={() => flipCard()} activeOpacity={0.92}>
@@ -1102,9 +1111,60 @@ export default function HomeScreen() {
               )}
             </Animated.View>
 
+            {/* 業務日誌：その日にした仕事のスタンプ（出来事の記録のみ。連続日数などの数字は出さない） */}
+            {(() => {
+              const startPad = new Date(journalMonth.y, journalMonth.m, 1).getDay()
+              const daysInMonth = new Date(journalMonth.y, journalMonth.m + 1, 0).getDate()
+              const now = new Date()
+              const isCurrentMonth = journalMonth.y === now.getFullYear() && journalMonth.m === now.getMonth()
+              const cells: (number | null)[] = [...Array(startPad).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+              return (
+                <View style={styles.journalCard}>
+                  <View style={styles.journalHeader}>
+                    <Text style={styles.journalTitle}>業務日誌</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <TouchableOpacity onPress={() => setJournalMonth(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 }))} hitSlop={8}>
+                        <Text style={styles.journalNav}>‹</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.journalMonth}>{journalMonth.y}年{journalMonth.m + 1}月</Text>
+                      <TouchableOpacity onPress={() => setJournalMonth(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 }))} hitSlop={8} disabled={isCurrentMonth}>
+                        <Text style={[styles.journalNav, isCurrentMonth && { opacity: 0.2 }]}>›</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.journalGrid}>
+                    {['日', '月', '火', '水', '木', '金', '土'].map((w) => (
+                      <Text key={w} style={styles.journalWeekday}>{w}</Text>
+                    ))}
+                    {cells.map((day, i) => {
+                      if (day === null) return <View key={`pad${i}`} style={styles.journalCell} />
+                      const e = workLog[workDateKey(journalMonth.y, journalMonth.m, day)]
+                      const isToday = isCurrentMonth && day === now.getDate()
+                      return (
+                        <View key={`d${day}`} style={[styles.journalCell, isToday && styles.journalCellToday]}>
+                          <Text style={[styles.journalDay, !!e && styles.journalDayActive]}>{day}</Text>
+                          <View style={styles.journalDots}>
+                            {e?.lesson ? <View style={[styles.journalDot, { backgroundColor: '#f472b6' }]} /> : null}
+                            {e?.drill ? <View style={[styles.journalDot, { backgroundColor: '#fcd34d' }]} /> : null}
+                            {e?.exam ? <View style={[styles.journalDot, { backgroundColor: '#7dd3fc' }]} /> : null}
+                          </View>
+                        </View>
+                      )
+                    })}
+                  </View>
+                  <View style={styles.journalLegend}>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#f472b6' }]} /><Text style={styles.journalLegendText}>授業</Text></View>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#fcd34d' }]} /><Text style={styles.journalLegendText}>研修</Text></View>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#7dd3fc' }]} /><Text style={styles.journalLegendText}>昇進試験</Text></View>
+                  </View>
+                </View>
+              )
+            })()}
+
             <TouchableOpacity style={[styles.sheetCloseBtn, styles.tcCloseBtn]} onPress={() => setTeacherSheet(false)}>
               <Text style={styles.tcCloseBtnText}>閉じる</Text>
             </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -1483,7 +1543,25 @@ const styles = StyleSheet.create({
   hwThanksText: { flex: 1, fontSize: 12, color: c.textMid, lineHeight: 18, backgroundColor: c.bgSub, borderRadius: 12, padding: 10 },
 
   // 先生証シート
-  tcSheetBottom: { backgroundColor: c.ink, paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0 },
+  tcSheetBottom: { backgroundColor: c.ink, paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0, maxHeight: '92%' },
+
+  // 業務日誌（先生証シート内のカレンダー）
+  journalCard: { marginHorizontal: 24, marginBottom: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', padding: 14 },
+  journalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  journalTitle: { fontSize: 10, fontWeight: '700', letterSpacing: 3, color: 'rgba(255,255,255,0.6)' },
+  journalNav: { fontSize: 15, color: 'rgba(255,255,255,0.5)', paddingHorizontal: 6 },
+  journalMonth: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.8)', fontVariant: ['tabular-nums'] },
+  journalGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  journalWeekday: { width: '14.28%', textAlign: 'center', fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.35)', marginBottom: 3 },
+  journalCell: { width: '14.28%', alignItems: 'center', paddingVertical: 2, borderRadius: 8, gap: 1 },
+  journalCellToday: { backgroundColor: 'rgba(255,255,255,0.1)' },
+  journalDay: { fontSize: 10, color: 'rgba(255,255,255,0.35)', fontVariant: ['tabular-nums'] },
+  journalDayActive: { color: 'rgba(255,255,255,0.85)', fontWeight: '700' },
+  journalDots: { flexDirection: 'row', gap: 2, height: 5 },
+  journalDot: { width: 5, height: 5, borderRadius: 2.5 },
+  journalLegend: { flexDirection: 'row', justifyContent: 'center', gap: 14, marginTop: 10 },
+  journalLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  journalLegendText: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.5)' },
   tcCardContainer: {
     width: 240, height: 353, alignSelf: 'center', marginVertical: 24,
     overflow: 'hidden', borderRadius: 22,

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useApp } from '@/lib/AppContext'
 import { TEACHER_TITLES, getUnlockedTitleCount } from '@/lib/teacherProfile'
-import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, splitUnits, getUnitStatuses } from '@/lib/storage'
+import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, splitUnits, getUnitStatuses, logWork } from '@/lib/storage'
 import { gradeExam } from '@/lib/api'
 import type { HistoryItem, QACard } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
@@ -150,6 +150,7 @@ export default function TrainingScreen() {
     setDrillPendingKeys(new Set(pending))
     if (drillIdx + 1 >= drillCards.length) {
       setDrillDone(true)
+      void logWork('drill') // 業務日誌へ（最後までめくった研修だけを記録）
     } else {
       setDrillIdx((i) => i + 1)
       setDrillRevealed(false)
@@ -195,6 +196,7 @@ export default function TrainingScreen() {
       const res = await gradeExam(examQuestions.map((cd, i) => ({ q: cd.q, a: cd.a, statement: cd.statement, facts: cd.facts, userAnswer: (examAnswers[i] ?? '').trim() })))
       if (!res.results) throw new Error(res.error)
       setExamResults(res.results)
+      void logWork('exam') // 業務日誌へ（合否によらず受験を記録）
       if (res.results.filter((r) => r.correct).length >= EXAM_PASS_COUNT) {
         const unlockedCount = getUnlockedTitleCount(teacherProfile)
         const nextTitle = TEACHER_TITLES[unlockedCount]

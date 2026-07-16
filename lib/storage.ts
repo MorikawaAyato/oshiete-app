@@ -100,6 +100,38 @@ export async function setUnitStatus(historyId: string, cardCount: number, unitIn
   } catch {}
 }
 
+// ─── 業務日誌 ───
+// その日にどの仕事をしたかの記録（授業・研修・昇進試験）。
+// 出来事の記録のみ（連続日数などの数字の指標は出さない。先生証の中で見られる）
+export type WorkKind = 'lesson' | 'drill' | 'exam'
+export type WorkLog = Record<string, Partial<Record<WorkKind, number>>>
+const WORK_LOG_KEY = 'oshiete_work_log'
+
+export function workDateKey(y: number, m: number, d: number): string {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
+export async function loadWorkLog(): Promise<WorkLog> {
+  try {
+    const raw = await AsyncStorage.getItem(WORK_LOG_KEY)
+    return raw ? (JSON.parse(raw) as WorkLog) : {}
+  } catch {
+    return {}
+  }
+}
+
+export async function logWork(kind: WorkKind): Promise<void> {
+  try {
+    const log = await loadWorkLog()
+    const now = new Date()
+    const key = workDateKey(now.getFullYear(), now.getMonth(), now.getDate())
+    log[key] = { ...(log[key] ?? {}), [kind]: (log[key]?.[kind] ?? 0) + 1 }
+    // 肥大化対策：新しい日付から400日分まで
+    const kept = Object.entries(log).sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 400)
+    await AsyncStorage.setItem(WORK_LOG_KEY, JSON.stringify(Object.fromEntries(kept)))
+  } catch {}
+}
+
 const MAIL_KEY = 'senseigokko_mail'
 
 const WELCOME_MAIL: MailMessage = {

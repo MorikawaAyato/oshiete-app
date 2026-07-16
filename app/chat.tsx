@@ -12,7 +12,7 @@ import { fetchPrint, fetchFactsheet } from '@/lib/api'
 import {
   loadFactsheet, updateHistoryFactsheet, saveRecapToHistory,
   loadCardProgress, saveCardProgress, loadDrillPending, saveDrillPending, drillKey,
-  splitUnits, defaultUnitIndex, getUnitStatuses, setUnitStatus,
+  splitUnits, defaultUnitIndex, getUnitStatuses, setUnitStatus, logWork,
 } from '@/lib/storage'
 import type { PrintItem, Recap } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
@@ -261,6 +261,7 @@ export default function ChatScreen() {
       }
       await saveCardProgress(progress)
       await saveDrillPending(drillPending)
+      await logWork('lesson') // 業務日誌へ
       // 単元はまず「実施済み」になる。「完了」に上げるかは振り返りのあとの先生の判断
       if (currentHistoryId && lessonUnit !== null) {
         const cardCount = (await loadFactsheet(currentHistoryId))?.cards?.length ?? 0
