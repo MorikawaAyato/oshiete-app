@@ -729,7 +729,7 @@ export default function HomeScreen() {
                       <Text style={styles.unitMapCount}>完了 {unitInfo.doneCount} / {unitInfo.units.length}</Text>
                     </View>
                     {/* 丸ノード：単元が増えても折り返して全体が一目で見える（ノートのページ送りドットと同じ文法）。
-                        色＝状態（緑=完了・橙=未完了・白=初回）、選択中はページ送りと同じ「塗り」で示す */}
+                        色＝状態（緑=完了・橙=未完了・白=未開始）、選択中はページ送りと同じ「塗り」で示す */}
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                       {unitInfo.units.map((_, i) => {
                         const st = unitInfo.statuses[i]
@@ -752,9 +752,9 @@ export default function HomeScreen() {
                         )
                       })}
                     </View>
-                    {/* 選択中の単元の詳細は1行に集約する（状態語は 初回/未完了/完了 で統一） */}
+                    {/* 選択中の単元の詳細は1行に集約する（状態語は 未開始/未完了/完了 で統一） */}
                     <Text style={styles.unitDetail}>
-                      ▸ 授業{unitLabel(unitInfo.selected)}（{unitInfo.units[unitInfo.selected].size}問）・{unitInfo.statuses[unitInfo.selected] === 'done' ? '完了' : unitInfo.statuses[unitInfo.selected] === 'tried' ? '未完了' : '初回'}
+                      ▸ 授業{unitLabel(unitInfo.selected)}（{unitInfo.units[unitInfo.selected].size}問）・{unitInfo.statuses[unitInfo.selected] === 'done' ? '完了' : unitInfo.statuses[unitInfo.selected] === 'tried' ? '未完了' : '未開始'}
                     </Text>
                   </View>
                 )}
