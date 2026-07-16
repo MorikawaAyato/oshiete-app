@@ -737,7 +737,7 @@ export default function ChatScreen() {
                         <Text style={{ fontWeight: '700' }}>問{page + 1} </Text>{it.question}
                       </Text>
                       {/* 生徒の答案（手書き）。メモで訂正した答案には訂正線が入る */}
-                      <Text style={[styles.memoLabel, { marginTop: 10 }]}>答案</Text>
+                      <Text style={[styles.memoLabel, { marginTop: 10 }]}>生徒の答案</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 2 }}>
                         <Text style={[styles.handAnswer, { flex: 1 }, corrected && styles.handAnswerCorrected]}>{it.studentAnswer}</Text>
                         {mark !== undefined && (
