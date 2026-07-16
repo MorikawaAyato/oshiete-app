@@ -137,6 +137,7 @@ export default function ChatScreen() {
   const [studentTyping, setStudentTyping] = useState(false)
   const [showPrint, setShowPrint] = useState(false) // 学習ノート（1問1ページ）モーダル
   const [notePage, setNotePage] = useState(0) // ノートの表示ページ（＝問題番号）
+  const [seenPages, setSeenPages] = useState<Set<number>>(new Set()) // 振り返りの既読ページ（全ページ見てから完了を判断）
   const [redpenInput, setRedpenInput] = useState('') // 赤ペンラリーの入力欄
   const [showRedpenHints, setShowRedpenHints] = useState(false) // いま聞かれている問題の虎の巻
   const [redpenError, setRedpenError] = useState<string | null>(null)
@@ -283,6 +284,7 @@ export default function ChatScreen() {
     pushBeats(beats)
     // お礼が届いたら振り返りを自動で開く（模範解答との見くらべは授業の必須の締め）
     setUnitDecided(false)
+    setSeenPages(new Set())
     beatTimers.current.push(setTimeout(() => { setNotePage(0); setShowPrint(true) }, beats.length * 2000 + 1300))
   }
 
@@ -386,6 +388,13 @@ export default function ChatScreen() {
     setPrintItems((prev) => prev.map((it, j) => (j === i ? { ...it, teacherMark: val } : it)))
     if (wasUnmarked && i < printItems.length - 1) setTimeout(() => setNotePage(i + 1), 550)
   }
+
+  // 振り返りの既読ページを記録（全ページを見てから「完了」を判断させる）
+  useEffect(() => {
+    if (!showPrint || printItems.length === 0) return
+    const p = Math.min(notePage, printItems.length - 1)
+    setSeenPages((prev) => (prev.has(p) ? prev : new Set(prev).add(p)))
+  }, [notePage, showPrint, printItems.length])
 
   // 振り返りの締め：この単元を「完了」にするか「また今度」にするかは先生が決める
   const decideUnit = (done: boolean) => {
@@ -668,6 +677,8 @@ export default function ChatScreen() {
               const divergent = showAnswers && it.truth === 'wrong' && it.teacherMark === true
               const allMarked = printItems.every((p) => p.teacherMark !== undefined)
               const deciding = showAnswers && !unitDecided
+              // 表示中のページは既読扱い（setSeenPagesの反映を待たない）
+              const allSeen = printItems.every((_, j) => seenPages.has(j) || j === page)
               return (
                 <View style={styles.notebookModal}>
                   <View style={styles.notebookModalHeader}>
@@ -767,18 +778,36 @@ export default function ChatScreen() {
                         </Text>
                       </BouncyPressable>
                     ) : deciding ? (
-                      <View style={{ gap: 8 }}>
-                        {/* 単元を完了にするかどうかは先生の判断（アプリは事実だけ見せて、結論は言わない） */}
-                        <Text style={styles.decideHint}>見なおしたら、先生としてこの授業をどうするか決めよう</Text>
-                        <View style={styles.decisionRow}>
-                          <TouchableOpacity onPress={() => decideUnit(false)} style={styles.decisionBtn}>
-                            <Text style={styles.decisionBtnText}>また今度もう一度</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => decideUnit(true)} style={[styles.decisionBtn, styles.decisionBtnCorrect]}>
-                            <Text style={[styles.decisionBtnText, styles.decisionBtnTextSel]}>この授業を完了にする</Text>
-                          </TouchableOpacity>
+                      allSeen ? (
+                        <View style={{ gap: 8 }}>
+                          {/* 単元を完了にするかどうかは先生の判断（アプリは事実だけ見せて、結論は言わない） */}
+                          <Text style={styles.decideHint}>見なおしたら、先生としてこの授業をどうするか決めよう</Text>
+                          <View style={styles.decisionRow}>
+                            <TouchableOpacity onPress={() => decideUnit(false)} style={styles.decisionBtn}>
+                              <Text style={styles.decisionBtnText}>また今度もう一度</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => decideUnit(true)} style={[styles.decisionBtn, styles.decisionBtnCorrect]}>
+                              <Text style={[styles.decisionBtnText, styles.decisionBtnTextSel]}>この授業を完了にする</Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
-                      </View>
+                      ) : (
+                        <View style={{ gap: 8 }}>
+                          {/* 全ページを見てから完了を判断する。未読がある間はフッター自体がナビになる */}
+                          <Text style={styles.decideHint}>ぜんぶのページを見なおしてから、しめくくりを決めよう</Text>
+                          <BouncyPressable
+                            onPress={() => {
+                              const after = printItems.findIndex((_, k) => k > page && !seenPages.has(k))
+                              const target = after >= 0 ? after : printItems.findIndex((_, k) => k !== page && !seenPages.has(k))
+                              if (target >= 0) setNotePage(target)
+                            }}
+                            style={styles.returnBtn}
+                            haptic="light"
+                          >
+                            <Text style={styles.gradeBtnText}>次のページへ ›</Text>
+                          </BouncyPressable>
+                        </View>
+                      )
                     ) : (
                       <TouchableOpacity onPress={() => setShowPrint(false)} style={styles.closeNotebookBtn}>
                         <Text style={styles.closeNotebookBtnText}>閉じる</Text>
