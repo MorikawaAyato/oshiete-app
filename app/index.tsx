@@ -820,18 +820,21 @@ export default function HomeScreen() {
                         )
                       })}
                     </View>
-                    {/* 選択中の単元の詳細は1行に集約する（状態語は 未開始/未完了/完了 で統一） */}
-                    <Text style={styles.unitDetail}>
-                      ▸ 授業{unitLabel(unitInfo.selected)}（{unitInfo.units[unitInfo.selected].size}問）・{unitInfo.statuses[unitInfo.selected] === 'done' ? '完了' : unitInfo.statuses[unitInfo.selected] === 'tried' ? '未完了' : '未開始'}
-                    </Text>
-                    {/* 生徒のテスト：固定の期日（先生は変更できない。全部教えて送り出すのが目標） */}
+                    {/* 選択中の単元の詳細（左）と生徒のテスト（右）を同じ行に振り分ける（左偏りの解消） */}
                     {(() => {
                       const entry = currentHistoryId ? examDays[currentHistoryId] : undefined
-                      if (!entry || entry.doneAt) return null
+                      const showExam = entry && !entry.doneAt
                       return (
-                        <View style={styles.unitExamRow}>
-                          <Feather name="file-text" size={12} color={c.link} />
-                          <Text style={styles.unitExam}>生徒のテスト：{examDateLabel(entry.date)}{entry.round > 1 ? '（追試）' : ''}</Text>
+                        <View style={styles.unitDetailRow}>
+                          <Text style={styles.unitDetail}>
+                            ▸ 授業{unitLabel(unitInfo.selected)}（{unitInfo.units[unitInfo.selected].size}問）・{unitInfo.statuses[unitInfo.selected] === 'done' ? '完了' : unitInfo.statuses[unitInfo.selected] === 'tried' ? '未完了' : '未開始'}
+                          </Text>
+                          {showExam && (
+                            <View style={styles.unitExamRow}>
+                              <Feather name="file-text" size={12} color={c.link} />
+                              <Text style={styles.unitExam}>生徒のテスト：{examDateLabel(entry!.date)}{entry!.round > 1 ? '（追試）' : ''}</Text>
+                            </View>
+                          )}
                         </View>
                       )
                     })()}
@@ -1487,8 +1490,9 @@ const styles = StyleSheet.create({
   unitNodeTried: { borderColor: '#fde68a', backgroundColor: '#fffbeb' },
   unitNodeSel: { borderWidth: 2, borderColor: c.primaryStrong, backgroundColor: c.primaryStrong },
   unitNodeText: { fontSize: 12, fontWeight: '700', color: c.textSub },
-  unitDetail: { marginTop: 7, fontSize: 11, fontWeight: '700', color: c.textSub },
-  unitExamRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  unitDetailRow: { marginTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  unitDetail: { fontSize: 11, fontWeight: '700', color: c.textSub, flexShrink: 1 },
+  unitExamRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
   unitExam: { fontSize: 11, fontWeight: '700', color: c.link },
 
   // 授業スタートボタン
