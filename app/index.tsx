@@ -715,9 +715,9 @@ export default function HomeScreen() {
                     <View style={styles.unitMapHeader}>
                       <Text style={styles.unitMapEyebrow}>授業をえらぶ</Text>
                     </View>
+                    {/* 準備中の案内文はボタン側が担うので、ここは場所を確保する点線ノードだけ */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       {[0, 1, 2].map((i) => <View key={i} style={styles.unitNodeGhost} />)}
-                      <Text style={styles.unitPreparing}>授業を準備しています…</Text>
                     </View>
                     <Text style={[styles.unitDetail, { opacity: 0 }]}>▸</Text>
                   </View>
@@ -1350,7 +1350,6 @@ const styles = StyleSheet.create({
     width: 32, height: 32, borderRadius: 16,
     borderWidth: 1, borderColor: c.borderStrong, borderStyle: 'dashed', backgroundColor: c.bgSub,
   },
-  unitPreparing: { marginLeft: 4, fontSize: 11, fontWeight: '700', color: c.faint },
   unitNodeDone: { borderColor: '#a7f3d0', backgroundColor: '#ecfdf5' },
   unitNodeTried: { borderColor: '#fde68a', backgroundColor: '#fffbeb' },
   unitNodeSel: { borderWidth: 2, borderColor: c.primaryStrong, backgroundColor: c.primaryStrong },
