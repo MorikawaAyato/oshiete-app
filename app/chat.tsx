@@ -262,14 +262,14 @@ export default function ChatScreen() {
       }
       await saveCardProgress(progress)
       await saveDrillPending(drillPending)
-      await logWork('lesson') // 業務日誌へ
+      await logWork('lesson', { studentId: student.id, historyId: currentHistoryId ?? undefined, unitIndex: lessonUnit ?? undefined }) // 業務日誌へ（誰に何の授業か）
       // 単元はまず「実施済み」になる。「完了」に上げるかは振り返りのあとの先生の判断
       if (currentHistoryId && lessonUnit !== null) {
         const cardCount = (await loadFactsheet(currentHistoryId))?.cards?.length ?? 0
         if (cardCount > 0) {
           await setUnitStatus(currentHistoryId, cardCount, lessonUnit, 'tried')
           // テストの予定がまだ無い教材（試験日導入前の教材）はここで立てる
-          const entry = await ensureExamDay(currentHistoryId, splitUnits(cardCount).length)
+          const entry = await ensureExamDay(currentHistoryId, splitUnits(cardCount).length, student.id)
           if (entry) {
             const title = (await loadHistory()).find((h) => h.id === currentHistoryId)?.title ?? '教材'
             await addMail(examMailFor(student, { id: currentHistoryId, title }, 'propose', examDateLabel(entry.date), 1))

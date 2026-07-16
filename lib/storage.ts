@@ -101,10 +101,12 @@ export async function setUnitStatus(historyId: string, cardCount: number, unitIn
 }
 
 // ─── 業務日誌 ───
-// その日にどの仕事をしたかの記録（授業・研修・昇進試験）。
-// 出来事の記録のみ（連続日数などの数字の指標は出さない。先生証の中で見られる）
-export type WorkKind = 'lesson' | 'drill' | 'exam'
-export type WorkLog = Record<string, Partial<Record<WorkKind, number>>>
+// その日にどの仕事をしたかの記録（授業・研修）。件数に加え、詳細（誰に何の授業／どの教材の研修）を
+// entries に残す（s=studentId, h=historyId, u=単元index）。出来事の記録のみ（数字の指標は出さない）
+export type WorkKind = 'lesson' | 'drill'
+export type WorkEntry = { k: WorkKind; s?: string; h?: string; u?: number }
+export type WorkDay = Partial<Record<WorkKind, number>> & { entries?: WorkEntry[] }
+export type WorkLog = Record<string, WorkDay>
 const WORK_LOG_KEY = 'oshiete_work_log'
 
 export function workDateKey(y: number, m: number, d: number): string {
@@ -120,12 +122,14 @@ export async function loadWorkLog(): Promise<WorkLog> {
   }
 }
 
-export async function logWork(kind: WorkKind): Promise<void> {
+export async function logWork(kind: WorkKind, detail?: { studentId?: string; historyId?: string; unitIndex?: number }): Promise<void> {
   try {
     const log = await loadWorkLog()
     const now = new Date()
     const key = workDateKey(now.getFullYear(), now.getMonth(), now.getDate())
-    log[key] = { ...(log[key] ?? {}), [kind]: (log[key]?.[kind] ?? 0) + 1 }
+    const day = log[key] ?? {}
+    const entry: WorkEntry = { k: kind, ...(detail?.studentId ? { s: detail.studentId } : {}), ...(detail?.historyId ? { h: detail.historyId } : {}), ...(detail?.unitIndex !== undefined ? { u: detail.unitIndex } : {}) }
+    log[key] = { ...day, [kind]: (day[kind] ?? 0) + 1, entries: [...(day.entries ?? []), entry].slice(-20) }
     // 肥大化対策：新しい日付から400日分まで
     const kept = Object.entries(log).sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 400)
     await AsyncStorage.setItem(WORK_LOG_KEY, JSON.stringify(Object.fromEntries(kept)))
@@ -136,7 +140,7 @@ export async function logWork(kind: WorkKind): Promise<void> {
 // 教材ごとに固定の期日が自動で決まり、先生は変更できない（動かせる締切は締切にならない。
 // 生徒の学校行事は先生の決定領域の外）。期日が来たら結果メールが届き、全単元完了なら大成功、
 // 未完了なら追試日が自動で立つ（責めない・行き止まらない）。教材が消えたら試験日も消える
-export type ExamEntry = { date: string; round: number; doneAt?: number }
+export type ExamEntry = { date: string; round: number; doneAt?: number; studentId?: string }
 const EXAM_DAYS_KEY = 'oshiete_exam_days'
 const EXAM_SUCCESS_KEY = 'oshiete_exam_success_count'
 
@@ -167,17 +171,17 @@ export function dateKeyAfterDays(days: number): string { const d = new Date(); d
 export function examDateLabel(key: string): string { const p = key.split('-'); return `${Number(p[1])}月${Number(p[2])}日` }
 
 // 期日の自動決定：残り単元数×2日（本番は5〜14日、追試は4〜10日に丸め）
-export function makeExamEntry(unitCount: number, round: number): ExamEntry {
+export function makeExamEntry(unitCount: number, round: number, studentId?: string): ExamEntry {
   const days = round === 1 ? Math.min(14, Math.max(5, unitCount * 2)) : Math.min(10, Math.max(4, unitCount * 2))
-  return { date: dateKeyAfterDays(days), round }
+  return { date: dateKeyAfterDays(days), round, ...(studentId ? { studentId } : {}) }
 }
 
 // テストの予定を立てる（まだ無ければ）。作った場合はエントリを返す（呼び出し側がお知らせメールを送る）
-export async function ensureExamDay(historyId: string, unitCount: number): Promise<ExamEntry | null> {
+export async function ensureExamDay(historyId: string, unitCount: number, studentId?: string): Promise<ExamEntry | null> {
   if (unitCount <= 0) return null
   const map = await loadExamDays()
   if (map[historyId]) return null
-  const entry = makeExamEntry(unitCount, 1)
+  const entry = makeExamEntry(unitCount, 1, studentId)
   map[historyId] = entry
   await saveExamDays(map)
   return entry

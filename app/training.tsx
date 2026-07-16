@@ -144,7 +144,7 @@ export default function TrainingScreen() {
     setDrillPendingKeys(new Set(pending))
     if (drillIdx + 1 >= drillCards.length) {
       setDrillDone(true)
-      void logWork('drill') // 業務日誌へ（最後までめくった研修だけを記録）
+      void logWork('drill', { historyId: drillMaterialId !== 'all' ? drillMaterialId : undefined }) // 業務日誌へ（最後までめくった研修だけを記録）
     } else {
       setDrillIdx((i) => i + 1)
       setDrillRevealed(false)

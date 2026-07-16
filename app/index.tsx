@@ -73,6 +73,7 @@ export default function HomeScreen() {
   const [workLog, setWorkLog] = useState<WorkLog>({}) // 業務日誌（ヘッダーの独立シート）
   const [journalOpen, setJournalOpen] = useState(false)
   const [journalMonth, setJournalMonth] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } })
+  const [journalDay, setJournalDay] = useState<string | null>(null) // タップした日付（その日の詳細を出す）
   const [examDays, setExamDays] = useState<Record<string, ExamEntry>>({}) // 生徒のテストの予定
   const [examSuccess, setExamSuccess] = useState(0) // 生徒のテスト大成功の累計（先生証の実績）
   const [showTeacherAvatar, setShowTeacherAvatar] = useState(false)
@@ -150,7 +151,7 @@ export default function HomeScreen() {
             await bumpExamSuccessCount()
             mails.push(examMailFor(student, item, 'full', '', entry.round))
           } else {
-            const next = makeExamEntry(Math.max(1, units.length - doneCount), entry.round + 1)
+            const next = makeExamEntry(Math.max(1, units.length - doneCount), entry.round + 1, entry.studentId)
             map[hid] = next
             mails.push(examMailFor(student, item, doneCount === 0 ? 'none' : 'partial', examDateLabel(next.date), next.round))
           }
@@ -282,9 +283,9 @@ export default function HomeScreen() {
         // カードバンクが揃った＝授業の予定が立つ。生徒のテストの日取りもここで決まる
         const cardCount = res.factsheet.cards?.length ?? 0
         if (cardCount > 0) {
-          const entry = await ensureExamDay(histId, splitUnits(cardCount).length)
+          const student = STUDENTS.find((s) => s.id === selectedStudentId) ?? STUDENTS[0]
+          const entry = await ensureExamDay(histId, splitUnits(cardCount).length, student.id)
           if (entry) {
-            const student = STUDENTS.find((s) => s.id === selectedStudentId) ?? STUDENTS[0]
             const title = items.find((h) => h.id === histId)?.title ?? '教材'
             await addMail(examMailFor(student, { id: histId, title }, 'propose', examDateLabel(entry.date), 1))
             setMailMessages(await loadMail())
@@ -575,7 +576,7 @@ export default function HomeScreen() {
                 </View>
               )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.teacherIconBtn} onPress={() => { const d = new Date(); setJournalMonth({ y: d.getFullYear(), m: d.getMonth() }); void loadWorkLog().then(setWorkLog); setJournalOpen(true) }}>
+            <TouchableOpacity style={styles.teacherIconBtn} onPress={() => { const d = new Date(); setJournalMonth({ y: d.getFullYear(), m: d.getMonth() }); setJournalDay(null); void loadWorkLog().then(setWorkLog); void loadExamDays().then(setExamDays); setJournalOpen(true) }}>
               <View style={styles.teacherIconCircle}>
                 <Feather name="calendar" size={18} color={c.sky} />
               </View>
@@ -1238,15 +1239,19 @@ export default function HomeScreen() {
                       const e = workLog[key]
                       const hasExam = examMarks.has(key)
                       const isToday = isCurrentMonth && day === now.getDate()
+                      const hasAny = !!e || hasExam
+                      const selected = journalDay === key
                       return (
-                        <View key={`d${day}`} style={[styles.journalCell, isToday && styles.journalCellToday]}>
-                          <Text style={[styles.journalDay, (!!e || hasExam) && styles.journalDayActive]}>{day}</Text>
+                        <TouchableOpacity key={`d${day}`} disabled={!hasAny} activeOpacity={0.7}
+                          onPress={() => setJournalDay(selected ? null : key)}
+                          style={[styles.journalCell, selected ? styles.journalCellSel : isToday && styles.journalCellToday]}>
+                          <Text style={[styles.journalDay, hasAny && styles.journalDayActive, selected && { color: 'white' }]}>{day}</Text>
                           <View style={styles.journalDots}>
                             {e?.lesson ? <View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /> : null}
                             {e?.drill ? <View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /> : null}
                             {hasExam ? <View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }]} /> : null}
                           </View>
-                        </View>
+                        </TouchableOpacity>
                       )
                     })}
                   </View>
@@ -1255,6 +1260,39 @@ export default function HomeScreen() {
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /><Text style={styles.journalLegendText}>研修</Text></View>
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }]} /><Text style={styles.journalLegendText}>生徒のテスト</Text></View>
                   </View>
+                  {/* その日の詳細：予定されているテスト（誰の何の授業）・実施した授業/研修（誰に何を） */}
+                  {journalDay && (() => {
+                    const matTitle = (hid?: string) => history.find((h) => h.id === hid)?.title.replace(/^この(教材|文書|画像|写真)は[、，]?\s*/u, '').slice(0, 20) ?? '教材'
+                    const parts = journalDay.split('-')
+                    const exams = Object.entries(examDays).filter(([hid, en]) => en.date === journalDay && !en.doneAt && history.some((h) => h.id === hid))
+                    const entries = workLog[journalDay]?.entries ?? []
+                    return (
+                      <View style={styles.journalDetail}>
+                        <Text style={styles.journalDetailDate}>{Number(parts[1])}月{Number(parts[2])}日</Text>
+                        {exams.map(([hid, en]) => {
+                          const st = STUDENTS.find((s) => s.id === en.studentId)
+                          return (
+                            <View key={`ex${hid}`} style={styles.journalDetailRow}>
+                              <View style={[styles.journalDot, { backgroundColor: '#0ea5e9', marginTop: 5 }]} />
+                              <Text style={styles.journalDetailText}>📝 {st ? `${st.name}の` : ''}「{matTitle(hid)}」のテスト{en.round > 1 ? '（追試）' : ''}</Text>
+                            </View>
+                          )
+                        })}
+                        {entries.map((en, k) => {
+                          const st = STUDENTS.find((s) => s.id === en.s)
+                          return (
+                            <View key={`en${k}`} style={styles.journalDetailRow}>
+                              <View style={[styles.journalDot, { backgroundColor: en.k === 'lesson' ? '#ec4899' : '#f59e0b', marginTop: 5 }]} />
+                              <Text style={styles.journalDetailText}>{en.k === 'lesson' ? `${st ? st.name + 'に' : ''}「${matTitle(en.h)}」の授業${en.u !== undefined ? unitLabel(en.u) : ''}` : `「${en.h ? matTitle(en.h) : '全部ミックス'}」の研修`}</Text>
+                            </View>
+                          )
+                        })}
+                        {exams.length === 0 && entries.length === 0 && (
+                          <Text style={styles.journalDetailEmpty}>この日の記録の詳細はありません</Text>
+                        )}
+                      </View>
+                    )
+                  })()}
                 </View>
               )
             })()}
@@ -1655,6 +1693,12 @@ const styles = StyleSheet.create({
   journalWeekday: { width: '14.28%', textAlign: 'center', fontSize: 9, fontWeight: '700', color: c.faint, marginBottom: 4 },
   journalCell: { width: '14.28%', alignItems: 'center', paddingVertical: 3, borderRadius: 8, gap: 1 },
   journalCellToday: { backgroundColor: c.pinkTint },
+  journalCellSel: { backgroundColor: '#334155' },
+  journalDetail: { marginTop: 12, borderRadius: 16, borderWidth: 1, borderColor: c.border, backgroundColor: c.bgSub, padding: 12, gap: 6 },
+  journalDetailDate: { fontSize: 12, fontWeight: '700', color: c.textMid, marginBottom: 2 },
+  journalDetailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  journalDetailText: { flex: 1, fontSize: 11, lineHeight: 16, color: c.textSub },
+  journalDetailEmpty: { fontSize: 11, color: c.faint },
   journalDay: { fontSize: 11, color: c.faint, fontVariant: ['tabular-nums'] },
   journalDayActive: { color: c.textMid, fontWeight: '700' },
   journalDots: { flexDirection: 'row', gap: 2, height: 6 },
