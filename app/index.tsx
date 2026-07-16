@@ -707,31 +707,33 @@ export default function HomeScreen() {
                       <Text style={styles.unitMapEyebrow}>授業をえらぶ</Text>
                       <Text style={styles.unitMapCount}>完了 {unitInfo.doneCount} / {unitInfo.units.length}</Text>
                     </View>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 2 }}>
-                      {unitInfo.units.map((u, i) => {
+                    {/* 丸ノード：単元が増えても折り返して全体が一目で見える（ノートのページ送りドットと同じ文法）。
+                        色＝状態（緑=完了・橙=もう一度・白=未実施）、選択中はピンクの輪 */}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {unitInfo.units.map((_, i) => {
                         const st = unitInfo.statuses[i]
                         const sel = i === unitInfo.selected
                         return (
                           <TouchableOpacity
                             key={i}
                             onPress={() => setHomeUnitIdx(i)}
-                            style={[styles.unitChip,
-                              st === 'done' && styles.unitChipDone,
-                              st === 'tried' && styles.unitChipTried,
-                              sel && styles.unitChipSel]}
+                            style={[styles.unitNode,
+                              st === 'done' && styles.unitNodeDone,
+                              st === 'tried' && styles.unitNodeTried,
+                              sel && styles.unitNodeSel]}
                             activeOpacity={0.8}
                           >
-                            <Text style={[styles.unitChipText,
+                            <Text style={[styles.unitNodeText,
                               st === 'done' && { color: '#059669' },
-                              st === 'tried' && { color: '#b45309' },
-                              sel && { color: c.primaryStrong }]}>授業{unitLabel(i)}</Text>
-                            {st === 'done' && <Text style={{ fontSize: 11, color: '#10b981' }}>✓</Text>}
-                            {st === 'tried' && <Text style={{ fontSize: 9, fontWeight: '600', color: '#b45309' }}>もう一度</Text>}
-                            <Text style={styles.unitChipSize}>{u.size}問</Text>
+                              st === 'tried' && { color: '#b45309' }]}>{i + 1}</Text>
                           </TouchableOpacity>
                         )
                       })}
-                    </ScrollView>
+                    </View>
+                    {/* 選択中の単元の詳細は1行に集約する */}
+                    <Text style={styles.unitDetail}>
+                      ▸ 授業{unitLabel(unitInfo.selected)}（{unitInfo.units[unitInfo.selected].size}問）・{unitInfo.statuses[unitInfo.selected] === 'done' ? '✓ 完了' : unitInfo.statuses[unitInfo.selected] === 'tried' ? 'もう一度' : 'はじめて'}
+                    </Text>
                   </View>
                 )}
 
@@ -1257,16 +1259,16 @@ const styles = StyleSheet.create({
   unitMapHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   unitMapEyebrow: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: c.faint },
   unitMapCount: { fontSize: 10, fontWeight: '700', color: c.faint },
-  unitChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+  unitNode: {
+    width: 32, height: 32, borderRadius: 16,
     borderWidth: 1, borderColor: c.border, backgroundColor: 'white',
-    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5,
+    alignItems: 'center', justifyContent: 'center',
   },
-  unitChipDone: { borderColor: '#a7f3d0', backgroundColor: '#ecfdf5' },
-  unitChipTried: { borderColor: '#fde68a', backgroundColor: '#fffbeb' },
-  unitChipSel: { borderColor: c.primary, backgroundColor: c.pinkTint },
-  unitChipText: { fontSize: 11, fontWeight: '700', color: c.textSub },
-  unitChipSize: { fontSize: 9, fontWeight: '600', color: c.faint },
+  unitNodeDone: { borderColor: '#a7f3d0', backgroundColor: '#ecfdf5' },
+  unitNodeTried: { borderColor: '#fde68a', backgroundColor: '#fffbeb' },
+  unitNodeSel: { borderWidth: 2, borderColor: c.primary },
+  unitNodeText: { fontSize: 12, fontWeight: '700', color: c.textSub },
+  unitDetail: { marginTop: 7, fontSize: 11, fontWeight: '700', color: c.textSub },
 
   // 授業スタートボタン
   startBtn: {
