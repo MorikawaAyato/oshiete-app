@@ -303,16 +303,12 @@ export default function ChatScreen() {
         await saveRecapToHistory(currentHistoryId, student.id, recap)
       }
     })()
+    // ○✕の集計はリザルトとして報告しない（誤答は仕込みなので演出上の数字。
+    // ✕が復習枠に入ることはホームの復習まちチップが伝える）。感情のビートだけ残す
     const okCount = items.filter((it) => it.finalMark).length
-    const retryCount = items.filter((it) => !it.finalMark || it.redPenFinal === 'relearn').length
     const beats: string[] = [...(opts?.leadBeats ?? [])]
     if (opts?.noMismatch) beats.push(okCount === items.length ? student.perfectLine : student.noMismatchLine)
     beats.push(student.printThanks)
-    // 生徒は自分の結果だけを言う（先生の採点の正確さを生徒が評価・報告しない。
-    // 採点が合っていたかは、先生自身が答え合わせ・振り返りで模範解答をめくって確かめる）
-    beats.push(
-      `今日は ○が${okCount}問・✕が${items.length - okCount}問でした！${retryCount > 0 ? `まちがえた${retryCount}問は、次の宿題でもういちど挑戦しますね！` : 'ぜんぶばっちりです！'}`
-    )
     pushBeats(beats)
   }
 
@@ -649,8 +645,6 @@ export default function ChatScreen() {
               {i === 0 && printItems.length > 0 && renderPrintCard(printStage === 'grading' ? (composeMode === 'return' ? 'ノートをたしかめる' : 'タップして丸付けする') : 'ノートを見る')}
             </Fragment>
           ))}
-          {/* 添削済みのプリントは「返却の瞬間」として最後にもう一度届く */}
-          {printStage === 'done' && printItems.length > 0 && chatMessages.length > 0 && renderPrintCard('今日の振り返りを見る')}
           {studentTyping && (
             <View style={[styles.bubble, styles.bubbleMana]}>
               <Image source={student.avatar} style={styles.bubbleAvatar} />
@@ -660,6 +654,9 @@ export default function ChatScreen() {
           {printStage === 'done' && !studentTyping && (
             <View style={styles.endedActions}>
               <Text style={styles.endedLabel}>今日の授業は終わりました！</Text>
+              <TouchableOpacity style={styles.reviewBtn} onPress={openNote}>
+                <Text style={styles.reviewBtnText}>今日の振り返りを見る</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.finishBtn} onPress={handleBack}>
                 <Text style={styles.finishBtnText}>ホームに戻る</Text>
               </TouchableOpacity>
