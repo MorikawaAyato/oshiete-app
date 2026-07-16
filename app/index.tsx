@@ -708,7 +708,7 @@ export default function HomeScreen() {
                       <Text style={styles.unitMapCount}>完了 {unitInfo.doneCount} / {unitInfo.units.length}</Text>
                     </View>
                     {/* 丸ノード：単元が増えても折り返して全体が一目で見える（ノートのページ送りドットと同じ文法）。
-                        色＝状態（緑=完了・橙=もう一度・白=未実施）、選択中はピンクの輪 */}
+                        色＝状態（緑=完了・橙=未完了・白=初回）、選択中はページ送りと同じ「塗り」で示す */}
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                       {unitInfo.units.map((_, i) => {
                         const st = unitInfo.statuses[i]
@@ -725,14 +725,15 @@ export default function HomeScreen() {
                           >
                             <Text style={[styles.unitNodeText,
                               st === 'done' && { color: '#059669' },
-                              st === 'tried' && { color: '#b45309' }]}>{i + 1}</Text>
+                              st === 'tried' && { color: '#b45309' },
+                              sel && { color: 'white' }]}>{i + 1}</Text>
                           </TouchableOpacity>
                         )
                       })}
                     </View>
-                    {/* 選択中の単元の詳細は1行に集約する */}
+                    {/* 選択中の単元の詳細は1行に集約する（状態語は 初回/未完了/完了 で統一） */}
                     <Text style={styles.unitDetail}>
-                      ▸ 授業{unitLabel(unitInfo.selected)}（{unitInfo.units[unitInfo.selected].size}問）・{unitInfo.statuses[unitInfo.selected] === 'done' ? '✓ 完了' : unitInfo.statuses[unitInfo.selected] === 'tried' ? 'もう一度' : 'はじめて'}
+                      ▸ 授業{unitLabel(unitInfo.selected)}（{unitInfo.units[unitInfo.selected].size}問）・{unitInfo.statuses[unitInfo.selected] === 'done' ? '完了' : unitInfo.statuses[unitInfo.selected] === 'tried' ? '未完了' : '初回'}
                     </Text>
                   </View>
                 )}
@@ -1266,7 +1267,7 @@ const styles = StyleSheet.create({
   },
   unitNodeDone: { borderColor: '#a7f3d0', backgroundColor: '#ecfdf5' },
   unitNodeTried: { borderColor: '#fde68a', backgroundColor: '#fffbeb' },
-  unitNodeSel: { borderWidth: 2, borderColor: c.primary },
+  unitNodeSel: { borderWidth: 2, borderColor: c.primaryStrong, backgroundColor: c.primaryStrong },
   unitNodeText: { fontSize: 12, fontWeight: '700', color: c.textSub },
   unitDetail: { marginTop: 7, fontSize: 11, fontWeight: '700', color: c.textSub },
 
