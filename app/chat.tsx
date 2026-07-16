@@ -290,6 +290,10 @@ export default function ChatScreen() {
     // ○✕の集計はリザルトとして報告しない（誤答は仕込みなので演出上の数字）。感情のビートだけ残す
     const beats: string[] = [...(opts?.leadBeats ?? [])]
     if (items.every((it) => it.teacherMark === true)) beats.push(student.perfectLine)
+    // 機械エコー：先生の赤ペンメモの一節をそのまま復唱する（判定はしない。「聞いていた」証拠と
+    // 自分の説明への再露出だけを作る。AIコールなし・定型文に原文を埋めるだけ）
+    const echoMemo = items.find((it) => it.redPen?.trim())?.redPen?.trim()
+    if (echoMemo) beats.push(student.redpenEcho.replace('{memo}', echoMemo.length > 24 ? `${echoMemo.slice(0, 24)}…` : echoMemo))
     beats.push(student.printThanks)
     pushBeats(beats)
     // お礼が届いたら振り返りを自動で開く（模範解答との見くらべは授業の必須の締め）
