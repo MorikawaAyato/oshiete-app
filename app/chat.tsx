@@ -35,6 +35,13 @@ function containsNG(text: string): boolean {
   return NG_PATTERNS.some((p) => p.test(text))
 }
 
+// 生成保険：仕込んだ「まちがい」答案が模範解答と実質同一だった場合は正解扱いに倒す
+// （言い換えレベルの近さは先生の最終判断に委ねるが、同一文をズレとして問うのは無意味なため）
+function sameAsModel(answer: string, model: string): boolean {
+  const norm = (t: string) => t.replace(/[\s　。、．，,.!！?？「」]/g, '')
+  return norm(answer) === norm(model)
+}
+
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -232,7 +239,7 @@ export default function ChatScreen() {
         question: p.card.q,
         modelAnswer: p.card.a,
         studentAnswer: res.items![i].studentAnswer,
-        truth: res.items![i].truth,
+        truth: sameAsModel(res.items![i].studentAnswer, p.card.a) ? 'correct' : res.items![i].truth,
         choices: (res.items![i].choices ?? []).slice(0, 3),
         isReview: p.isReview,
       }))
@@ -760,7 +767,7 @@ export default function ChatScreen() {
               const showModel = showAnswers || isCheck
               // 出来事の記録だけをバッジにする（先生への評価はしない）。何も起きなかったページは無印
               const reviewChip =
-                it.redPenFinal === 'relearn' ? { t: '覚え直し', bg: '#fde68a', fg: '#92400e' }
+                it.redPenFinal === 'relearn' ? { t: '復習へ', bg: '#fde68a', fg: '#92400e' }
                 : it.teacherMark !== undefined && it.finalMark !== undefined && it.teacherMark !== it.finalMark
                   ? (it.finalMark ? { t: '見直して○', bg: '#bae6fd', fg: '#075985' } : { t: '見直して✕', bg: '#fecdd3', fg: '#9f1239' })
                   : null
@@ -889,7 +896,7 @@ export default function ChatScreen() {
                           <Text style={styles.hintNote}>「先生のメモ、模範解答とちょっとちがう気がして…」</Text>
                           <View style={styles.decisionRow}>
                             <TouchableOpacity onPress={() => setRedpenDecision(page, 'relearn')} style={[styles.decisionBtn, it.redPenFinal === 'relearn' && styles.decisionBtnRelearn]}>
-                              <Text style={[styles.decisionBtnText, it.redPenFinal === 'relearn' && styles.decisionBtnTextSel]}>模範解答で覚え直す</Text>
+                              <Text style={[styles.decisionBtnText, it.redPenFinal === 'relearn' && styles.decisionBtnTextSel]}>模範解答が正しい</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={() => setRedpenDecision(page, 'ok')} style={[styles.decisionBtn, it.redPenFinal === 'ok' && styles.decisionBtnCorrect]}>
                               <Text style={[styles.decisionBtnText, it.redPenFinal === 'ok' && styles.decisionBtnTextSel]}>同じ意味だからOK</Text>
