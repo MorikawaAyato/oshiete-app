@@ -76,6 +76,9 @@ export default function HomeScreen() {
   } = useApp()
 
   const [analyzing, setAnalyzing] = useState(false)
+  // ファクトシート生成に失敗した教材のID。CTAを無限スピナーにせず再試行に切り替えるための状態
+  const [factsheetErrorIds, setFactsheetErrorIds] = useState<Set<string>>(new Set())
+  const factsheetInFlight = useRef<Set<string>>(new Set())
   const [inputMode, setInputMode] = useState<'photo' | 'text'>('photo')
   const [textInput, setTextInput] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -163,19 +166,24 @@ export default function HomeScreen() {
           const units = splitUnits(cards.length)
           const statuses = await getUnitStatuses(hid, cards.length)
           const doneCount = units.filter((_, i) => statuses[i] === 'done').length
+          // 差出人はテストを受けた生徒（entryに記録済み）。selectedStudentId はこの時点で
+          // まだAsyncStorageから読み込まれていないことがあるため、フォールバックにのみ使う
+          const sender = STUDENTS.find((s) => s.id === entry.studentId) ?? student
           if (units.length > 0 && doneCount === units.length) {
             map[hid] = { ...entry, doneAt: Date.now() }
             await bumpExamSuccessCount()
-            mails.push(examMailFor(student, item, 'full', '', entry.round))
+            mails.push(examMailFor(sender, item, 'full', '', entry.round))
           } else {
             const next = makeExamEntry(Math.max(1, units.length - doneCount), entry.round + 1, entry.studentId)
             map[hid] = next
-            mails.push(examMailFor(student, item, doneCount === 0 ? 'none' : 'partial', examDateLabel(next.date), next.round))
+            mails.push(examMailFor(sender, item, doneCount === 0 ? 'none' : 'partial', examDateLabel(next.date), next.round))
           }
           changed = true
         }
-        if (changed) await saveExamDays(map)
+        // メールを届けてから処理済みを保存する。逆順だと途中終了で結果メールが永久に消える
+        // （この順なら最悪でも重複して届くだけで、行き止まりにならない）
         for (const m of mails) await addMail(m)
+        if (changed) await saveExamDays(map)
         if (mails.length > 0) setMailMessages(await loadMail())
         setExamDays(await loadExamDays())
         setExamSuccess(await loadExamSuccessCount())
@@ -291,14 +299,24 @@ export default function HomeScreen() {
 
   // ファクトシートをバックグラウンド生成して履歴に保存（失敗しても授業は劣化動作で成立する）
   const backgroundFetchFactsheet = async (desc: string, notesText: string, histId: string) => {
+    // 同じ教材への多重生成を防ぐ（並行生成はカード枚数の揺れで単元進度の count 不一致リセットを招く）
+    if (factsheetInFlight.current.has(histId)) return
+    factsheetInFlight.current.add(histId)
+    setFactsheetErrorIds((prev) => {
+      if (!prev.has(histId)) return prev
+      const next = new Set(prev)
+      next.delete(histId)
+      return next
+    })
     try {
       const res = await fetchFactsheet(desc, notesText)
+      // サーバは生成不能でも200+factsheetなし/カード0で返すことがある。その場合も失敗としてCTAの再試行に回す
+      const cardCount = res.factsheet?.cards?.length ?? 0
       if (res.factsheet) {
         await updateHistoryFactsheet(histId, res.factsheet)
         const items = await loadHistory()
         setHistory(items)
         // カードバンクが揃った＝授業の予定が立つ。生徒のテストの日取りもここで決まる
-        const cardCount = res.factsheet.cards?.length ?? 0
         if (cardCount > 0) {
           const student = STUDENTS.find((s) => s.id === selectedStudentId) ?? STUDENTS[0]
           const entry = await ensureExamDay(histId, splitUnits(cardCount).length, student.id)
@@ -310,7 +328,19 @@ export default function HomeScreen() {
           }
         }
       }
-    } catch { /* ファクトシートは任意。失敗は無視 */ }
+      if (cardCount === 0) setFactsheetErrorIds((prev) => new Set(prev).add(histId))
+    } catch {
+      // 授業は劣化動作で成立するが、失敗はCTAに表示して再試行できるようにする
+      setFactsheetErrorIds((prev) => new Set(prev).add(histId))
+    } finally {
+      factsheetInFlight.current.delete(histId)
+    }
+  }
+
+  // ホームCTAからの再試行（失敗した教材のファクトシートを作り直す）
+  const retryFactsheet = () => {
+    const it = history.find((h) => h.id === currentHistoryId)
+    if (it) void backgroundFetchFactsheet(it.imageDescription, it.notes, it.id)
   }
 
   const backgroundFetchPreview = async (desc: string, histId: string) => {
@@ -392,8 +422,12 @@ export default function HomeScreen() {
       setTextInput('')
       triggerMaterialAnimation()
       void backgroundFetchFactsheet(finalDesc, finalNotes, saved.id)
-    } catch {
-      Alert.alert('エラー', '教材の読み込みに失敗しました。もう一度試してください。')
+    } catch (e) {
+      // 冒頭で先行して立てた「教材あり」状態を戻す。戻さないと履歴未保存のまま
+      // 入力UIが消え、CTAが「準備しています…」で行き止まりになる（入力テキストは残っているので作業は消えない）
+      setImageDescription('')
+      setNotes('')
+      Alert.alert('エラー', e instanceof Error ? e.message : '教材の読み込みに失敗しました。もう一度試してください。')
     } finally {
       setAnalyzing(false)
     }
@@ -452,7 +486,7 @@ export default function HomeScreen() {
       void backgroundFetchFactsheet(res.imageDescription, res.notes, saved.id)
     } catch (e) {
       console.error('analyzeFromPending error:', e)
-      Alert.alert('エラー', '教材の読み込みに失敗しました。もう一度試してください。')
+      Alert.alert('エラー', e instanceof Error ? e.message : '教材の読み込みに失敗しました。もう一度試してください。')
     } finally {
       setAnalyzing(false)
     }
@@ -470,6 +504,7 @@ export default function HomeScreen() {
   }
 
   const selectHistory = (item: HistoryItem) => {
+    if (analyzing) return // 教材の読み込み中は選択を切り替えない（解析完了時の後勝ち上書きを防ぐ）
     if (activeHistoryId === item.id) return
     setPendingImages([])
     resetChatSession()
@@ -842,11 +877,16 @@ export default function HomeScreen() {
                 )}
 
                 {/* CTAはカードの内側：このカード一式＝授業のしごと、という単位にする。
-                    カードバンク生成中（unitInfoなし）は授業を始められないので押せない */}
+                    カードバンク生成中（unitInfoなし）は授業を始められないので押せない。
+                    生成失敗時はスピナーのまま待たせず、CTA自体を再試行ボタンに切り替える */}
+                {(() => {
+                  const factsheetFailed = !unitInfo && !!currentHistoryId && factsheetErrorIds.has(currentHistoryId)
+                  return (
                 <BouncyPressable
-                  style={[styles.startBtn, (!selectedStudentId || !unitInfo) && styles.startBtnDisabled]}
-                  disabled={!unitInfo}
+                  style={[styles.startBtn, (!selectedStudentId || (!unitInfo && !factsheetFailed)) && styles.startBtnDisabled, factsheetFailed && { backgroundColor: '#f59e0b' }]}
+                  disabled={!unitInfo && !factsheetFailed}
                   onPress={() => {
+                    if (factsheetFailed) { retryFactsheet(); return }
                     if (!unitInfo) return
                     if (!selectedStudentId) { showToast(); return }
                     // 選択中の単元を授業画面へ引き継ぐ
@@ -855,7 +895,9 @@ export default function HomeScreen() {
                   }}
                   haptic="medium"
                 >
-                  {!unitInfo ? (
+                  {factsheetFailed ? (
+                    <Text style={styles.startBtnText}>準備に失敗しました。もう一度準備する</Text>
+                  ) : !unitInfo ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <ActivityIndicator color={c.primary} size="small" />
                       <Text style={[styles.startBtnText, styles.startBtnTextDisabled]}>授業を準備しています…</Text>
@@ -869,6 +911,8 @@ export default function HomeScreen() {
                     <Text style={[styles.startBtnText, styles.startBtnTextDisabled]}>生徒を選んでからスタート →</Text>
                   )}
                 </BouncyPressable>
+                  )
+                })()}
               </View>
             </Animated.View>
           )}
@@ -880,12 +924,12 @@ export default function HomeScreen() {
           const pendingCount = history.flatMap((h) => h.factsheet?.cards ?? []).filter((cd) => drillPendingKeys.has(cd.statement.replace(/[\s　]/g, ''))).length
           return (
             <View style={styles.quickRow}>
-              <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/library')} activeOpacity={0.8}>
+              <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/library')} activeOpacity={0.8} disabled={analyzing}>
                 <Ionicons name="book-outline" size={15} color={c.sky} />
                 <Text style={styles.jobTitle} numberOfLines={1}>教材を確認する</Text>
                 <View style={[styles.jobBadge, { backgroundColor: c.skyBg }]}><Text style={[styles.jobBadgeText, { color: c.link }]}>{history.length}冊</Text></View>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/training')} activeOpacity={0.8}>
+              <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/training')} activeOpacity={0.8} disabled={analyzing}>
                 <Ionicons name="school-outline" size={15} color="#d97706" />
                 <Text style={styles.jobTitle} numberOfLines={1}>研修を受ける</Text>
                 {pendingCount > 0 && (
@@ -944,7 +988,7 @@ export default function HomeScreen() {
                 )
               })}
               {history.length > 3 && (
-                <TouchableOpacity style={styles.seeAllBtn} onPress={() => router.push('/library')}>
+                <TouchableOpacity style={styles.seeAllBtn} onPress={() => router.push('/library')} disabled={analyzing}>
                   <Text style={styles.seeAllText}>他 {history.length - 3} 件を見る →</Text>
                 </TouchableOpacity>
               )}
