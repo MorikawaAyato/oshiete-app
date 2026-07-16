@@ -27,8 +27,6 @@ export default function PreviewScreen() {
   // 選択中の教材とは独立させ、選択は「この教材を選択する」でのみ行う
   const viewId = typeof id === 'string' && id ? id : currentHistoryId
   const [step, setStep] = useState(0)
-  const [revealed, setRevealed] = useState<Set<string>>(new Set())
-  const [hiddenMode, setHiddenMode] = useState(false)
 
   // バンク描画ビュー：一問一答バンク（v3: sections付き）がある教材はカードから機械描画する。
   // 表示＝台帳そのものなので、✎でカードを直せばこの画面も判定も一斉に変わる（旧プレビューはフォールバック）
@@ -124,35 +122,9 @@ export default function PreviewScreen() {
   const isFirst = step === 0
   const isLast = step === totalSteps - 1
 
-  const toggleReveal = (key: string) => {
-    setRevealed((prev) => {
-      const next = new Set(prev)
-      next.has(key) ? next.delete(key) : next.add(key)
-      return next
-    })
-  }
-
-  // キーワード隠し: [word] ブラケット記法をパースしてインライン要素を返す
-  const buildTextNodes = (raw: string, lineIdx: number): React.ReactNode => {
-    if (!hiddenMode) return raw.replace(/\[([^\]]+)\]/g, '$1')
-    const bracketPat = /\[([^\]]+)\]/g
-    const parts: React.ReactNode[] = []
-    let last = 0; let ki = 0; let m: RegExpExecArray | null
-    while ((m = bracketPat.exec(raw)) !== null) {
-      if (m.index > last) parts.push(<Text key={last}>{raw.slice(last, m.index)}</Text>)
-      const key = `${lineIdx}-${ki++}`
-      const isRev = revealed.has(key)
-      parts.push(
-        <Text key={key} onPress={() => toggleReveal(key)}
-          style={[styles.keyword, isRev ? styles.keywordRevealed : styles.keywordHidden]}>
-          {m[1]}
-        </Text>
-      )
-      last = m.index + m[0].length
-    }
-    if (last < raw.length) parts.push(<Text key={last}>{raw.slice(last)}</Text>)
-    return parts.length > 0 ? parts : raw
-  }
+  // キーワード隠し（隠して覚える）は廃止：想起の練習は研修に一本化し、教材は読む・調べるに徹する。
+  // [word] ブラケット記法は素の語として表示する
+  const buildTextNodes = (raw: string, _lineIdx: number): React.ReactNode => raw.replace(/\[([^\]]+)\]/g, '$1')
 
   const renderDetailText = (raw: string, _keywords: string[], lineIdx: number) => (
     <Text style={styles.detailText}>{buildTextNodes(raw, lineIdx)}</Text>
@@ -160,7 +132,6 @@ export default function PreviewScreen() {
 
   let content: React.ReactNode
   const currentSection: Section | null = !bankSections && step >= 2 ? doc!.sections[step - 2] : null
-  const showHiddenToggle = bankSections ? step >= 2 : !!currentSection && currentSection.keywords.length > 0
 
   if (bankSections && bankFs?.cards) {
     const cards = bankFs.cards
@@ -211,21 +182,7 @@ export default function PreviewScreen() {
           )}
           <View style={styles.detailsBox}>
             {rows.map(({ cd, gi }, j) =>
-              hiddenMode ? (
-                // 覚えるモード：問いを見て、答えをタップで確認
-                <View key={gi} style={styles.bankRow}>
-                  <Text style={styles.bankNum}>{j + 1}.</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.bankQ}>{cd.q}</Text>
-                    <TouchableOpacity
-                      onPress={() => toggleReveal(`c${gi}`)}
-                      style={[styles.bankA, revealed.has(`c${gi}`) ? styles.bankARevealed : styles.bankAHidden]}
-                    >
-                      <Text style={[styles.bankAText, !revealed.has(`c${gi}`) && styles.bankATextHidden]}>{cd.a}</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : editingCardIdx === gi ? (
+              editingCardIdx === gi ? (
                 <View key={gi} style={styles.editWrap}>
                   <Text style={styles.bankQ}>{cd.q}</Text>
                   <TextInput value={editCardValue} onChangeText={setEditCardValue} multiline autoFocus style={styles.editInput} />
@@ -260,7 +217,6 @@ export default function PreviewScreen() {
               ),
             )}
           </View>
-          {hiddenMode && <Text style={styles.revealHint}>こたえをタップして確認</Text>}
           <View style={{ height: 16 }} />
         </ScrollView>
       )
@@ -360,14 +316,11 @@ export default function PreviewScreen() {
 
         <View style={styles.keywordsRow}>
           {section.keywords.map((kw, i) => (
-            <View key={i} style={[styles.kwBadge, hiddenMode && styles.kwBadgeHidden]}>
-              <Text style={[styles.kwText, hiddenMode && styles.kwTextHidden]}>{kw}</Text>
+            <View key={i} style={styles.kwBadge}>
+              <Text style={styles.kwText}>{kw}</Text>
             </View>
           ))}
         </View>
-        {hiddenMode && (
-          <Text style={styles.revealHint}>キーワードをタップして確認</Text>
-        )}
         <View style={{ height: 16 }} />
       </ScrollView>
     )
@@ -395,32 +348,21 @@ export default function PreviewScreen() {
           </View>
         )}
 
-        {/* 前へ / 隠して覚える / 次へ */}
+        {/* 前へ / 次へ（「隠して覚える」は廃止：想起の練習は研修に一本化） */}
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.navBtn, isFirst && styles.navBtnDisabled]}
-            onPress={() => { setStep(step - 1); setRevealed(new Set()) }}
+            onPress={() => setStep(step - 1)}
             disabled={isFirst}
           >
             <Text style={[styles.navBtnText, isFirst && styles.navBtnTextDisabled]}>← 前へ</Text>
           </TouchableOpacity>
 
-          {showHiddenToggle ? (
-            <TouchableOpacity
-              style={[styles.hiddenPill, hiddenMode && styles.hiddenPillOn]}
-              onPress={() => { setHiddenMode(!hiddenMode); setRevealed(new Set()) }}
-            >
-              <Text style={[styles.hiddenPillText, hiddenMode && styles.hiddenPillTextOn]}>
-                {bankSections ? (hiddenMode ? '読む' : '覚える') : (hiddenMode ? '表示' : '隠す')}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.hiddenPillSpace} />
-          )}
+          <View style={styles.hiddenPillSpace} />
 
           <TouchableOpacity
             style={[styles.navBtn, styles.navBtnNext, isLast && styles.navBtnDisabled]}
-            onPress={() => { setStep(step + 1); setRevealed(new Set()) }}
+            onPress={() => setStep(step + 1)}
             disabled={isLast}
           >
             <Text style={[styles.navBtnText, styles.navBtnTextNext, isLast && styles.navBtnTextDisabled]}>
@@ -537,16 +479,10 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', gap: 6 },
   detailBullet: { fontSize: 13, color: c.faint, marginTop: 1 },
   detailText: { flex: 1, fontSize: 13, color: c.text, lineHeight: 21 },
-  keyword: { fontWeight: '600', borderRadius: 3, overflow: 'hidden' },
-  keywordRevealed: { backgroundColor: c.pinkSoft, color: c.primaryStrong },
-  keywordHidden: { backgroundColor: c.border, color: c.border },
 
   keywordsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
   kwBadge: { backgroundColor: c.skyTint, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  kwBadgeHidden: { backgroundColor: c.border },
   kwText: { fontSize: 11, fontWeight: '600', color: c.link },
-  kwTextHidden: { color: c.border },
-  revealHint: { fontSize: 11, color: c.textSub, marginBottom: 4 },
 
   // バンク描画ビュー用
   preparingText: { fontSize: 13, color: c.textSub, textAlign: 'center', lineHeight: 20 },
@@ -558,11 +494,6 @@ const styles = StyleSheet.create({
   correctedTag: { fontSize: 10, color: '#fb7185' },
   undoLink: { fontSize: 10, color: c.textSub, textDecorationLine: 'underline' },
   bankQ: { fontSize: 13, color: c.text, lineHeight: 20, fontWeight: '600' },
-  bankA: { marginTop: 6, borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 7, alignSelf: 'flex-start' },
-  bankARevealed: { borderColor: c.pinkBorder, backgroundColor: c.pinkTint },
-  bankAHidden: { borderColor: c.border, backgroundColor: c.border },
-  bankAText: { fontSize: 13, color: c.text, lineHeight: 19 },
-  bankATextHidden: { color: c.border },
   bankEditBtn: { paddingHorizontal: 4, marginTop: 1 },
   bankEditBtnText: { fontSize: 14, color: c.faint },
   editWrap: { gap: 6, borderWidth: 1, borderColor: c.pinkBorder, borderRadius: 10, padding: 10, backgroundColor: c.bg },
@@ -576,14 +507,6 @@ const styles = StyleSheet.create({
   principalToast: { position: 'absolute', bottom: 130, alignSelf: 'center', backgroundColor: '#1e293b', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10 },
   principalToastText: { color: 'white', fontSize: 13, fontWeight: '600' },
 
-  hiddenPill: {
-    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12,
-    borderWidth: 1.5, borderColor: c.pinkBorder, backgroundColor: c.pinkSoft,
-    alignItems: 'center', justifyContent: 'center', minWidth: 72,
-  },
-  hiddenPillOn: { borderColor: c.primaryStrong, backgroundColor: c.primaryStrong },
-  hiddenPillText: { fontSize: 13, fontWeight: '700', color: c.primaryStrong },
-  hiddenPillTextOn: { color: 'white' },
   hiddenPillSpace: { minWidth: 56 },
 
   startClassBtn: {

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useApp } from '@/lib/AppContext'
 import { TEACHER_TITLES, getUnlockedTitleCount } from '@/lib/teacherProfile'
-import { loadHistory, loadDrillPending, saveDrillPending } from '@/lib/storage'
+import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, splitUnits, getUnitStatuses } from '@/lib/storage'
 import { gradeExam } from '@/lib/api'
 import type { HistoryItem, QACard } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
@@ -69,10 +69,22 @@ export default function TrainingScreen() {
 
   // 「まだ」のカードキー集合。残数バッジと校長のセリフに使う（markDrillで更新）
   const [drillPendingKeys, setDrillPendingKeys] = useState<Set<string>>(new Set())
+  // 完了済みの単元があるか（校長の「みがき直し」の口上に使う）
+  const [hasDoneUnits, setHasDoneUnits] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
-      loadHistory().then(setHistory)
+      loadHistory().then(async (items) => {
+        setHistory(items)
+        let done = false
+        for (const h of items) {
+          const cards = h.factsheet?.cards ?? []
+          if (cards.length === 0) continue
+          const statuses = await getUnitStatuses(h.id, cards.length)
+          if (splitUnits(cards.length).some((_, i) => statuses[i] === 'done')) { done = true; break }
+        }
+        setHasDoneUnits(done)
+      })
       void loadDrillPending().then(setDrillPendingKeys)
     }, [])
   )
@@ -91,13 +103,33 @@ export default function TrainingScreen() {
       ? history.flatMap((h) => h.factsheet?.cards ?? [])
       : history.find((h) => h.id === materialId)?.factsheet?.cards ?? []
 
+  // 完了済み単元のカードキー集合（研修の「わすれ防止」出題の対象）
+  const collectDoneUnitKeys = async (): Promise<Set<string>> => {
+    const keys = new Set<string>()
+    for (const h of history) {
+      const cards = h.factsheet?.cards ?? []
+      if (cards.length === 0) continue
+      const statuses = await getUnitStatuses(h.id, cards.length)
+      splitUnits(cards.length).forEach((u, i) => {
+        if (statuses[i] !== 'done') return
+        for (let k = u.start; k < u.start + u.size; k++) keys.add(drillKey(cards[k]))
+      })
+    }
+    return keys
+  }
+
+  // 研修＝練習場：授業前のならしにも、完了後のわすれ防止にも同じ入口で応える。
+  // 出題優先度は ①「まだ」 ②完了済み単元のカードを触れてから古い順（間隔反復） ③残りシャッフル
   const startDrill = async (materialId: string) => {
     const pool = drillPool(materialId)
     if (pool.length === 0) return
-    const pending = await loadDrillPending()
+    const [pending, progress, doneKeys] = await Promise.all([loadDrillPending(), loadCardProgress(), collectDoneUnitKeys()])
     const pendingCards = shuffleCards(pool.filter((cd) => pending.has(drillKey(cd))))
-    const restCards = shuffleCards(pool.filter((cd) => !pending.has(drillKey(cd))))
-    setDrillCards([...pendingCards, ...restCards].slice(0, DRILL_SESSION_SIZE))
+    const maintainCards = pool
+      .filter((cd) => !pending.has(drillKey(cd)) && doneKeys.has(drillKey(cd)))
+      .sort((a, b) => (progress[drillKey(a)]?.lastAt ?? 0) - (progress[drillKey(b)]?.lastAt ?? 0))
+    const restCards = shuffleCards(pool.filter((cd) => !pending.has(drillKey(cd)) && !doneKeys.has(drillKey(cd))))
+    setDrillCards([...pendingCards, ...maintainCards, ...restCards].slice(0, DRILL_SESSION_SIZE))
     setDrillIdx(0)
     setDrillRevealed(false)
     setDrillOkCount(0)
@@ -188,6 +220,8 @@ export default function TrainingScreen() {
       ? `${teacherCall}、よく来たね。だが研修はまだ早い。まずは教材を取り込んで、生徒に授業をしてきなさい。話はそれからだ。`
       : allPending > 0
       ? `${teacherCall}、よく来たね。「まだ」のカードが${allPending}枚残っておるぞ。逃げずに、一枚ずつ潰していきなさい。`
+      : hasDoneUnits
+      ? `${teacherCall}、よく来たね。教えた知識も、時間がたてばさびる。完了した授業のカードをめくって、みがき直しておきなさい。`
       : canExam
       ? `${teacherCall}、よく来たね。研修は嘘をつかん。研修で鍛えたら、次の昇進試験に挑みなさい。待っておるぞ。`
       : `${teacherCall}、よく来たね。教えるとは、二度学ぶことだ。カードをめくって、教えの引き出しを増やしなさい。`
@@ -239,7 +273,7 @@ export default function TrainingScreen() {
                   </View>
                 )}
               </View>
-              <Text style={styles.sectionDesc}>何度でも・自己採点・3分から。カードをめくって自分の言葉で答え、「おぼえた／まだ」をつけていきます。「まだ」のカードは次回優先で出ます。</Text>
+              <Text style={styles.sectionDesc}>授業の前のならしにも、おわった授業のわすれ防止にも。カードをめくって自分の言葉で答え、「おぼえた／まだ」をつけていきます。「まだ」のカードと、完了した授業のしばらく触れていないカードが優先で出ます。</Text>
               {allCards.length === 0 ? (
                 <Text style={styles.emptyText}>教材を取り込むと、その内容からカードが用意されます</Text>
               ) : (
