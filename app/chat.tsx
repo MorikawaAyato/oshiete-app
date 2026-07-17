@@ -323,7 +323,7 @@ export default function ChatScreen() {
 
   // 下書きは入力欄には入れず、プレースホルダーとして見せる（空のまま送信＝下書きが届く／書けば自分の言葉）。
   // 用途が切り替わったら入力欄を空にする
-  const composeDraft = composeMode === 'return' ? 'まるつけできたよ。ノート、返すね！' : null
+  const composeDraft = composeMode === 'return' ? '丸付けできたよ。ノート、返すね！' : null
   const prevComposeRef = useRef<string | null>(null)
   useEffect(() => {
     if (composeMode === prevComposeRef.current) return
@@ -429,7 +429,7 @@ export default function ChatScreen() {
   const handleBack = () => {
     if (chatMessages.length > 0 && printStage !== 'done') {
       Alert.alert(
-        '授業をとちゅうでやめますか？',
+        '授業を途中でやめますか？',
         'やめると、このノートの丸付けはリセットされます。',
         [
           { text: 'キャンセル', style: 'cancel' },
@@ -574,7 +574,7 @@ export default function ChatScreen() {
               </View>
               {/* プリントカードは「提出の瞬間」の位置に固定（毎回チャットの後ろに現れて目線を奪わない）。
                   以後のアクセスは共有ドックが受け持つ */}
-              {i === 0 && printItems.length > 0 && renderPrintCard(printStage === 'grading' ? (composeMode === 'return' ? 'ノートをたしかめる' : 'タップして丸付けする') : 'ノートを見る')}
+              {i === 0 && printItems.length > 0 && renderPrintCard(printStage === 'grading' ? (composeMode === 'return' ? 'ノートを確かめる' : 'タップして丸付けする') : 'ノートを見る')}
             </Fragment>
           ))}
           {studentTyping && (
@@ -585,9 +585,9 @@ export default function ChatScreen() {
           )}
           {printStage === 'done' && !studentTyping && (
             <View style={styles.endedActions}>
-              <Text style={styles.endedLabel}>{unitDecided ? '今日の授業は終わりました！' : 'さいごに振り返りをして、授業をしめくくろう'}</Text>
+              <Text style={styles.endedLabel}>{unitDecided ? '今日の授業は終了しました' : '最後に振り返りをして、授業を締めくくりましょう'}</Text>
               <TouchableOpacity style={styles.reviewBtn} onPress={openNote}>
-                <Text style={styles.reviewBtnText}>{unitDecided ? '今日の振り返りを見る' : '振り返りをひらく'}</Text>
+                <Text style={styles.reviewBtnText}>{unitDecided ? '今日の振り返りを見る' : '振り返りを開く'}</Text>
               </TouchableOpacity>
               {unitDecided && (
                 <TouchableOpacity style={styles.finishBtn} onPress={handleBack}>
@@ -608,12 +608,12 @@ export default function ChatScreen() {
                 const placeholder = studentTyping
                   ? `${student.name}が書いています…`
                   : composeMode === 'rally'
-                    ? (composerAsk ? '教えてあげよう…' : 'ノートを返しています…')
+                    ? (composerAsk ? '自分の言葉で教える…' : 'ノートを返しています…')
                     : composeMode === 'return'
                       ? (composeDraft ?? '')
-                      : 'ノートの丸付けがおわったら返せるよ'
+                      : '丸付けが終わると返却できます'
                 const guide = !studentTyping && composeMode === 'return'
-                  ? 'そのまま送信でこの言葉が届くよ。書けば自分の言葉になるよ'
+                  ? 'そのまま送信するとこの下書きが届きます。書き直せば自分の言葉で返せます'
                   : null
                 const handleSend = () => { if (composeMode === 'rally') sendRedpenChat(); else sendTeacherLine() }
                 return (
@@ -735,7 +735,7 @@ export default function ChatScreen() {
                     )}
                     {showAnswers && (
                       <Text style={styles.notebookGradeHint}>
-                        自分の採点・メモを、赤い<Text style={styles.modelAnswerWord}>模範解答</Text>と見くらべて振り返ろう。
+                        自分の採点とメモを、赤い<Text style={styles.modelAnswerWord}>模範解答</Text>と見くらべて振り返ります。
                       </Text>
                     )}
                     <View style={[styles.notebookPaper, { marginBottom: 12 }]}>
@@ -780,14 +780,14 @@ export default function ChatScreen() {
                     {isGrading ? (
                       <BouncyPressable onPress={() => { if (allMarked) setShowPrint(false) }} style={[styles.returnBtn, !allMarked && styles.returnBtnDisabled]} haptic="success">
                         <Text style={[styles.gradeBtnText, !allMarked && styles.gradeBtnTextDisabled]}>
-                          {allMarked ? '丸付けおわり！チャットで返す' : <>すべての問題に <Text style={styles.gradeMarkO}>○</Text> か <Text style={styles.gradeMarkX}>✕</Text> をつけてね</>}
+                          {allMarked ? '丸付け完了。チャットで返却する' : <>すべての問題に <Text style={styles.gradeMarkO}>○</Text> か <Text style={styles.gradeMarkX}>✕</Text> をつけると返却できます</>}
                         </Text>
                       </BouncyPressable>
                     ) : deciding ? (
                       allSeen ? (
                         <View style={{ gap: 8 }}>
                           {/* 単元を完了にするかどうかは先生の判断（アプリは事実だけ見せて、結論は言わない） */}
-                          <Text style={styles.decideHint}>見なおしたら、先生としてこの授業をどうするか決めよう</Text>
+                          <Text style={styles.decideHint}>見直しが済んだら、この授業をどう締めくくるか決めてください</Text>
                           <View style={styles.decisionRow}>
                             <TouchableOpacity onPress={() => decideUnit(false)} style={styles.decisionBtn}>
                               <Text style={styles.decisionBtnText}>また今度もう一度</Text>
@@ -800,7 +800,7 @@ export default function ChatScreen() {
                       ) : (
                         <View style={{ gap: 8 }}>
                           {/* 全ページを見てから完了を判断する。未読がある間はフッター自体がナビになる */}
-                          <Text style={styles.decideHint}>ぜんぶのページを見なおしてから、しめくくりを決めよう</Text>
+                          <Text style={styles.decideHint}>すべてのページを見直すと、締めくくりを選べます</Text>
                           <BouncyPressable
                             onPress={() => {
                               const after = printItems.findIndex((_, k) => k > page && !seenPages.has(k))

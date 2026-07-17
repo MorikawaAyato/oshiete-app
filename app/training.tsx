@@ -225,7 +225,7 @@ export default function TrainingScreen() {
                   )}
                 </View>
               </View>
-              <Text style={styles.sectionDesc}>授業の前のならしにも、おわった授業のわすれ防止にも。カードをめくって自分の言葉で答え、「おぼえた／まだ」をつけていきます。「まだ」のカードと、完了した授業のしばらく触れていないカードが優先で出ます。</Text>
+              <Text style={styles.sectionDesc}>授業前の準備にも、終えた授業の忘れ防止にも。カードをめくって自分の言葉で答え、「覚えた／まだ」を付けていきます。「まだ」のカードと、完了した授業のしばらく触れていないカードが優先して出ます。</Text>
               {allCards.length === 0 ? (
                 <Text style={styles.emptyText}>教材を取り込むと、その内容からカードが用意されます</Text>
               ) : (
@@ -254,7 +254,7 @@ export default function TrainingScreen() {
                     style={styles.primaryBtn}
                     onPress={() => void startDrill(drillMaterialId === 'all' || materialsWithCards.some((h) => h.id === drillMaterialId) ? drillMaterialId : 'all')}
                   >
-                    <Text style={styles.primaryBtnText}>研修をはじめる（最大{DRILL_SESSION_SIZE}問）</Text>
+                    <Text style={styles.primaryBtnText}>研修を始める（最大{DRILL_SESSION_SIZE}問）</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -263,8 +263,8 @@ export default function TrainingScreen() {
         ) : drillDone ? (
           <>
             <View style={[styles.card, { alignItems: 'center' }]}>
-              <Text style={styles.doneTitle}>{drillOkCount === drillCards.length ? '全部おぼえた！' : 'おつかれさま！'}</Text>
-              <Text style={styles.doneScore}>{drillOkCount} / {drillCards.length} 枚おぼえた</Text>
+              <Text style={styles.doneTitle}>{drillOkCount === drillCards.length ? '全部覚えた！' : 'おつかれさまでした'}</Text>
+              <Text style={styles.doneScore}>{drillOkCount} / {drillCards.length} 枚覚えた</Text>
               <View style={styles.heroRow}>
                 <Image source={PRINCIPAL_IMAGE} style={styles.principalAvatarSmall} />
                 <Text style={styles.principalComment}>
@@ -277,7 +277,7 @@ export default function TrainingScreen() {
                 <Text style={styles.primaryBtnText}>もう一回</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryBtn} onPress={exitDrill}>
-                <Text style={styles.secondaryBtnText}>おわる</Text>
+                <Text style={styles.secondaryBtnText}>終わる</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -302,7 +302,7 @@ export default function TrainingScreen() {
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TouchableOpacity style={[styles.markBtn, styles.markBtnRow, { backgroundColor: '#10b981' }]} onPress={() => void markDrill(true)}>
                   <Feather name="check" size={16} color="#fff" />
-                  <Text style={styles.primaryBtnText}>おぼえた</Text>
+                  <Text style={styles.primaryBtnText}>覚えた</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.markBtn, styles.markBtnRow, { backgroundColor: '#fb7185' }]} onPress={() => void markDrill(false)}>
                   <Feather name="rotate-ccw" size={16} color="#fff" />

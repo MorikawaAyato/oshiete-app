@@ -268,7 +268,7 @@ const WELCOME_MAIL: MailMessage = {
   type: 'notice',
   from: 'オシエテ先生',
   subject: 'ようこそ、オシエテ先生へ！',
-  content: '生徒を選んで、はじめての授業を始めてみましょう ✨',
+  content: '生徒を選んで、最初の授業を始めましょう',
   timestamp: new Date(0).toISOString(),
   read: false,
 }

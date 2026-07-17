@@ -77,7 +77,7 @@ export default function SignIn() {
             'Clerkダッシュボードで Password 等の必須設定をオフにしてください。',
         )
       } else if (err.errors?.[0]?.code === 'form_code_incorrect') {
-        setError('コードがちがうようです。メールに届いた最新のコードを入力してください。')
+        setError('確認コードが一致しません。最新のコードを入力してください。')
       } else {
         setError(err.errors?.[0]?.longMessage ?? 'ログインを完了できませんでした。もう一度試してください。')
       }
@@ -91,14 +91,14 @@ export default function SignIn() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <View style={styles.container}>
           <Text style={styles.title}>オシエテ先生</Text>
-          <Text style={styles.subtitle}>教えるとおぼえる、せんせいごっこ。</Text>
+          <Text style={styles.subtitle}>教えると、おぼえる。</Text>
 
           <View style={styles.card}>
             {step === 'email' ? (
               <>
                 <Text style={styles.cardTitle}>ログインして始める</Text>
                 <Text style={styles.cardDesc}>
-                  メールアドレスに確認コードを送ります。{'\n'}授業の記録を保存するために使います（おうちの人のメールでOK）
+                  メールアドレスに確認コードを送ります。{'\n'}学習の記録の保存に使用します。
                 </Text>
                 <TextInput
                   style={styles.input}

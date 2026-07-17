@@ -74,7 +74,7 @@ export default function PreviewScreen() {
       const nextFs = { ...bankFs, cards: res.cards, facts: res.facts, errata: res.errata }
       await updateHistoryFactsheet(viewId, nextFs)
       setBankFs(nextFs)
-      setPrincipalToast('校長先生に伝えました。教材に反映しておきますね')
+      setPrincipalToast('訂正を教材に反映しました')
       setTimeout(() => setPrincipalToast(null), 3200)
     }
   }
@@ -141,7 +141,7 @@ export default function PreviewScreen() {
           <Text style={styles.stepLabel}>この教材のテーマ</Text>
           <Text style={styles.themeText}>{materialTitle}</Text>
           <Text style={styles.bankMeta}>{bankSections.length}つのまとまり・{cards.length}個のポイント</Text>
-          <Text style={styles.hint}>次へ進んで全体の概要を確認しよう →</Text>
+          <Text style={styles.hint}>次のページで全体の概要を確認できます →</Text>
         </View>
       )
     } else if (step === 1) {
@@ -226,7 +226,7 @@ export default function PreviewScreen() {
       <View style={styles.centerContent}>
         <Text style={styles.stepLabel}>この教材のテーマ</Text>
         <Text style={styles.themeText}>{doc!.theme}</Text>
-        <Text style={styles.hint}>次へ進んで各項目の詳細を確認しよう →</Text>
+        <Text style={styles.hint}>次のページで各項目の詳細を確認できます →</Text>
       </View>
     )
   } else if (step === 1) {

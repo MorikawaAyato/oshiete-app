@@ -661,7 +661,7 @@ export default function HomeScreen() {
           {/* ゾーン見出しは常時表示（アップロード前でもしごとゾーンの物語を保つ）。
               ＋教材を作るリンクは教材選択後のみ（選択前はアップロードUI自体が"作る"） */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>今日のお仕事</Text>
+            <Text style={styles.sectionTitle}>今日の仕事</Text>
             {hasContent && (
               <TouchableOpacity onPress={clearSelection}>
                 <Text style={styles.sectionClear}>＋ 教材を作る</Text>
@@ -829,7 +829,7 @@ export default function HomeScreen() {
                 {!unitInfo && (
                   <View style={styles.unitMap}>
                     <View style={styles.unitMapHeader}>
-                      <Text style={styles.unitMapEyebrow}>授業をえらぶ</Text>
+                      <Text style={styles.unitMapEyebrow}>授業を選ぶ</Text>
                     </View>
                     {/* 準備中の案内文はボタン側が担うので、ここは場所を確保する点線ノードだけ */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -841,7 +841,7 @@ export default function HomeScreen() {
                 {unitInfo && (
                   <View style={styles.unitMap}>
                     <View style={styles.unitMapHeader}>
-                      <Text style={styles.unitMapEyebrow}>授業をえらぶ</Text>
+                      <Text style={styles.unitMapEyebrow}>授業を選ぶ</Text>
                       <Text style={styles.unitMapCount}>完了 {unitInfo.doneCount} / {unitInfo.units.length}</Text>
                     </View>
                     {/* 丸ノード：単元が増えても折り返して全体が一目で見える（ノートのページ送りドットと同じ文法）。
@@ -909,7 +909,7 @@ export default function HomeScreen() {
                   haptic="medium"
                 >
                   {factsheetFailed ? (
-                    <Text style={styles.startBtnText}>準備に失敗しました。もう一度準備する</Text>
+                    <Text style={styles.startBtnText}>教材の準備に失敗しました。もう一度試す</Text>
                   ) : !unitInfo ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <ActivityIndicator color={c.primary} size="small" />
@@ -921,7 +921,7 @@ export default function HomeScreen() {
                       <Text style={styles.startBtnText}>{unitInfo.units.length > 1 ? `授業${unitLabel(unitInfo.selected)}をする` : '授業をする'}</Text>
                     </View>
                   ) : (
-                    <Text style={[styles.startBtnText, styles.startBtnTextDisabled]}>生徒を選んでからスタート →</Text>
+                    <Text style={[styles.startBtnText, styles.startBtnTextDisabled]}>生徒を選ぶと始められます</Text>
                   )}
                 </BouncyPressable>
                   )
@@ -931,7 +931,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* しごとカード：「今日のお仕事」ゾーンの続き。動詞タイトル＋行き先サブ＋状態バッジで自己紹介する
+        {/* しごとカード：「今日の仕事」ゾーンの続き。動詞タイトル＋行き先サブ＋状態バッジで自己紹介する
             （並びはタブ順＝教材が左・研修が右） */}
         {history.length > 0 && (() => {
           const pendingCount = history.flatMap((h) => h.factsheet?.cards ?? []).filter((cd) => drillPendingKeys.has(cd.statement.replace(/[\s　]/g, ''))).length
@@ -961,7 +961,7 @@ export default function HomeScreen() {
           </View>
 
           {history.length === 0 ? (
-            <Text style={styles.recentEmpty}>教材をアップロードすると履歴が表示されます</Text>
+            <Text style={styles.recentEmpty}>取り込んだ教材がここに並びます</Text>
           ) : (
             <View style={{ gap: 10 }}>
               {history.slice(0, 3).map((item) => {
@@ -1174,7 +1174,7 @@ export default function HomeScreen() {
                           style={[styles.inboxOpenBtn, styles.inboxOpenBtnRow]}
                         >
                           <Feather name="book-open" size={14} color="#fff" />
-                          <Text style={styles.inboxOpenBtnText}>この教材をひらいて教えてあげる</Text>
+                          <Text style={styles.inboxOpenBtnText}>この教材を開いて教える</Text>
                         </TouchableOpacity>
                       )}
                     </View>
