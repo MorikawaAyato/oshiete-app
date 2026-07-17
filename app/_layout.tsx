@@ -6,6 +6,8 @@ import { useFonts, ZenMaruGothic_700Bold, ZenMaruGothic_900Black } from '@expo-g
 // 手書き風（子どもの鉛筆書き）。生徒が書くもの（答案・ノートのメモ）だけに使う
 import { Yomogi_400Regular } from '@expo-google-fonts/yomogi'
 import { AppProvider } from '@/lib/AppContext'
+import { setAuthTokenGetter } from '@/lib/api'
+import { bootstrapSync } from '@/lib/sync'
 
 const tokenCache = {
   async getToken(key: string) {
@@ -20,9 +22,20 @@ const clerkKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? ''
 const hasValidClerkKey = clerkKey.startsWith('pk_') && !clerkKey.includes('xxx')
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { isSignedIn, isLoaded } = useAuth()
+  const { isSignedIn, isLoaded, getToken } = useAuth()
   const segments = useSegments()
   const router = useRouter()
+
+  // APIクライアントにトークン取得関数を渡し、ログイン確立時にサーバ同期を起動する
+  useEffect(() => {
+    if (!isLoaded) return
+    if (isSignedIn) {
+      setAuthTokenGetter(() => getToken())
+      void bootstrapSync()
+    } else {
+      setAuthTokenGetter(null)
+    }
+  }, [isSignedIn, isLoaded, getToken])
 
   useEffect(() => {
     if (!isLoaded) return

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { PreviewContent, ChatMessage, PrintItem, PrintStage } from './types'
 import { type TeacherProfile, DEFAULT_TEACHER, normalizeAvatarId } from './teacherProfile'
+import { enqueue } from './sync'
 
 const STUDENT_KEY = 'oshiete_student'
 const TEACHER_KEY = 'oshiete_teacher'
@@ -72,6 +73,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!studentLoaded.current) return
     if (selectedStudentId) {
       AsyncStorage.setItem(STUDENT_KEY, selectedStudentId).catch(() => {})
+      enqueue({ t: 'me', p: { selectedStudentId } })
     } else {
       AsyncStorage.removeItem(STUDENT_KEY).catch(() => {})
     }
@@ -96,6 +98,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!teacherLoaded.current) return
     AsyncStorage.setItem(TEACHER_KEY, JSON.stringify(teacherProfile)).catch(() => {})
+    enqueue({ t: 'me', p: { teacherName: teacherProfile.name, avatarId: teacherProfile.avatarId } })
   }, [teacherProfile])
 
   const setTeacherProfile = (v: TeacherProfile) => setTeacherProfileRaw(v)

@@ -14,6 +14,7 @@ import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, normalizeAvatarId } from '@/lib/teacherProfile'
 import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail } from '@/lib/api'
 import { needsFactsheetUpgrade } from '@/lib/factsheet'
+import { onSyncComplete } from '@/lib/sync'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
@@ -139,6 +140,18 @@ export default function HomeScreen() {
       }
     }, [])
   )
+
+  // サーバ同期の完了時：キャッシュが作り直されているので画面stateを読み直す
+  useEffect(() => {
+    return onSyncComplete(() => {
+      loadMail().then(setMailMessages)
+      loadHistory().then(setHistory)
+      loadDrillPending().then(setDrillPendingKeys)
+      loadUnitProgressMap().then(setUnitProgress)
+      loadExamDays().then(setExamDays)
+      loadExamSuccessCount().then(setExamSuccess)
+    })
+  }, [])
 
   useEffect(() => {
     loadHistory().then(setHistory)

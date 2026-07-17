@@ -1,5 +1,25 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { CardProgress, Factsheet, HistoryItem, PreviewContent, QACard, Recap, UnitProgress, UnitStatus } from './types'
+import { enqueue } from './sync'
+
+// 教材1件をサーバへ送るキュー投入（AsyncStorageはキャッシュ、サーバが正）
+function enqueueMaterialPut(item: HistoryItem): void {
+  enqueue({
+    t: 'material',
+    p: {
+      id: item.id,
+      title: item.title,
+      imageDescription: item.imageDescription,
+      notes: item.notes,
+      groupName: item.groupName ?? null,
+      thumbnails: item.thumbnails,
+      factsheet: item.factsheet,
+      previewContent: item.previewContent,
+      recaps: item.recaps,
+      savedAt: item.savedAt,
+    },
+  })
+}
 
 export type MailMessage = {
   id: string
@@ -34,9 +54,16 @@ export async function loadCardProgress(): Promise<Record<string, CardProgress>> 
 
 export async function saveCardProgress(map: Record<string, CardProgress>): Promise<void> {
   try {
+    const prev = await loadCardProgress()
     const entries = Object.entries(map)
     const kept = entries.length > 800 ? entries.sort((a, b) => b[1].lastAt - a[1].lastAt).slice(0, 800) : entries
     await AsyncStorage.setItem(CARD_PROGRESS_KEY, JSON.stringify(Object.fromEntries(kept)))
+    // 変わったキーだけサーバへ（呼び出し元は全量mapを渡すため、ここで差分化する）
+    const changed: Record<string, CardProgress> = {}
+    for (const [k, v] of kept) {
+      if (JSON.stringify(prev[k]) !== JSON.stringify(v)) changed[k] = v
+    }
+    if (Object.keys(changed).length > 0) enqueue({ t: 'progress', p: { cardProgress: changed } })
   } catch {}
 }
 
@@ -97,6 +124,7 @@ export async function setUnitStatus(historyId: string, cardCount: number, unitIn
     const statusMap = prev && prev.count === cardCount ? prev.status : {}
     map[historyId] = { count: cardCount, status: { ...statusMap, [unitIndex]: status } }
     await AsyncStorage.setItem(UNIT_PROGRESS_KEY, JSON.stringify(map))
+    enqueue({ t: 'progress', p: { unitProgress: [{ materialId: historyId, count: cardCount, status: map[historyId].status }] } })
   } catch {}
 }
 
@@ -133,6 +161,7 @@ export async function logWork(kind: WorkKind, detail?: { studentId?: string; his
     // 肥大化対策：新しい日付から400日分まで
     const kept = Object.entries(log).sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 400)
     await AsyncStorage.setItem(WORK_LOG_KEY, JSON.stringify(Object.fromEntries(kept)))
+    enqueue({ t: 'progress', p: { workLog: { [key]: log[key] } } })
   } catch {}
 }
 
@@ -154,7 +183,19 @@ export async function loadExamDays(): Promise<Record<string, ExamEntry>> {
 }
 
 export async function saveExamDays(map: Record<string, ExamEntry>): Promise<void> {
-  try { await AsyncStorage.setItem(EXAM_DAYS_KEY, JSON.stringify(map)) } catch {}
+  try {
+    const prev = await loadExamDays()
+    await AsyncStorage.setItem(EXAM_DAYS_KEY, JSON.stringify(map))
+    // 差分（変更・追加はエントリ、消えたものはnull=サーバ側で削除）だけ送る
+    const diff: Record<string, ExamEntry | null> = {}
+    for (const [k, v] of Object.entries(map)) {
+      if (JSON.stringify(prev[k]) !== JSON.stringify(v)) diff[k] = v
+    }
+    for (const k of Object.keys(prev)) {
+      if (!(k in map)) diff[k] = null
+    }
+    if (Object.keys(diff).length > 0) enqueue({ t: 'progress', p: { examDays: diff } })
+  } catch {}
 }
 
 // 生徒のテスト大成功（期日までに全単元完了）の累計。教材を消しても実績は残る
@@ -163,7 +204,10 @@ export async function loadExamSuccessCount(): Promise<number> {
 }
 
 export async function bumpExamSuccessCount(): Promise<void> {
-  try { await AsyncStorage.setItem(EXAM_SUCCESS_KEY, String((await loadExamSuccessCount()) + 1)) } catch {}
+  try {
+    await AsyncStorage.setItem(EXAM_SUCCESS_KEY, String((await loadExamSuccessCount()) + 1))
+    enqueue({ t: 'progress', p: { examSuccessDelta: 1 } })
+  } catch {}
 }
 
 export function todayDateKey(): string { const d = new Date(); return workDateKey(d.getFullYear(), d.getMonth(), d.getDate()) }
@@ -232,7 +276,9 @@ const WELCOME_MAIL: MailMessage = {
 export async function loadMail(): Promise<MailMessage[]> {
   try {
     const raw = await AsyncStorage.getItem(MAIL_KEY)
-    const items = raw ? (JSON.parse(raw) as MailMessage[]) : [WELCOME_MAIL]
+    const items = raw ? (JSON.parse(raw) as MailMessage[]) : []
+    // 空（初回・サーバ同期直後）はようこそメールを出す
+    if (items.length === 0) return [WELCOME_MAIL]
     // 旧アプリ名（せんせいごっこ）時代に保存されたようこそメールを現行の文面へ差し替える（既読状態は保持）
     return items.map((m) => (m.id === 'welcome' ? { ...WELCOME_MAIL, read: m.read } : m))
   } catch {
@@ -248,6 +294,7 @@ export async function addMail(msg: MailMessage): Promise<MailMessage[]> {
   const current = await loadMail()
   const updated = [msg, ...current]
   await saveMail(updated)
+  enqueue({ t: 'progress', p: { mails: { add: [msg] } } })
   return updated
 }
 
@@ -255,6 +302,7 @@ export async function markMailRead(id: string): Promise<MailMessage[]> {
   const current = await loadMail()
   const updated = current.map((m) => m.id === id ? { ...m, read: true } : m)
   await saveMail(updated)
+  enqueue({ t: 'progress', p: { mails: { markRead: [id] } } })
   return updated
 }
 
@@ -271,7 +319,13 @@ export async function loadFollowupSent(): Promise<Set<string>> {
 }
 
 export async function saveFollowupSent(keys: Set<string>): Promise<void> {
-  try { await AsyncStorage.setItem(FOLLOWUP_SENT_KEY, JSON.stringify([...keys].slice(-100))) } catch {}
+  try {
+    const prev = await loadFollowupSent()
+    const kept = [...keys].slice(-100)
+    await AsyncStorage.setItem(FOLLOWUP_SENT_KEY, JSON.stringify(kept))
+    const add = kept.filter((k) => !prev.has(k))
+    if (add.length > 0) enqueue({ t: 'progress', p: { followupSent: { add } } })
+  } catch {}
 }
 
 // 昇進試験の案内メールを送った称号名
@@ -303,7 +357,14 @@ export async function loadDrillPending(): Promise<Set<string>> {
 }
 
 export async function saveDrillPending(keys: Set<string>): Promise<void> {
-  try { await AsyncStorage.setItem(DRILL_PENDING_KEY, JSON.stringify([...keys].slice(-500))) } catch {}
+  try {
+    const prev = await loadDrillPending()
+    const kept = [...keys].slice(-500)
+    await AsyncStorage.setItem(DRILL_PENDING_KEY, JSON.stringify(kept))
+    const add = kept.filter((k) => !prev.has(k))
+    const remove = [...prev].filter((k) => !keys.has(k))
+    if (add.length > 0 || remove.length > 0) enqueue({ t: 'progress', p: { drillPending: { add, remove } } })
+  } catch {}
 }
 
 // 保存済み先生プロフィール（キーはAppContextのTEACHER_KEYと同じ）
@@ -345,12 +406,14 @@ export async function saveToHistory(
   }
   const updated = [newItem, ...history].slice(0, HISTORY_MAX)
   await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+  enqueueMaterialPut(newItem)
   return newItem
 }
 
 export async function deleteFromHistory(id: string): Promise<void> {
   const history = await loadHistory()
   await AsyncStorage.setItem(KEY, JSON.stringify(history.filter((h) => h.id !== id)))
+  enqueue({ t: 'material-del', id }) // サーバ側は試験日・単元進度もFKカスケードで消える
   // 教材が消えたら、その教材のテストの予定も消す（読み出し側の存在チェックとの二重防御）
   try {
     const exams = await loadExamDays()
@@ -358,23 +421,26 @@ export async function deleteFromHistory(id: string): Promise<void> {
   } catch {}
 }
 
-export async function renameHistoryItem(id: string, newTitle: string): Promise<void> {
+// 履歴の1件更新＋サーバ送信の共通処理
+async function updateHistoryItem(id: string, patch: (h: HistoryItem) => HistoryItem): Promise<void> {
   const history = await loadHistory()
-  const updated = history.map((h) => h.id === id ? { ...h, title: newTitle } : h)
+  const updated = history.map((h) => (h.id === id ? patch(h) : h))
   await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+  const item = updated.find((h) => h.id === id)
+  if (item) enqueueMaterialPut(item)
+}
+
+export async function renameHistoryItem(id: string, newTitle: string): Promise<void> {
+  await updateHistoryItem(id, (h) => ({ ...h, title: newTitle }))
 }
 
 export async function updateHistoryPreview(id: string, previewContent: PreviewContent): Promise<void> {
-  const history = await loadHistory()
-  const updated = history.map((h) => (h.id === id ? { ...h, previewContent } : h))
-  await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+  await updateHistoryItem(id, (h) => ({ ...h, previewContent }))
 }
 
 // 教材ファクトシート（バックグラウンド生成）を履歴に保存
 export async function updateHistoryFactsheet(id: string, factsheet: Factsheet): Promise<void> {
-  const history = await loadHistory()
-  const updated = history.map((h) => (h.id === id ? { ...h, factsheet } : h))
-  await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+  await updateHistoryItem(id, (h) => ({ ...h, factsheet }))
 }
 
 export async function loadFactsheet(historyId: string | null): Promise<Factsheet | undefined> {
@@ -390,6 +456,8 @@ export async function saveRecapToHistory(historyId: string, studentId: string, r
     h.id === historyId ? { ...h, recaps: { ...(h.recaps ?? {}), [studentId]: recap } } : h
   )
   await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+  // Recapは専用op（サーバ側でmaterials.recapsへ生徒IDキーでマージ）
+  enqueue({ t: 'progress', p: { recaps: [{ materialId: historyId, studentId, recap }] } })
 }
 
 export async function loadRecap(historyId: string | null, studentId: string): Promise<Recap | null> {
@@ -409,22 +477,27 @@ export async function loadSavedGroups(): Promise<string[]> {
 
 export async function saveGroupsList(groups: string[]): Promise<void> {
   await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(groups))
+  enqueue({ t: 'me', p: { savedGroups: groups } })
 }
 
 export async function moveItemToGroup(id: string, groupName: string | undefined): Promise<void> {
+  await updateHistoryItem(id, (h) => ({ ...h, groupName }))
+}
+
+// グループ名の一括変更・解除は変わった教材だけサーバへ送る
+async function updateHistoryByGroup(match: string, groupName: string | undefined): Promise<void> {
   const history = await loadHistory()
-  const updated = history.map((h) => h.id === id ? { ...h, groupName } : h)
+  const updated = history.map((h) => (h.groupName === match ? { ...h, groupName } : h))
   await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+  for (const h of updated) {
+    if (history.find((p) => p.id === h.id)?.groupName !== h.groupName) enqueueMaterialPut(h)
+  }
 }
 
 export async function renameGroupInStorage(oldName: string, newName: string): Promise<void> {
-  const history = await loadHistory()
-  const updated = history.map((h) => h.groupName === oldName ? { ...h, groupName: newName } : h)
-  await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+  await updateHistoryByGroup(oldName, newName)
 }
 
 export async function deleteGroupFromStorage(groupName: string): Promise<void> {
-  const history = await loadHistory()
-  const updated = history.map((h) => h.groupName === groupName ? { ...h, groupName: undefined } : h)
-  await AsyncStorage.setItem(KEY, JSON.stringify(updated))
+  await updateHistoryByGroup(groupName, undefined)
 }
