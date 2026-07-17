@@ -60,14 +60,27 @@ export default function SignIn() {
       if (mode === 'signin') {
         const res = await signIn!.attemptFirstFactor({ strategy: 'email_code', code: trimmed })
         if (res.status === 'complete') await setActiveSignIn!({ session: res.createdSessionId })
-        else throw new Error('incomplete')
+        else throw Object.assign(new Error('incomplete'), { clerkStatus: res.status })
       } else {
         const res = await signUp!.attemptEmailAddressVerification({ code: trimmed })
         if (res.status === 'complete') await setActiveSignUp!({ session: res.createdSessionId })
-        else throw new Error('incomplete')
+        else throw Object.assign(new Error('incomplete'), { clerkStatus: res.status, missing: res.missingFields })
       }
-    } catch {
-      setError('コードがちがうようです。もう一度確認してください。')
+    } catch (e) {
+      // 「コードが正しいのに完了できない」（Clerk側でパスワード必須等が有効）と
+      // 「コードが違う」を区別して表示する
+      const err = e as { clerkStatus?: string; missing?: string[]; errors?: { code?: string; longMessage?: string }[] }
+      console.error('verifyCode failed:', JSON.stringify({ status: err.clerkStatus, missing: err.missing, errors: err.errors }))
+      if (err.clerkStatus === 'missing_requirements') {
+        setError(
+          `コードは確認できましたが、登録に必要な項目が残っています（${(err.missing ?? []).join(', ') || '不明'}）。` +
+            'Clerkダッシュボードで Password 等の必須設定をオフにしてください。',
+        )
+      } else if (err.errors?.[0]?.code === 'form_code_incorrect') {
+        setError('コードがちがうようです。メールに届いた最新のコードを入力してください。')
+      } else {
+        setError(err.errors?.[0]?.longMessage ?? 'ログインを完了できませんでした。もう一度試してください。')
+      }
     } finally {
       setBusy(false)
     }
