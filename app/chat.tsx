@@ -463,11 +463,12 @@ export default function ChatScreen() {
   }
 
   if (starting || (startError && printItems.length === 0)) {
+    // 接続中は画面全体を紺の「通信室」にする（ヘッダーの戻る導線も暗面用の色に）
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: student.color + '18' }]}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: starting ? c.ink : student.color + '18' }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-            <Text style={styles.backText}>← 戻る</Text>
+            <Text style={[styles.backText, starting && { color: '#94a3b8' }]}>← 戻る</Text>
           </TouchableOpacity>
           <View style={{ width: 60 }} />
         </View>
@@ -837,17 +838,19 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 15, color: c.textSub, textAlign: 'center' },
   backLink: { fontSize: 14, color: c.link, fontWeight: '600' },
 
+  // 接続の瞬間だけ紺の「通信室」になる（先生証と同族の儀式面。銀の日常との対比が演出）
   entering: {
     flex: 1, justifyContent: 'center', alignItems: 'center', gap: 28, paddingHorizontal: 32,
+    backgroundColor: c.ink,
   },
   enteringAvatarWrap: { position: 'relative' },
-  enteringAvatar: { width: 96, height: 96, borderRadius: 48 },
+  enteringAvatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' },
   enteringOnline: {
     position: 'absolute', bottom: 4, right: 4,
     width: 16, height: 16, borderRadius: 8,
-    backgroundColor: c.success, borderWidth: 2, borderColor: 'white',
+    backgroundColor: '#34d399', borderWidth: 2, borderColor: c.ink,
   },
-  enteringMsg: { fontSize: 16, fontWeight: '600', color: c.text, textAlign: 'center' },
+  enteringMsg: { fontSize: 16, fontWeight: '600', color: '#cbd5e1', textAlign: 'center' },
   dotsRow: { flexDirection: 'row', gap: 8 },
   dot: { width: 10, height: 10, borderRadius: 5 },
 

@@ -31,6 +31,20 @@ import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 import StampText from '@/components/StampText'
 
+// オンライン表示の脈動ドット（「画面の向こうに誰かがいる」気配。Webのanimate-pulseと同等）
+function PulseDot({ color, size = 6 }: { color: string; size?: number }) {
+  const v = useRef(new Animated.Value(1)).current
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(v, { toValue: 0.35, duration: 900, useNativeDriver: true }),
+      Animated.timing(v, { toValue: 1, duration: 900, useNativeDriver: true }),
+    ]))
+    loop.start()
+    return () => loop.stop()
+  }, [])
+  return <Animated.View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity: v }} />
+}
+
 type ImageData = { data: string; mimeType: string; uri: string }
 
 const MAX_IMAGES = 3
@@ -623,7 +637,7 @@ export default function HomeScreen() {
                   {teacherProfile.name ? `${teacherProfile.name}先生` : '先生'}
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.success }} />
+                  <PulseDot color={c.success} size={6} />
                   <Text style={{ fontSize: 10, fontWeight: '700', color: c.successText }}>オンライン</Text>
                 </View>
               </View>
@@ -806,7 +820,7 @@ export default function HomeScreen() {
                         <View style={{ gap: 1, alignItems: 'center' }}>
                           <Text style={styles.lessonStudentName}>{selectedStudent.name}</Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.success }} />
+                            <PulseDot color={c.success} size={6} />
                             <Text style={{ fontSize: 10, fontWeight: '700', color: c.successText }}>オンライン</Text>
                           </View>
                         </View>
