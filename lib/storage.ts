@@ -169,7 +169,7 @@ export async function logWork(kind: WorkKind, detail?: { studentId?: string; his
 // 教材ごとに固定の期日が自動で決まり、先生は変更できない（動かせる締切は締切にならない。
 // 生徒の学校行事は先生の決定領域の外）。期日が来たら結果メールが届き、全単元完了なら大成功、
 // 未完了なら追試日が自動で立つ（責めない・行き止まらない）。教材が消えたら試験日も消える
-export type ExamEntry = { date: string; round: number; doneAt?: number; studentId?: string }
+export type ExamEntry = { date: string; round: number; doneAt?: number; studentId?: string; remindedAt?: number }
 const EXAM_DAYS_KEY = 'oshiete_exam_days'
 const EXAM_SUCCESS_KEY = 'oshiete_exam_success_count'
 
@@ -214,10 +214,17 @@ export function todayDateKey(): string { const d = new Date(); return workDateKe
 export function dateKeyAfterDays(days: number): string { const d = new Date(); d.setDate(d.getDate() + days); return workDateKey(d.getFullYear(), d.getMonth(), d.getDate()) }
 export function examDateLabel(key: string): string { const p = key.split('-'); return `${Number(p[1])}月${Number(p[2])}日` }
 
-// 期日の自動決定：残り単元数×2日（本番は5〜14日、追試は4〜10日に丸め）
-export function makeExamEntry(unitCount: number, round: number, studentId?: string): ExamEntry {
-  const days = round === 1 ? Math.min(14, Math.max(5, unitCount * 2)) : Math.min(10, Math.max(4, unitCount * 2))
-  return { date: dateKeyAfterDays(days), round, ...(studentId ? { studentId } : {}) }
+// 期日の自動決定：残り単元数×2日（本番は5〜14日、追試は4〜10日に丸め）。
+// ±1日のジッタ（教材IDハッシュ由来）で同時に取り込んだ教材の期日が揃うのを防ぎ、
+// 土日に落ちた期日は次の月曜へ送る（学校のテストは平日にある）
+export function makeExamEntry(unitCount: number, round: number, studentId?: string, seed?: string): ExamEntry {
+  let days = round === 1 ? Math.min(14, Math.max(5, unitCount * 2)) : Math.min(10, Math.max(4, unitCount * 2))
+  if (seed) days += (hashStr(seed) % 3) - 1
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  if (d.getDay() === 6) d.setDate(d.getDate() + 2)
+  else if (d.getDay() === 0) d.setDate(d.getDate() + 1)
+  return { date: workDateKey(d.getFullYear(), d.getMonth(), d.getDate()), round, ...(studentId ? { studentId } : {}) }
 }
 
 // テストの予定を立てる（まだ無ければ）。作った場合はエントリを返す（呼び出し側がお知らせメールを送る）
@@ -225,40 +232,101 @@ export async function ensureExamDay(historyId: string, unitCount: number, studen
   if (unitCount <= 0) return null
   const map = await loadExamDays()
   if (map[historyId]) return null
-  const entry = makeExamEntry(unitCount, 1, studentId)
+  const entry = makeExamEntry(unitCount, 1, studentId, historyId)
   map[historyId] = entry
   await saveExamDays(map)
   return entry
 }
 
-// テストのお知らせ・結果メール（生徒のトーンに合わせた定型。AIコールなし）
-export function examMailFor(student: { id: string; name: string }, item: { id: string; title: string }, kind: 'propose' | 'full' | 'partial' | 'none', dateLabel: string, round: number): MailMessage {
+// テストのお知らせ・結果メール（生徒のトーンに合わせた定型。AIコールなし）。
+// 文面は各種類4パターンのプールから教材IDのハッシュで安定選択：同時に複数届いても機械的に
+// 見えず、同じメールが再生成されても文面は変わらない（重複配信が二重事故に見えない）
+export type ExamMailKind = 'propose' | 'full' | 'partial' | 'none' | 'remind'
+const EXAM_MAIL_POOL: Record<ExamMailKind, { subject: string; siete: string; sowal: string }[]> = {
+  propose: [
+    { subject: 'こんどテストがあります…！',
+      siete: '先生、じつは【{日付}】に「{教材}」のテストがあるんです…！それまでに、授業ぜんぶおねがいします！がんばります😊',
+      sowal: '先生、あの...【{日付}】に「{教材}」のテストがあるんです...🐾 それまでに、授業ぜんぶおねがいします...！' },
+    { subject: 'テストの日が決まりました！',
+      siete: '先生、【{日付}】に「{教材}」のテストをやるって決まりました！それまでに授業ぜんぶ、おねがいします！✨',
+      sowal: '先生...【{日付}】に「{教材}」のテストをやるって、決まったそうです...。それまでに授業、おねがいします...🐾' },
+    { subject: '先生、聞いてください…！',
+      siete: 'きょう学校で、【{日付}】に「{教材}」のテストがあるって言われました…！先生の授業だけがたよりです！おねがいします😊',
+      sowal: 'きょう...【{日付}】に「{教材}」のテストがあるって言われました...。先生の授業だけがたよりです...🐾' },
+    { subject: 'たいへんです、テストです！',
+      siete: '【{日付}】に「{教材}」のテストがあります！ちょっとどきどきしていますが、先生とじゅんびすればだいじょうぶな気がします！',
+      sowal: '【{日付}】に「{教材}」のテストがあります...。どきどきします...。先生とじゅんびしたいです...🐾' },
+  ],
+  full: [
+    { subject: 'テストの結果、聞いてください！！',
+      siete: '今日の「{教材}」のテスト、ぜんぶ書けました！！先生に教えてもらったところ、ぜんぶ出ました✨ ほんとうにありがとうございました！😊',
+      sowal: '今日の「{教材}」のテスト...ぜんぶ書けました...！先生に教えてもらったところ、ぜんぶ出ました🐾 ほんとうにありがとうございました...！' },
+    { subject: '見てください、テストの答案！',
+      siete: '「{教材}」のテストが返ってきました！先生に教えてもらったところ、ぜんぶ書けていました✨ 先生のおかげです！',
+      sowal: '「{教材}」のテスト、返ってきました...。教えてもらったところ、ぜんぶ書けていました...！先生のおかげです🐾' },
+    { subject: 'やりました…！',
+      siete: '「{教材}」のテスト、すごくよくできました！授業でやったところが、そのまま出たんです😊 つぎもよろしくおねがいします！',
+      sowal: '「{教材}」のテスト...よくできました...！授業でやったところが、そのまま出ました🐾 つぎも、おねがいします...' },
+    { subject: 'テスト、だいせいこうでした！',
+      siete: 'きょうの「{教材}」のテスト、じしんをもって書けました！先生の授業のおかげです✨ ありがとうございました！',
+      sowal: 'きょうの「{教材}」のテスト...じしんをもって書けました...！先生の授業のおかげです...🐾' },
+  ],
+  partial: [
+    { subject: 'テスト、がんばりました…！',
+      siete: '今日、「{教材}」のテストがありました！教えてもらったところは、ばっちり書けました！のこりはむずかしかったです…。でも【{日付}】に追試があるんです。こんどこそ、ぜんぶ教えてほしいです…！',
+      sowal: '今日、「{教材}」のテストがありました...。教えてもらったところは、ばっちり書けました🐾 のこりはむずかしかったです...。でも【{日付}】に追試があるんです。こんどこそ、ぜんぶ教えてほしいです...！' },
+    { subject: 'テストの結果です…！',
+      siete: '「{教材}」のテスト、教えてもらったところはちゃんと書けました！でも、のこりがむずかしくて…。【{日付}】に追試があるので、つづきの授業おねがいします！',
+      sowal: '「{教材}」のテスト...教えてもらったところは書けました...。のこりがむずかしくて...。【{日付}】に追試があるので、つづきの授業、おねがいします🐾' },
+    { subject: '追試、がんばりたいです！',
+      siete: 'きょうの「{教材}」のテスト、半分くらい書けました！くやしいので、【{日付}】の追試までにのこりもぜんぶ教えてほしいです！',
+      sowal: 'きょうの「{教材}」のテスト...半分くらい書けました...。【{日付}】に追試があるので、のこりも教えてほしいです...🐾' },
+    { subject: 'もういちどチャンスがあります！',
+      siete: '「{教材}」のテスト、やったところはばっちりでした！【{日付}】に追試があるって言われました。こんどこそ全部できるようになりたいです！',
+      sowal: '「{教材}」のテスト...やったところは書けました...。【{日付}】に追試があります...。こんどこそ、ぜんぶできるようになりたいです🐾' },
+  ],
+  none: [
+    { subject: 'テスト、むずかしかったです…',
+      siete: '今日、「{教材}」のテストがありました…。まだ教えてもらっていないところばかりで、むずかしかったです…。【{日付}】に追試があるので、こんどこそおねがいします…！',
+      sowal: '今日、「{教材}」のテストがありました...。まだ教えてもらっていないところばかりで、むずかしかったです...。【{日付}】に追試があるので、こんどこそおねがいします...🐾' },
+    { subject: 'つぎこそ、がんばります…！',
+      siete: '「{教材}」のテスト、ぜんぜん書けませんでした…。でも【{日付}】に追試があります！それまでに授業、おねがいします…！',
+      sowal: '「{教材}」のテスト...あまり書けませんでした...。【{日付}】に追試があるので、それまでに授業、おねがいします...🐾' },
+    { subject: '先生、たすけてください…！',
+      siete: 'きょうの「{教材}」のテスト、むずかしかったです…。【{日付}】の追試までに、ぜんぶ教えてもらえたらうれしいです…！',
+      sowal: 'きょうの「{教材}」のテスト...むずかしかったです...。【{日付}】の追試までに、教えてもらえたらうれしいです...🐾' },
+    { subject: '追試があります…！',
+      siete: '「{教材}」のテスト、こんかいはだめでした…。でも【{日付}】に追試があるんです。こんどは先生といっしょにじゅんびしたいです！',
+      sowal: '「{教材}」のテスト...こんかいはだめでした...。【{日付}】に追試があるので、こんどは先生とじゅんびしたいです🐾' },
+  ],
+  remind: [
+    { subject: 'もうすぐテストです…！',
+      siete: '【{日付}】の「{教材}」のテスト、もうすぐです…！まだ授業してもらっていないところがあって、ちょっとふあんです…。つづきの授業、おねがいします！',
+      sowal: '【{日付}】の「{教材}」のテスト...もうすぐです...。まだ授業してもらっていないところがあって、ふあんです...🐾' },
+    { subject: 'テストまであと少しです！',
+      siete: '先生、【{日付}】の「{教材}」のテストがせまってきました！のこりの授業、まにあいますように…！おねがいします😊',
+      sowal: '先生...【{日付}】の「{教材}」のテスト、せまってきました...。のこりの授業、おねがいします...🐾' },
+    { subject: 'つづきの授業、おねがいします！',
+      siete: '【{日付}】に「{教材}」のテストがあります…！やっていないところが出たらどうしようって、きのうゆめに見ました…。つづきの授業、おねがいします！',
+      sowal: '【{日付}】に「{教材}」のテストがあります...。やっていないところが出たらどうしようって、きのうゆめに見ました...🐾' },
+    { subject: '先生、じかんがないです…！',
+      siete: '気づいたら【{日付}】の「{教材}」のテストがすぐそこです…！のこりのところ、先生といっしょにやりたいです！',
+      sowal: '気づいたら...【{日付}】の「{教材}」のテスト、すぐそこです...。のこりのところ、いっしょにやりたいです🐾' },
+  ],
+}
+
+function hashStr(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return h
+}
+
+export function examMailFor(student: { id: string; name: string }, item: { id: string; title: string }, kind: ExamMailKind, dateLabel: string, round: number): MailMessage {
   const title = item.title.replace(/^この(教材|文書|画像|写真)は[、，]?\s*/u, '').slice(0, 24)
-  const sowal = student.id === 'sowal'
-  let subject: string
-  let content: string
-  if (kind === 'propose') {
-    subject = 'こんどテストがあります…！'
-    content = sowal
-      ? `先生、あの...【${dateLabel}】に「${title}」のテストがあるんです...🐾 それまでに、授業ぜんぶおねがいします...！`
-      : `先生、じつは【${dateLabel}】に「${title}」のテストがあるんです…！それまでに、授業ぜんぶおねがいします！がんばります😊`
-  } else if (kind === 'full') {
-    subject = 'テストの結果、聞いてください！！'
-    content = sowal
-      ? `今日の「${title}」のテスト...ぜんぶ書けました...！先生に教えてもらったところ、ぜんぶ出ました🐾 ほんとうにありがとうございました...！`
-      : `今日の「${title}」のテスト、ぜんぶ書けました！！先生に教えてもらったところ、ぜんぶ出ました✨ ほんとうにありがとうございました！😊`
-  } else if (kind === 'partial') {
-    subject = 'テスト、がんばりました…！'
-    content = sowal
-      ? `今日、「${title}」のテストがありました...。教えてもらったところは、ばっちり書けました🐾 のこりはむずかしかったです...。でも【${dateLabel}】に追試があるんです。こんどこそ、ぜんぶ教えてほしいです...！`
-      : `今日、「${title}」のテストがありました！教えてもらったところは、ばっちり書けました！のこりはむずかしかったです…。でも【${dateLabel}】に追試があるんです。こんどこそ、ぜんぶ教えてほしいです…！`
-  } else {
-    subject = 'テスト、むずかしかったです…'
-    content = sowal
-      ? `今日、「${title}」のテストがありました...。まだ教えてもらっていないところばかりで、むずかしかったです...。【${dateLabel}】に追試があるので、こんどこそおねがいします...🐾`
-      : `今日、「${title}」のテストがありました…。まだ教えてもらっていないところばかりで、むずかしかったです…。【${dateLabel}】に追試があるので、こんどこそおねがいします…！`
-  }
-  return { id: `exam-${kind}-${item.id}-${round}-${Date.now()}`, type: 'student', from: student.name, studentId: student.id, subject, content, timestamp: new Date().toISOString(), read: false, historyId: item.id }
+  const pool = EXAM_MAIL_POOL[kind]
+  const v = pool[hashStr(`${item.id}:${kind}:${round}`) % pool.length]
+  const content = (student.id === 'sowal' ? v.sowal : v.siete).replaceAll('{日付}', dateLabel).replaceAll('{教材}', title)
+  return { id: `exam-${kind}-${item.id}-${round}-${Date.now()}`, type: 'student', from: student.name, studentId: student.id, subject: v.subject, content, timestamp: new Date().toISOString(), read: false, historyId: item.id }
 }
 
 const MAIL_KEY = 'senseigokko_mail'
@@ -304,28 +372,6 @@ export async function markMailRead(id: string): Promise<MailMessage[]> {
   await saveMail(updated)
   enqueue({ t: 'progress', p: { mails: { markRead: [id] } } })
   return updated
-}
-
-// あとから質問メール（間隔反復）の送信済みRecapキー
-const FOLLOWUP_SENT_KEY = 'oshiete_followup_sent'
-
-export async function loadFollowupSent(): Promise<Set<string>> {
-  try {
-    const raw = await AsyncStorage.getItem(FOLLOWUP_SENT_KEY)
-    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
-  } catch {
-    return new Set()
-  }
-}
-
-export async function saveFollowupSent(keys: Set<string>): Promise<void> {
-  try {
-    const prev = await loadFollowupSent()
-    const kept = [...keys].slice(-100)
-    await AsyncStorage.setItem(FOLLOWUP_SENT_KEY, JSON.stringify(kept))
-    const add = kept.filter((k) => !prev.has(k))
-    if (add.length > 0) enqueue({ t: 'progress', p: { followupSent: { add } } })
-  } catch {}
 }
 
 // 昇進試験の案内メールを送った称号名

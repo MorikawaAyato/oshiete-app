@@ -12,21 +12,20 @@ import PawGlyph from '@/components/PawGlyph'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, normalizeAvatarId } from '@/lib/teacherProfile'
-import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFollowupMail } from '@/lib/api'
+import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet } from '@/lib/api'
 import { needsFactsheetUpgrade } from '@/lib/factsheet'
 import { onSyncComplete } from '@/lib/sync'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
-  loadFollowupSent, saveFollowupSent, loadTeacherName,
   loadDrillPending, drillKey,
   splitUnits, unitLabel, defaultUnitIndex, loadUnitProgressMap, getUnitStatuses,
   loadWorkLog, workDateKey,
-  loadExamDays, saveExamDays, makeExamEntry, ensureExamDay, examMailFor, examDateLabel, todayDateKey,
+  loadExamDays, saveExamDays, makeExamEntry, ensureExamDay, examMailFor, examDateLabel, todayDateKey, dateKeyAfterDays,
   loadExamSuccessCount, bumpExamSuccessCount,
 } from '@/lib/storage'
 import type { ExamEntry, MailMessage, WorkLog } from '@/lib/storage'
-import type { HistoryItem, Recap, UnitProgress, UnitStatus } from '@/lib/types'
+import type { HistoryItem, UnitProgress, UnitStatus } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 import StampText from '@/components/StampText'
@@ -48,10 +47,6 @@ function PulseDot({ color, size = 6 }: { color: string; size?: number }) {
 type ImageData = { data: string; mimeType: string; uri: string }
 
 const MAX_IMAGES = 3
-
-// あとから質問メール（間隔反復）：授業の2日後〜2週間以内のRecapが対象
-const FOLLOWUP_MIN_AGE_MS = 2 * 24 * 60 * 60 * 1000
-const FOLLOWUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 
 // 先生アバターを円で表示すると耳の高いキャラ（うさぎ・きつね）は耳が見切れるため、
 // そのキャラだけ画像をごくわずかに下げて耳を収める（表示サイズに対する縦オフセット比）
@@ -188,7 +183,7 @@ export default function HomeScreen() {
         for (const [hid, entry] of Object.entries(map)) {
           const item = items.find((h) => h.id === hid)
           if (!item) { delete map[hid]; changed = true; continue }
-          if (entry.doneAt || entry.date > today) continue
+          if (entry.doneAt) continue
           const cards = item.factsheet?.cards ?? []
           const units = splitUnits(cards.length)
           const statuses = await getUnitStatuses(hid, cards.length)
@@ -196,12 +191,21 @@ export default function HomeScreen() {
           // 差出人はテストを受けた生徒（entryに記録済み）。selectedStudentId はこの時点で
           // まだAsyncStorageから読み込まれていないことがあるため、フォールバックにのみ使う
           const sender = STUDENTS.find((s) => s.id === entry.studentId) ?? student
+          if (entry.date > today) {
+            // 期日間近の予告：2日前から、授業が終わっていなければ一度だけ催促メール
+            if (!entry.remindedAt && entry.date <= dateKeyAfterDays(2) && units.length > 0 && doneCount < units.length) {
+              map[hid] = { ...entry, remindedAt: Date.now() }
+              mails.push(examMailFor(sender, item, 'remind', examDateLabel(entry.date), entry.round))
+              changed = true
+            }
+            continue
+          }
           if (units.length > 0 && doneCount === units.length) {
             map[hid] = { ...entry, doneAt: Date.now() }
             await bumpExamSuccessCount()
             mails.push(examMailFor(sender, item, 'full', '', entry.round))
           } else {
-            const next = makeExamEntry(Math.max(1, units.length - doneCount), entry.round + 1, entry.studentId)
+            const next = makeExamEntry(Math.max(1, units.length - doneCount), entry.round + 1, entry.studentId, hid)
             map[hid] = next
             mails.push(examMailFor(sender, item, doneCount === 0 ? 'none' : 'partial', examDateLabel(next.date), next.round))
           }
@@ -215,47 +219,6 @@ export default function HomeScreen() {
         setExamDays(await loadExamDays())
         setExamSuccess(await loadExamSuccessCount())
       } catch { /* メールは任意機能。失敗は無視 */ }
-    })()
-  }, [])
-
-  // あとから質問メール：授業の数日後、生徒がつまずきを思い出して質問してくる（起動ごとに最大1通）
-  const followupChecked = useRef(false)
-  useEffect(() => {
-    if (followupChecked.current) return
-    followupChecked.current = true
-    void (async () => {
-      try {
-        const [items, sent, teacherName] = await Promise.all([loadHistory(), loadFollowupSent(), loadTeacherName()])
-        let best: { item: HistoryItem; studentId: string; recap: Recap; key: string } | null = null
-        for (const item of items) {
-          for (const [studentId, recap] of Object.entries(item.recaps ?? {})) {
-            const age = Date.now() - recap.savedAt
-            if (age < FOLLOWUP_MIN_AGE_MS || age > FOLLOWUP_MAX_AGE_MS) continue
-            const key = `${item.id}_${studentId}_${recap.savedAt}`
-            if (sent.has(key)) continue
-            if (!best || recap.savedAt > best.recap.savedAt) best = { item, studentId, recap, key }
-          }
-        }
-        if (!best) return
-        const student = STUDENTS.find((s) => s.id === best!.studentId)
-        if (!student) return
-        const res = await fetchFollowupMail(best.studentId, best.item.title, best.recap, teacherName)
-        if (!res.body) return
-        const updated = await addMail({
-          id: Date.now().toString(),
-          type: 'student',
-          from: student.name,
-          studentId: student.id,
-          subject: res.subject,
-          content: res.body,
-          timestamp: new Date().toISOString(),
-          read: false,
-          historyId: best.item.id,
-        })
-        setMailMessages(updated)
-        sent.add(best.key)
-        await saveFollowupSent(sent)
-      } catch { /* メールは任意機能。失敗時は次回起動時に再挑戦 */ }
     })()
   }, [])
 

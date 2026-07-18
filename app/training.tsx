@@ -175,12 +175,17 @@ export default function TrainingScreen() {
   // 「まだ」のカード残数（全体・教材ごと）。研修に戻ってくる理由を可視化する
   const pendingCountOf = (cards: QACard[]) => cards.filter((cd) => drillPendingKeys.has(drillKey(cd))).length
   const allPending = pendingCountOf(allCards)
-  // みがき状況：覚えた＝最後に触れたとき○/覚えた、まだ＝研修で「まだ」、これから＝それ以外（未着手や授業で✕のまま）
-  const rememberedCount = allCards.filter((cd) => {
-    const k = drillKey(cd)
-    return !drillPendingKeys.has(k) && cardProgressMap[k]?.lastResult === true
-  }).length
-  const freshCount = allCards.length - rememberedCount - allPending
+  // みがき状況の内訳：覚えた＝最後に触れたとき○/覚えた、まだ＝研修で「まだ」、これから＝それ以外（未着手や授業で✕のまま）。
+  // サマリー・教材行のミニバー・研修中の表示で同じ計算式を共用する（合計と内訳が必ず一致する）
+  const breakdownOf = (cards: QACard[]) => {
+    const pend = pendingCountOf(cards)
+    const rem = cards.filter((cd) => {
+      const k = drillKey(cd)
+      return !drillPendingKeys.has(k) && cardProgressMap[k]?.lastResult === true
+    }).length
+    return { rem, pend, fresh: cards.length - rem - pend }
+  }
+  const { rem: rememberedCount, fresh: freshCount } = breakdownOf(allCards)
   const principalLine =
     allCards.length === 0
       ? `${teacherCall}、よく来たね。だが研修はまだ早い。まずは教材を取り込んで、生徒に授業をしてきなさい。話はそれからだ。`
@@ -284,18 +289,22 @@ export default function TrainingScreen() {
               <View style={[styles.card, { paddingVertical: 10 }]}>
                 <Text style={styles.matListLabel}>教材ごとに始める</Text>
                 {materialsWithCards.map((h, i) => {
-                  const pending = pendingCountOf(h.factsheet?.cards ?? [])
+                  const cards = h.factsheet?.cards ?? []
+                  const b = breakdownOf(cards)
+                  const total = cards.length || 1
                   return (
                     <TouchableOpacity key={h.id} style={[styles.matRow, i > 0 && styles.matRowBorder]}
                       onPress={() => { setDrillMaterialId(h.id); void startDrill(h.id) }}>
                       <Feather name="layers" size={16} color={c.blazer} />
-                      <Text style={styles.matRowTitle} numberOfLines={1}>{h.title.replace(TITLE_RE, '')}</Text>
-                      <Text style={styles.pickerCount}>{h.factsheet?.cards?.length ?? 0}枚</Text>
-                      {pending > 0 && (
-                        <View style={styles.chipBadge}>
-                          <Text style={styles.chipBadgeText}>まだ{pending}</Text>
+                      {/* タイトル1行＋ミニバー（サマリーと同配色。緑=覚えた/ピンク=まだ/地=これから）。
+                          数字を並べるより教材が増えたときの比較が速い。正確な数字は開始後に出る */}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.matRowTitle} numberOfLines={1}>{h.title.replace(TITLE_RE, '')}</Text>
+                        <View style={styles.matBar}>
+                          <View style={{ width: `${(b.rem / total) * 100}%`, backgroundColor: '#10b981' }} />
+                          <View style={{ width: `${(b.pend / total) * 100}%`, backgroundColor: c.primary }} />
                         </View>
-                      )}
+                      </View>
                       <Text style={styles.matRowChevron}>›</Text>
                     </TouchableOpacity>
                   )
@@ -326,7 +335,16 @@ export default function TrainingScreen() {
           </>
         ) : (
           <>
-            <Text style={styles.drillProgress}>カード {drillIdx + 1} / {drillCards.length}</Text>
+            {/* どの教材の研修かをフルタイトル＋内訳で明示（一覧はバーだけなので、正確な数字はここで出す） */}
+            <View>
+              <Text style={styles.drillMaterialTitle}>{drillMaterialId === 'all' ? '全教材ミックス' : (history.find((h) => h.id === drillMaterialId)?.title.replace(TITLE_RE, '') ?? '')}</Text>
+              {(() => {
+                const b = breakdownOf(drillPool(drillMaterialId))
+                const parts = [b.rem > 0 ? `覚えた ${b.rem}` : null, b.pend > 0 ? `まだ ${b.pend}` : null, b.fresh > 0 ? `これから ${b.fresh}` : null].filter(Boolean)
+                return <Text style={styles.drillBreakdown}>{parts.join(' ・ ')}</Text>
+              })()}
+              <Text style={[styles.drillProgress, { marginTop: 2 }]}>カード {drillIdx + 1} / {drillCards.length}</Text>
+            </View>
             <View style={styles.drillCard}>
               <Text style={styles.drillLabelQ}>Q</Text>
               <Text style={styles.drillQuestion}>{drillCards[drillIdx]?.q}</Text>
@@ -453,10 +471,6 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '700', color: c.textMid },
   emptyText: { fontSize: 12, color: c.textSub, lineHeight: 18 },
 
-  pickerCount: { fontSize: 10, color: c.textSub, flexShrink: 0 },
-  chipBadge: { backgroundColor: '#fef3c7', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
-  chipBadgeText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
-
   // みがき状況サマリー
   statBox: { backgroundColor: c.bgSub, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 },
   statCell: { flex: 1, alignItems: 'center' },
@@ -470,8 +484,13 @@ const styles = StyleSheet.create({
   matListLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: c.faint, paddingTop: 2, paddingBottom: 2 },
   matRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   matRowBorder: { borderTopWidth: 1, borderTopColor: c.bgSub },
-  matRowTitle: { flex: 1, fontSize: 13, fontWeight: '600', color: c.textMid },
+  matRowTitle: { fontSize: 13, fontWeight: '600', color: c.textMid },
+  matBar: { flexDirection: 'row', height: 4, borderRadius: 999, overflow: 'hidden', backgroundColor: c.bgSub, marginTop: 4 },
   matRowChevron: { fontSize: 15, color: c.faint },
+
+  // 研修中の教材表示（フルタイトル＋内訳）
+  drillMaterialTitle: { fontSize: 12, fontWeight: '700', color: c.textMid },
+  drillBreakdown: { fontSize: 10, color: c.textSub, marginTop: 1 },
 
   primaryBtn: { backgroundColor: c.primaryStrong, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   primaryBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },

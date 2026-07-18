@@ -1,4 +1,4 @@
-import type { Factsheet, Recap } from './types'
+import type { Factsheet } from './types'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? ''
 
@@ -129,12 +129,3 @@ export async function fetchPrint(
   return postJson('/api/print', { studentId, items, misconceptions }, 90_000)
 }
 
-// あとから質問メール（授業の数日後、生徒がつまずきを思い出して質問してくる）の生成
-export async function fetchFollowupMail(
-  studentId: string,
-  materialTitle: string,
-  recap: Recap,
-  teacherName?: string,
-): Promise<{ subject?: string; body?: string; error?: string }> {
-  return postJson('/api/followup', { studentId, materialTitle, recap, teacherName }, 60_000)
-}
