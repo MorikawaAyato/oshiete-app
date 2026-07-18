@@ -42,6 +42,10 @@ export const c = {
   paperRule: '#fcd34d',
   paperText: '#b45309', // 小さな文字でも 4.5:1 を満たす濃さ
 
+  // 紺ブレザー＝儀式面（ヘッダー帯など）の深セルリアン。面積で使うのはここだけ
+  blazer: '#0c5a8a',
+  blazerText: '#bcd9ec', // 帯上の弱い文字・ラベル
+
   // セマンティック
   success: '#10b981',
   successText: '#059669',
