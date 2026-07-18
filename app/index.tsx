@@ -31,6 +31,9 @@ import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 import StampText from '@/components/StampText'
 
+// 生徒ズーム拡大時の背景（白いサモエドを映えさせる、生徒ごとのキャラ色の淡ティント）
+const STUDENT_ZOOM_BG: Record<string, string> = { siete: '#f9d5e8', sowal: '#d6e4fb' }
+
 type ImageData = { data: string; mimeType: string; uri: string }
 
 const MAX_IMAGES = 3
@@ -1095,7 +1098,8 @@ export default function HomeScreen() {
           {/* 生徒アバター拡大表示（シートの上に重ねるため入れ子にする。兄弟 Modal の同時表示は iOS で提示に失敗し、以降タッチが効かなくなる） */}
           <Modal visible={showStudentAvatar} transparent animationType="fade" onRequestClose={() => setShowStudentAvatar(false)}>
             <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowStudentAvatar(false)}>
-              <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white' }}>
+              {/* サモエドは白いので、先生と同じ白背景だと沈む。生徒ごとのキャラ色の淡ティントを敷いて映えさせる */}
+              <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white', backgroundColor: STUDENT_ZOOM_BG[selectedStudent?.id ?? ''] ?? c.bgSub }}>
                 {selectedStudent && <Image source={selectedStudent.avatar} style={{ width: '100%', height: '100%' }} />}
               </View>
             </Pressable>
