@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0',
     borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1,
   },
-  connectedText: { fontSize: 8, fontWeight: '700', color: '#059669' },
+  connectedText: { fontSize: 8, fontWeight: '700', color: '#047857' },
   principalBubble: {
     marginTop: 10, alignSelf: 'flex-start',
     backgroundColor: 'white', borderWidth: 1, borderColor: c.border,
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   pendingBadgeText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
   sectionDesc: { fontSize: 12, color: c.textSub, lineHeight: 18, marginBottom: 12 },
   bold: { fontWeight: '700', color: c.textMid },
-  emptyText: { fontSize: 12, color: c.faint, lineHeight: 18 },
+  emptyText: { fontSize: 12, color: c.textSub, lineHeight: 18 },
 
   // 教材選択プルダウン
   pickerBtn: {
@@ -464,10 +464,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: c.border, borderRadius: 12,
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12, backgroundColor: 'white',
   },
-  pickerLabel: { fontSize: 10, fontWeight: '700', color: c.faint },
+  pickerLabel: { fontSize: 10, fontWeight: '700', color: c.textSub },
   pickerValue: { flex: 1, fontSize: 13, fontWeight: '600', color: c.textMid },
   pickerCaret: { fontSize: 11, color: c.faint },
-  pickerCount: { fontSize: 10, color: c.faint, flexShrink: 0 },
+  pickerCount: { fontSize: 10, color: c.textSub, flexShrink: 0 },
   pickerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 18, paddingVertical: 14,

@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
   editSaveText: { color: 'white', fontSize: 12, fontWeight: '700' },
   editCancel: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
   editCancelText: { color: c.textSub, fontSize: 12, fontWeight: '700' },
-  principalToast: { position: 'absolute', bottom: 130, alignSelf: 'center', backgroundColor: '#1e293b', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10 },
+  principalToast: { position: 'absolute', bottom: 130, alignSelf: 'center', backgroundColor: c.ink, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10 },
   principalToastText: { color: 'white', fontSize: 13, fontWeight: '600' },
 
   hiddenPillSpace: { minWidth: 56 },

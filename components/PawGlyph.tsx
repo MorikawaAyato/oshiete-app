@@ -2,7 +2,7 @@ import { View } from 'react-native'
 
 // 犬の肉球（グレー）。react-native-svgを使わず丸めたViewで描画する。
 // size でグリフの一辺(px)を指定（16基準でスケール）。上向き。
-export default function PawGlyph({ size = 16, color = '#94a3b8' }: { size?: number; color?: string }) {
+export default function PawGlyph({ size = 16, color = '#8e9cb0' }: { size?: number; color?: string }) {
   const s = size / 16
   const pad = { position: 'absolute' as const, backgroundColor: color }
   return (

@@ -55,7 +55,7 @@ function NotePlaceholder({ style }: { style?: object }) {
   const boxH = w / 1.7 // lessonThumb の aspectRatio
   const top = boxH / 2 - 0.44 * imgH // ノートの中心（画像の縦44%）をボックス中央へ
   return (
-    <View style={[style, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
+    <View style={[style, { backgroundColor: c.bgSub, overflow: 'hidden' }]} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
       {w > 0 && <Image source={TEXT_ASSET} style={{ position: 'absolute', left: 0, width: w, height: imgH, top, opacity: 0.9 }} resizeMode="cover" />}
     </View>
   )
@@ -938,12 +938,12 @@ export default function HomeScreen() {
           return (
             <View style={styles.quickRow}>
               <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/library')} activeOpacity={0.8} disabled={analyzing}>
-                <Ionicons name="book-outline" size={15} color={c.sky} />
+                <Ionicons name="book-outline" size={15} color={c.blazer} />
                 <Text style={styles.jobTitle} numberOfLines={1}>教材を確認する</Text>
                 <View style={[styles.jobBadge, { backgroundColor: c.skyBg }]}><Text style={[styles.jobBadgeText, { color: c.link }]}>{history.length}冊</Text></View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/training')} activeOpacity={0.8} disabled={analyzing}>
-                <Ionicons name="school-outline" size={15} color="#d97706" />
+                <Ionicons name="school-outline" size={15} color={c.blazer} />
                 <Text style={styles.jobTitle} numberOfLines={1}>研修を受ける</Text>
                 {pendingCount > 0 && (
                   <View style={[styles.jobBadge, { backgroundColor: '#fef3c7' }]}><Text style={[styles.jobBadgeText, { color: '#b45309' }]}>まだ {pendingCount}</Text></View>
@@ -975,7 +975,7 @@ export default function HomeScreen() {
                       {item.thumbnails[0] ? (
                         <Image source={{ uri: item.thumbnails[0] }} style={styles.recentThumb} />
                       ) : (
-                        <View style={[styles.recentThumb, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]}>
+                        <View style={[styles.recentThumb, { backgroundColor: c.bgSub, overflow: 'hidden' }]}>
                           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: -8 }}>
                             <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
                           </View>
@@ -1615,7 +1615,7 @@ const styles = StyleSheet.create({
   recentDate: { fontSize: 10, color: c.textSub, marginTop: 2, fontWeight: '300' },
   checkMark: { fontSize: 14, color: c.primary, fontWeight: 'bold' },
   deleteBtn: { paddingHorizontal: 14, paddingVertical: 12 },
-  deleteBtnText: { fontSize: 13, color: c.faint },
+  deleteBtnText: { fontSize: 13, color: c.textSub },
   seeAllBtn: { paddingVertical: 10, alignItems: 'center' },
   seeAllText: { fontSize: 13, color: c.link, fontWeight: '500' },
 
@@ -1704,7 +1704,7 @@ const styles = StyleSheet.create({
   titleChipTextLocked: { color: c.borderStrong },
   examBtn: { backgroundColor: '#f59e0b', borderRadius: 12, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
   examBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  examHint: { fontSize: 10, color: c.faint, marginTop: 10 },
+  examHint: { fontSize: 10, color: c.textSub, marginTop: 10 },
   examSpeech: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: c.bgSub, borderRadius: 14, padding: 12, marginBottom: 14 },
   examSpeechText: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19 },
   examProgress: { fontSize: 11, fontWeight: '700', color: c.faint, marginBottom: 4 },
@@ -1736,7 +1736,7 @@ const styles = StyleSheet.create({
   hwBadgeMuted: { backgroundColor: c.bgSub, borderColor: c.border },
   hwBadgeIconMuted: { backgroundColor: 'white', borderColor: c.border },
   hwBadgeTitleMuted: { fontSize: 12, fontWeight: '700', color: c.textMid },
-  hwBadgeSubMuted: { fontSize: 11, color: c.faint, marginTop: 1 },
+  hwBadgeSubMuted: { fontSize: 11, color: c.textSub, marginTop: 1 },
   hwHint: { fontSize: 12, color: c.textSub, marginBottom: 10, lineHeight: 18 },
   hwCandidate: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 8, backgroundColor: '#fff' },
   hwCandidateSel: { borderColor: '#fbbf24', backgroundColor: '#fffbeb' },
@@ -1776,12 +1776,12 @@ const styles = StyleSheet.create({
   journalWeekday: { width: '14.28%', textAlign: 'center', fontSize: 9, fontWeight: '700', color: c.faint, marginBottom: 4 },
   journalCell: { width: '14.28%', alignItems: 'center', paddingVertical: 3, borderRadius: 8, gap: 1 },
   journalCellToday: { backgroundColor: c.pinkTint },
-  journalCellSel: { backgroundColor: '#334155' },
+  journalCellSel: { backgroundColor: c.ink },
   journalDetail: { marginTop: 12, borderRadius: 16, borderWidth: 1, borderColor: c.border, backgroundColor: c.bgSub, padding: 12, gap: 6 },
   journalDetailDate: { fontSize: 12, fontWeight: '700', color: c.textMid, marginBottom: 2 },
   journalDetailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   journalDetailText: { flex: 1, fontSize: 11, lineHeight: 16, color: c.textSub },
-  journalDetailEmpty: { fontSize: 11, color: c.faint },
+  journalDetailEmpty: { fontSize: 11, color: c.textSub },
   journalDay: { fontSize: 11, color: c.faint, fontVariant: ['tabular-nums'] },
   journalDayActive: { color: c.textMid, fontWeight: '700' },
   journalDots: { flexDirection: 'row', gap: 2, height: 6 },

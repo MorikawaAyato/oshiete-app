@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 10, fontWeight: '600', color: c.textStrong, lineHeight: 14, minHeight: 28 },
   cardTitleActive: { color: c.primary },
   cardDate: { fontSize: 9, color: c.textSub, marginTop: 2 },
-  cardDateFaint: { fontSize: 9, color: c.faint, marginTop: 2 },
+  cardDateFaint: { fontSize: 9, color: c.textSub, marginTop: 2 },
   cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   cardLessonRow: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 1 },
   cardLessonAvatar: { width: 12, height: 12, borderRadius: 6 },
@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 2,
   },
   emptySlotPlus: { fontSize: 20, color: c.faint, lineHeight: 24 },
-  emptySlotText: { fontSize: 10, fontWeight: '600', color: c.faint },
+  emptySlotText: { fontSize: 10, fontWeight: '600', color: c.textSub },
   cardMenuBtn: {
     position: 'absolute', top: 4, right: 4,
     width: 22, height: 22, borderRadius: 11,
@@ -774,7 +774,7 @@ const styles = StyleSheet.create({
   sheetRowText: { fontSize: 14, color: c.text, fontWeight: '500', flex: 1 },
   sheetRowTextRed: { color: c.danger },
   sheetRowTextPink: { color: c.primary, fontWeight: '600' },
-  sheetRowTextMuted: { color: c.faint },
+  sheetRowTextMuted: { color: c.textSub },
   sheetRowSub: { fontSize: 12, color: c.textSub, maxWidth: 100 },
   sheetRowCheck: { fontSize: 14, color: c.primary, fontWeight: '700' },
 
