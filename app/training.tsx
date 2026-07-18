@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useApp } from '@/lib/AppContext'
-import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, splitUnits, getUnitStatuses, logWork } from '@/lib/storage'
+import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, saveCardProgress, splitUnits, getUnitStatuses, logWork } from '@/lib/storage'
 import type { HistoryItem, QACard } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { c, font } from '@/lib/theme'
@@ -64,6 +64,8 @@ export default function TrainingScreen() {
 
   // 「まだ」のカードキー集合。残数バッジと校長のセリフに使う（markDrillで更新）
   const [drillPendingKeys, setDrillPendingKeys] = useState<Set<string>>(new Set())
+  // カードごとの接触記録。みがき状況サマリーに使う（markDrillで更新）
+  const [cardProgressMap, setCardProgressMap] = useState<Awaited<ReturnType<typeof loadCardProgress>>>({})
   // 完了済みの単元があるか（校長の「みがき直し」の口上に使う）
   const [hasDoneUnits, setHasDoneUnits] = useState(false)
 
@@ -81,12 +83,12 @@ export default function TrainingScreen() {
         setHasDoneUnits(done)
       })
       void loadDrillPending().then(setDrillPendingKeys)
+      void loadCardProgress().then(setCardProgressMap)
     }, [])
   )
 
   // フラッシュカードの進行状態
   const [drillMaterialId, setDrillMaterialId] = useState<string>('all')
-  const [drillPickerOpen, setDrillPickerOpen] = useState(false) // 教材選択シート
   const [drillCards, setDrillCards] = useState<QACard[]>([])
   const [drillIdx, setDrillIdx] = useState(0)
   const [drillRevealed, setDrillRevealed] = useState(false)
@@ -143,6 +145,12 @@ export default function TrainingScreen() {
     }
     await saveDrillPending(pending)
     setDrillPendingKeys(new Set(pending))
+    // 研修も「触れた」として記録（間隔反復の並び順と、みがき状況サマリーの元データ）
+    const progress = await loadCardProgress()
+    const key = drillKey(card)
+    progress[key] = { seen: (progress[key]?.seen ?? 0) + 1, lastAt: Date.now(), lastResult: remembered }
+    await saveCardProgress(progress)
+    setCardProgressMap(progress)
     if (drillIdx + 1 >= drillCards.length) {
       setDrillDone(true)
       void logWork('drill', { historyId: drillMaterialId !== 'all' ? drillMaterialId : undefined }) // 業務日誌へ（最後までめくった研修だけを記録）
@@ -167,6 +175,12 @@ export default function TrainingScreen() {
   // 「まだ」のカード残数（全体・教材ごと）。研修に戻ってくる理由を可視化する
   const pendingCountOf = (cards: QACard[]) => cards.filter((cd) => drillPendingKeys.has(drillKey(cd))).length
   const allPending = pendingCountOf(allCards)
+  // みがき状況：覚えた＝最後に触れたとき○/覚えた、まだ＝研修で「まだ」、これから＝それ以外（未着手や授業で✕のまま）
+  const rememberedCount = allCards.filter((cd) => {
+    const k = drillKey(cd)
+    return !drillPendingKeys.has(k) && cardProgressMap[k]?.lastResult === true
+  }).length
+  const freshCount = allCards.length - rememberedCount - allPending
   const principalLine =
     allCards.length === 0
       ? `${teacherCall}、よく来たね。だが研修はまだ早い。まずは教材を取り込んで、生徒に授業をしてきなさい。話はそれからだ。`
@@ -191,22 +205,20 @@ export default function TrainingScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
         {!drillActive ? (
           <>
-            {/* 校長との1on1：研修ルームの主役。あたたかい応接ふうのカードで大きく見せる */}
+            {/* 校長との1on1＝紺の「通信パネル」。挨拶役なので帯に格下げ（研修カードより弱く） */}
             <View style={styles.principalHero}>
-              <View style={styles.principalHeroHead}>
-                <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.8} style={{ position: 'relative' }}>
-                  <Image source={PRINCIPAL_IMAGE_DARK} style={styles.principalHeroAvatar} />
-                  <View style={styles.callAvatarDot} />
-                </TouchableOpacity>
-                <View>
+              <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.8} style={{ position: 'relative' }}>
+                <Image source={PRINCIPAL_IMAGE_DARK} style={styles.principalHeroAvatar} />
+                <View style={styles.callAvatarDot} />
+              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                   <Text style={styles.principalHeroName}>校長先生</Text>
                   <View style={styles.connectedPill}>
                     <EqBars />
                     <Text style={styles.connectedText}>接続中</Text>
                   </View>
                 </View>
-              </View>
-              <View style={styles.principalHeroBubble}>
                 <Text style={styles.principalLine}>{principalLine}</Text>
               </View>
             </View>
@@ -231,35 +243,65 @@ export default function TrainingScreen() {
                 <Text style={styles.emptyText}>教材を取り込むと、その内容からカードが用意されます</Text>
               ) : (
                 <>
-                  {/* 研修する教材の選択：プルダウン（教材が増えても場所を取らず、スマホでも操作しやすい） */}
-                  {(() => {
-                    const selectedMaterial = drillMaterialId === 'all' ? null : materialsWithCards.find((h) => h.id === drillMaterialId) ?? null
-                    const selectedLabel = selectedMaterial ? selectedMaterial.title.replace(TITLE_RE, '') : '全部ミックス'
-                    const selectedCount = selectedMaterial ? (selectedMaterial.factsheet?.cards?.length ?? 0) : allCards.length
-                    const selectedPending = selectedMaterial ? pendingCountOf(selectedMaterial.factsheet?.cards ?? []) : allPending
-                    return (
-                      <TouchableOpacity style={styles.pickerBtn} onPress={() => setDrillPickerOpen(true)}>
-                        <Text style={styles.pickerLabel}>教材</Text>
-                        <Text style={styles.pickerValue} numberOfLines={1}>{selectedLabel}</Text>
-                        <Text style={styles.pickerCount}>{selectedCount}枚</Text>
-                        {selectedPending > 0 && (
-                          <View style={styles.chipBadge}>
-                            <Text style={styles.chipBadgeText}>まだ{selectedPending}</Text>
-                          </View>
-                        )}
-                        <Text style={styles.pickerCaret}>▾</Text>
-                      </TouchableOpacity>
-                    )
-                  })()}
+                  {/* みがき状況：研修の成果と残量。「まだ」の数字は校長のセリフと一致させる */}
+                  <View style={styles.statBox}>
+                    <View style={{ flexDirection: 'row' }}>
+                      <View style={styles.statCell}>
+                        <Text style={styles.statNum}>{rememberedCount}</Text>
+                        <Text style={styles.statLabel}>覚えた</Text>
+                      </View>
+                      <View style={styles.statCell}>
+                        <Text style={[styles.statNum, allPending > 0 && { color: c.primaryStrong }]}>{allPending}</Text>
+                        <Text style={styles.statLabel}>まだ</Text>
+                      </View>
+                      <View style={styles.statCell}>
+                        <Text style={styles.statNum}>{freshCount}</Text>
+                        <Text style={styles.statLabel}>これから</Text>
+                      </View>
+                    </View>
+                    <View style={styles.statBar}>
+                      <View style={{ width: `${(rememberedCount / allCards.length) * 100}%`, backgroundColor: '#10b981' }} />
+                      <View style={{ width: `${(allPending / allCards.length) * 100}%`, backgroundColor: c.primary }} />
+                    </View>
+                  </View>
                   <TouchableOpacity
-                    style={styles.primaryBtn}
-                    onPress={() => void startDrill(drillMaterialId === 'all' || materialsWithCards.some((h) => h.id === drillMaterialId) ? drillMaterialId : 'all')}
+                    style={[styles.primaryBtn, { flexDirection: 'row', justifyContent: 'center', gap: 6 }]}
+                    onPress={() => { setDrillMaterialId('all'); void startDrill('all') }}
                   >
-                    <Text style={styles.primaryBtnText}>研修を始める（最大{DRILL_SESSION_SIZE}問）</Text>
+                    <Feather name="layers" size={15} color="#fff" />
+                    <Text style={styles.primaryBtnText}>
+                      {materialsWithCards.length >= 2 ? '全教材ミックスで始める' : '研修を始める'}
+                    </Text>
                   </TouchableOpacity>
+                  {/* 問数はボタンの外に（小さい端末での文字あふれ対策） */}
+                  <Text style={styles.drillLimitNote}>1回の研修は最大{DRILL_SESSION_SIZE}問</Text>
                 </>
               )}
             </View>
+
+            {/* 教材ごとの入口：行タップで即研修（ピッカーはこのリストで置き換え、選択UIの二重化を避ける） */}
+            {allCards.length > 0 && materialsWithCards.length >= 2 && (
+              <View style={[styles.card, { paddingVertical: 10 }]}>
+                <Text style={styles.matListLabel}>教材ごとに始める</Text>
+                {materialsWithCards.map((h, i) => {
+                  const pending = pendingCountOf(h.factsheet?.cards ?? [])
+                  return (
+                    <TouchableOpacity key={h.id} style={[styles.matRow, i > 0 && styles.matRowBorder]}
+                      onPress={() => { setDrillMaterialId(h.id); void startDrill(h.id) }}>
+                      <Feather name="layers" size={16} color={c.blazer} />
+                      <Text style={styles.matRowTitle} numberOfLines={1}>{h.title.replace(TITLE_RE, '')}</Text>
+                      <Text style={styles.pickerCount}>{h.factsheet?.cards?.length ?? 0}枚</Text>
+                      {pending > 0 && (
+                        <View style={styles.chipBadge}>
+                          <Text style={styles.chipBadgeText}>まだ{pending}</Text>
+                        </View>
+                      )}
+                      <Text style={styles.matRowChevron}>›</Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            )}
           </>
         ) : drillDone ? (
           <>
@@ -326,53 +368,6 @@ export default function TrainingScreen() {
         </Pressable>
       </Modal>
 
-      {/* 研修する教材の選択シート */}
-      <Modal visible={drillPickerOpen} transparent animationType="slide" onRequestClose={() => setDrillPickerOpen(false)}>
-        <View style={styles.sheetContainer}>
-          <Pressable style={styles.sheetOverlay} onPress={() => setDrillPickerOpen(false)} />
-          <View style={styles.sheetBottom}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>研修する教材</Text>
-              <TouchableOpacity onPress={() => setDrillPickerOpen(false)}>
-                <Text style={styles.sheetClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView>
-              <TouchableOpacity style={styles.pickerRow} onPress={() => { setDrillMaterialId('all'); setDrillPickerOpen(false) }}>
-                <Text style={[styles.pickerRowText, drillMaterialId === 'all' && styles.pickerRowTextSel]} numberOfLines={1}>
-                  全部ミックス
-                </Text>
-                <Text style={styles.pickerCount}>{allCards.length}枚</Text>
-                {allPending > 0 && (
-                  <View style={styles.chipBadge}>
-                    <Text style={styles.chipBadgeText}>まだ{allPending}</Text>
-                  </View>
-                )}
-                {drillMaterialId === 'all' && <Text style={styles.pickerCheck}>✓</Text>}
-              </TouchableOpacity>
-              {materialsWithCards.map((h) => {
-                const pending = pendingCountOf(h.factsheet?.cards ?? [])
-                const sel = drillMaterialId === h.id
-                return (
-                  <TouchableOpacity key={h.id} style={styles.pickerRow} onPress={() => { setDrillMaterialId(h.id); setDrillPickerOpen(false) }}>
-                    <Text style={[styles.pickerRowText, sel && styles.pickerRowTextSel]} numberOfLines={1}>
-                      {h.title.replace(TITLE_RE, '')}
-                    </Text>
-                    <Text style={styles.pickerCount}>{h.factsheet?.cards?.length ?? 0}枚</Text>
-                    {pending > 0 && (
-                      <View style={styles.chipBadge}>
-                        <Text style={styles.chipBadgeText}>まだ{pending}</Text>
-                      </View>
-                    )}
-                    {sel && <Text style={styles.pickerCheck}>✓</Text>}
-                  </TouchableOpacity>
-                )
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
     </SafeAreaView>
   )
 }
@@ -397,14 +392,12 @@ const styles = StyleSheet.create({
   // 1on1のチャット風バー（カードの器に入れず、部屋に浮かぶメッセージとして表示）
   // 校長ヒーロー＝紺の「通信パネル」（通信室・先生証と同族の儀式面。接続中の1on1通信なのでダークが許される。
   // 黒モニターほど硬くせず、紺＋金縁＋発光する緑で「いかした」側に寄せる）
-  principalHero: { backgroundColor: c.ink, borderRadius: 24, borderWidth: 1, borderColor: '#1b2b42', padding: 16 },
-  principalHeroHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
-  principalHeroAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fcd34d' },
-  principalHeroName: { fontSize: 14, fontWeight: '900', color: '#f1f5f9', marginBottom: 2 },
-  principalHeroBubble: {
-    alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 16, borderTopLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10,
+  principalHero: {
+    backgroundColor: c.ink, borderRadius: 16, borderWidth: 1, borderColor: '#1b2b42',
+    paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 10,
   },
+  principalHeroAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fcd34d' },
+  principalHeroName: { fontSize: 12, fontWeight: '900', color: '#f1f5f9' },
   // 研修カードのヒーロー見出し（アイコン＋タイトル）
   sectionHeroRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   sectionHeroIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: c.bgSub, alignItems: 'center', justifyContent: 'center' },
@@ -460,26 +453,25 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '700', color: c.textMid },
   emptyText: { fontSize: 12, color: c.textSub, lineHeight: 18 },
 
-  // 教材選択プルダウン
-  pickerBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderColor: c.border, borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12, backgroundColor: 'white',
-  },
-  pickerLabel: { fontSize: 10, fontWeight: '700', color: c.textSub },
-  pickerValue: { flex: 1, fontSize: 13, fontWeight: '600', color: c.textMid },
-  pickerCaret: { fontSize: 11, color: c.faint },
   pickerCount: { fontSize: 10, color: c.textSub, flexShrink: 0 },
-  pickerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 18, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: c.bgSub,
-  },
-  pickerRowText: { flex: 1, fontSize: 13, color: c.textMid },
-  pickerRowTextSel: { fontWeight: '700', color: c.primaryStrong },
-  pickerCheck: { fontSize: 13, fontWeight: '700', color: c.primaryStrong },
   chipBadge: { backgroundColor: '#fef3c7', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
   chipBadgeText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
+
+  // みがき状況サマリー
+  statBox: { backgroundColor: c.bgSub, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 },
+  statCell: { flex: 1, alignItems: 'center' },
+  statNum: { fontSize: 17, fontWeight: '900', color: c.textStrong, fontVariant: ['tabular-nums'] },
+  statLabel: { fontSize: 9, color: c.textSub, marginTop: 1 },
+  statBar: { flexDirection: 'row', height: 5, borderRadius: 999, overflow: 'hidden', backgroundColor: 'white', marginTop: 8 },
+
+  drillLimitNote: { fontSize: 10, color: c.textSub, textAlign: 'center', marginTop: 6 },
+
+  // 教材ごとの入口（行タップで即研修）
+  matListLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: c.faint, paddingTop: 2, paddingBottom: 2 },
+  matRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
+  matRowBorder: { borderTopWidth: 1, borderTopColor: c.bgSub },
+  matRowTitle: { flex: 1, fontSize: 13, fontWeight: '600', color: c.textMid },
+  matRowChevron: { fontSize: 15, color: c.faint },
 
   primaryBtn: { backgroundColor: c.primaryStrong, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   primaryBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
@@ -505,17 +497,6 @@ const styles = StyleSheet.create({
   zoomCircle: { width: 220, height: 220, borderRadius: 110, overflow: 'hidden', borderWidth: 4, borderColor: '#fcd34d', backgroundColor: '#fff' },
   // 新しい校長画像は正方形なので、旧構図用の縦長クロップ（歪む）をやめて全体をcover表示にする
   zoomImage: { width: '100%', height: '100%' },
-
-  sheetContainer: { flex: 1, justifyContent: 'flex-end' },
-  sheetOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheetBottom: { backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '88%', paddingBottom: 28 },
-  sheetHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border,
-  },
-  sheetTitle: { fontSize: 15, fontWeight: '900', color: c.text },
-  sheetClose: { fontSize: 18, color: c.faint },
 
   examSpeech: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: c.bgSub, borderRadius: 14, padding: 12, marginBottom: 14 },
   examSpeechText: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19 },
