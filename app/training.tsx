@@ -214,7 +214,7 @@ export default function TrainingScreen() {
             <View style={styles.card}>
               <View style={styles.sectionHeroRow}>
                 <View style={styles.sectionHeroIcon}>
-                  <Feather name="award" size={20} color="#d97706" />
+                  <Feather name="award" size={20} color={c.blazer} />
                 </View>
                 <View style={styles.sectionTitleRow}>
                   <Text style={styles.sectionTitle}>一問一答研修</Text>
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   // 校長ヒーロー（研修ルームの主役。面は銀ルールで白、校長の識別は金縁アバターなど小アクセントが担う）
   principalHero: { backgroundColor: 'white', borderRadius: 24, borderWidth: 1, borderColor: c.border, padding: 20 },
   principalHeroHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  principalHeroAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: 'white' },
+  principalHeroAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: c.paperRule },
   principalHeroName: { fontSize: 14, fontWeight: '900', color: c.text, marginBottom: 2 },
   principalHeroBubble: {
     alignSelf: 'flex-start', backgroundColor: c.bgSub, borderWidth: 1, borderColor: c.border,
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   },
   // 研修カードのヒーロー見出し（アイコン＋タイトル）
   sectionHeroRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-  sectionHeroIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: '#fef3c7', alignItems: 'center', justifyContent: 'center' },
+  sectionHeroIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: c.bgSub, alignItems: 'center', justifyContent: 'center' },
   callBar: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 4 },
   callAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: c.border },
   callAvatarDot: {
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
   secondaryBtnText: { fontSize: 13, fontWeight: '700', color: c.textMid },
 
   drillProgress: { fontSize: 11, fontWeight: '700', color: c.faint },
-  drillCard: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: c.border, padding: 20, minHeight: 160, justifyContent: 'center' },
+  drillCard: { backgroundColor: c.paper, borderRadius: 16, borderWidth: 1, borderColor: c.paperBorder, padding: 20, minHeight: 160, justifyContent: 'center' },
   drillLabelQ: { fontSize: 10, fontWeight: '700', color: '#b45309', letterSpacing: 2, marginBottom: 6 },
   drillLabelA: { fontSize: 10, fontWeight: '700', color: '#059669', letterSpacing: 2, marginTop: 14, marginBottom: 6 },
   drillQuestion: { fontSize: 16, fontWeight: '700', color: c.text, lineHeight: 24 },
