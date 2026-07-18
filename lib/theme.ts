@@ -6,11 +6,12 @@ import type { TextStyle, ViewStyle } from 'react-native'
 // ショッキングピンクは主要CTAと選択状態だけの一点アクセントにする（寒色地はピンクの発色を増幅する）。
 // 淡ピンク・淡スカイの「面」は全廃（パステル面の多色使いが幼く見える原因のため）。暗面も作らない
 export const c = {
-  // ニュートラル（青みの銀。彩度は「青と名指しできない」範囲に抑える）
-  bg: '#f6f8fc',
-  bgSub: '#eef2f8',
-  border: '#dde5ef',
-  borderStrong: '#c3cfdf',
+  // ニュートラル（青みの銀。明るい面はワンノッチ青寄せ済み＝これ以上足すと「水色」の崖。
+  // 暗い側（文字）はすでに紺系なので据え置き）
+  bg: '#eef3fb',
+  bgSub: '#e4ecf7',
+  border: '#d3deee',
+  borderStrong: '#b8c8de',
   faint: '#8e9cb0', // 装飾・アイコン専用。読ませる文字には textSub 以上を使う
   textSub: '#5d6b80',
   textMid: '#42536b',
@@ -19,18 +20,18 @@ export const c = {
   ink: '#0d1a2e',
 
   // ブランド（ピンク）＝主要CTA・選択状態だけの一点アクセント。淡色面は敷かない
-  pinkTint: '#f6f8fc', // 旧・淡ピンク面 → 基調色に中和（選択状態は白地＋pinkBorderの枠線で表現）
-  pinkSoft: '#eef2f8',
+  pinkTint: '#eef3fb', // 旧・淡ピンク面 → 基調色に中和（選択状態は白地＋pinkBorderの枠線で表現）
+  pinkSoft: '#e4ecf7',
   pinkBorder: '#fbcfe8',
   pinkMuted: '#f9a8d4',
   primary: '#ec4899',
   primaryStrong: '#db2777',
 
   // 情報・リンク（機能色として維持。淡スカイの面は基調色に中和）
-  skyTint: '#f6f8fc',
-  skyBg: '#eef2f8',
-  skyBorder: '#dde5ef',
-  skySoft: '#c3cfdf',
+  skyTint: '#eef3fb',
+  skyBg: '#e4ecf7',
+  skyBorder: '#d3deee',
+  skySoft: '#b8c8de',
   sky: '#0ea5e9',
   link: '#0369a1',
   skyStrong: '#0d1a2e', // 見出し用途はインクに統一
