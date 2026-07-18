@@ -736,7 +736,7 @@ export default function ChatScreen() {
                     )}
                     {showAnswers && (
                       <Text style={styles.notebookGradeHint}>
-                        自分の採点とメモを、赤い<Text style={styles.modelAnswerWord}>模範解答</Text>と見くらべて振り返ります。
+                        自分がつけた○×と教えたことを、赤い<Text style={styles.modelAnswerWord}>模範解答</Text>と見くらべて振り返ります。
                       </Text>
                     )}
                     <View style={[styles.notebookPaper, { marginBottom: 12 }]}>
@@ -744,7 +744,11 @@ export default function ChatScreen() {
                         <Text style={{ fontWeight: '700' }}>問{page + 1} </Text>{it.question}
                       </Text>
                       {/* 生徒の答案（手書き）。メモで訂正した答案には訂正線が入る */}
-                      <Text style={[styles.memoLabel, { marginTop: 10 }]}>生徒の答案</Text>
+                      {/* 振り返りでは所有権を明示：印の真上にラベルを置き、答案の行長は狭めない */}
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, marginTop: 10 }}>
+                        <Text style={[styles.memoLabel, { marginBottom: 0 }]}>生徒の答案</Text>
+                        {showAnswers && mark !== undefined && <Text style={[styles.memoLabel, { marginBottom: 0 }]}>あなたがつけた<Text style={{ fontSize: 13 }}>○×</Text></Text>}
+                      </View>
                       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 2 }}>
                         <Text style={[styles.handAnswer, { flex: 1 }, corrected && styles.handAnswerCorrected]}>{it.studentAnswer}</Text>
                         {mark !== undefined && (
@@ -765,7 +769,8 @@ export default function ChatScreen() {
                       {/* 生徒のメモ（先生の説明の書き取り。直しは青ペン） */}
                       {memo !== undefined && (
                         <View style={styles.memoBlock}>
-                          <Text style={styles.memoLabel}>先生から教わったこと</Text>
+                          {/* 授業中は生徒のノートの文字（生徒視点）、振り返りは自分の学びとして見直す（あなた視点） */}
+                          <Text style={styles.memoLabel}>{showAnswers ? 'あなたが教えたこと' : '先生から教わったこと'}</Text>
                           <Text style={styles.memoText}>{memo}</Text>
                         </View>
                       )}
