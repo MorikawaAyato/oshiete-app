@@ -82,7 +82,7 @@ function TypingPaws() {
   )
 }
 
-function EnteringRoom({ student }: { student: { name: string; avatar: ReturnType<typeof require>; color: string } }) {
+function EnteringRoom({ student }: { student: { name: string; avatar: ReturnType<typeof require>; color: string; tint: string } }) {
   const msgs = [
     `${student.name}のトークルームに接続中...`,
     `${student.name}がノートをかばんから出しています...`,
@@ -104,7 +104,7 @@ function EnteringRoom({ student }: { student: { name: string; avatar: ReturnType
   return (
     <View style={styles.entering}>
       <View style={styles.enteringAvatarWrap}>
-        <Image source={student.avatar} style={styles.enteringAvatar} />
+        <Image source={student.avatar} style={[styles.enteringAvatar, { backgroundColor: student.tint }]} />
         <View style={styles.enteringOnline} />
       </View>
       <Animated.Text style={[styles.enteringMsg, { opacity }]}>
@@ -490,7 +490,7 @@ export default function ChatScreen() {
   // チャット内のプリントカード。提出時（先頭）と返却時（末尾）の2回だけ登場する
   const renderPrintCard = (label: string) => (
     <View style={[styles.bubble, styles.bubbleMana]}>
-      <Image source={student.avatar} style={styles.bubbleAvatar} />
+      <Image source={student.avatar} style={[styles.bubbleAvatar, { backgroundColor: student.tint }]} />
       <TouchableOpacity onPress={openNote} style={styles.notebookCard}>
         <View style={styles.notebookCardPaper}>
           <Text style={styles.notebookCardTitle} numberOfLines={1}>学習ノート</Text>
@@ -526,7 +526,7 @@ export default function ChatScreen() {
             <Text style={styles.backText}>← 退出</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Image source={student.avatar} style={styles.headerAvatar} />
+            <Image source={student.avatar} style={[styles.headerAvatar, { backgroundColor: student.tint }]} />
             <View>
               <Text style={styles.headerName}>{student.name}</Text>
               <Text style={styles.stageText}>{stageLabel}</Text>
@@ -549,7 +549,7 @@ export default function ChatScreen() {
             <Fragment key={i}>
               <View style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleMana]}>
                 {msg.role === 'mana' && (
-                  <Image source={student.avatar} style={styles.bubbleAvatar} />
+                  <Image source={student.avatar} style={[styles.bubbleAvatar, { backgroundColor: student.tint }]} />
                 )}
                 <View style={[
                   styles.bubbleText,
@@ -579,7 +579,7 @@ export default function ChatScreen() {
           ))}
           {studentTyping && (
             <View style={[styles.bubble, styles.bubbleMana]}>
-              <Image source={student.avatar} style={styles.bubbleAvatar} />
+              <Image source={student.avatar} style={[styles.bubbleAvatar, { backgroundColor: student.tint }]} />
               <TypingPaws />
             </View>
           )}

@@ -5,6 +5,7 @@ export type Student = {
   avatar: ReturnType<typeof require> // 同梱画像（require）。ネットワーク取得しない
   color: string
   colorStrong: string // 白文字を載せるボタン用の濃い色
+  tint: string // アバター背景の淡ティント（白いサモエドを映えさせる。落ち着いた色味）
   systemPrompt: string
   endMessage: string
   notebookMessage: string
@@ -62,6 +63,7 @@ export const STUDENTS: Student[] = [
     avatar: require('../assets/samoedo-girl.webp'),
     color: '#ec4899',
     colorStrong: '#db2777',
+    tint: '#f2dce7',
     endMessage: '⏰ あっ、もう時間！先生、今日もありがとうございました！✨',
     notebookMessage: '今日のノート送りますね！📷 添削してもらえたらうれしいです！',
     notebookThanks: 'わあっ、添削ありがとうございます！✨ 直してもらったところ、次までにちゃんと覚え直しますね！😊',
@@ -92,6 +94,7 @@ ${TEACHING_ROLE}`,
     avatar: require('../assets/samoedo-boy.webp'),
     color: '#3b82f6',
     colorStrong: '#2563eb',
+    tint: '#d9e4f0',
     endMessage: '⏰ あ...もう時間なんですね。今日もありがとうございました🐾',
     notebookMessage: 'あの...今日のノートです...📷 まちがってたら教えてほしいです🐾',
     notebookThanks: '添削ありがとうございます...！なおしてもらったところ、ゆっくり覚え直します🐾😊',
