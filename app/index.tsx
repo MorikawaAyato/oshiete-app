@@ -623,8 +623,8 @@ export default function HomeScreen() {
                   {teacherProfile.name ? `${teacherProfile.name}先生` : '先生'}
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#34d399' }} />
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#6ee7b7' }}>オンライン</Text>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.success }} />
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: c.successText }}>オンライン</Text>
                 </View>
               </View>
             </View>
@@ -632,7 +632,7 @@ export default function HomeScreen() {
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.mailIconBtn} onPress={() => setShowInbox(true)}>
               <View style={styles.mailIconCircle}>
-                <Feather name="mail" size={18} color="white" />
+                <Feather name="mail" size={18} color={c.blazer} />
               </View>
               <Text style={styles.teacherIconLabel}>メール</Text>
               {unreadCount > 0 && (
@@ -643,13 +643,13 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={styles.teacherIconBtn} onPress={() => { const d = new Date(); setJournalMonth({ y: d.getFullYear(), m: d.getMonth() }); setJournalDay(null); void loadWorkLog().then(setWorkLog); void loadExamDays().then(setExamDays); setJournalOpen(true) }}>
               <View style={styles.teacherIconCircle}>
-                <Feather name="calendar" size={18} color="white" />
+                <Feather name="calendar" size={18} color={c.blazer} />
               </View>
               <Text style={styles.teacherIconLabel}>日誌</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.teacherIconBtn} onPress={() => setTeacherSheet(true)}>
               <View style={styles.teacherIconCircle}>
-                <MaterialCommunityIcons name="badge-account-outline" size={20} color="white" />
+                <MaterialCommunityIcons name="badge-account-outline" size={20} color={c.blazer} />
               </View>
               <Text style={styles.teacherIconLabel}>先生証</Text>
             </TouchableOpacity>
@@ -1400,21 +1400,16 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: 20, paddingVertical: 24, gap: 16 },
 
-  // ヘッダー（紺ブレザー帯：儀式面の深セルリアン。本文の銀とピンクCTAは面が離れているので喧嘩しない）
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: c.blazer,
-    marginHorizontal: -20, marginTop: -24, marginBottom: 4,
-    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16,
-    borderBottomLeftRadius: 22, borderBottomRightRadius: 22,
-  },
-  appTitle: { fontSize: 18, fontFamily: font.roundHeavy, color: 'white', letterSpacing: -0.3 },
-  appSubtitle: { fontSize: 10, color: c.blazerText, fontWeight: '700', letterSpacing: 0.3 },
+  // ヘッダー（静かな家具：画面の主役は授業カード＋ピンクCTA。紺は面でなく「印」として
+  // アプリ名・アイコンにだけ宿す。ヒエラルキー＝CTA＞授業情報＞ヘッダー）
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  appTitle: { fontSize: 18, fontFamily: font.roundHeavy, color: c.ink, letterSpacing: -0.3 },
+  appSubtitle: { fontSize: 10, color: c.blazer, fontWeight: '700', letterSpacing: 0.3 },
   headerIcons: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
   mailIconBtn: { alignItems: 'center', gap: 2, position: 'relative' },
   mailIconCircle: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'white', borderWidth: 1, borderColor: c.borderStrong,
     alignItems: 'center', justifyContent: 'center',
   },
   mailIconEmoji: { fontSize: 20 },
@@ -1429,10 +1424,10 @@ const styles = StyleSheet.create({
   teacherIconBtn: { alignItems: 'center', gap: 2 },
   teacherIconCircle: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'white', borderWidth: 1, borderColor: c.borderStrong,
     alignItems: 'center', justifyContent: 'center',
   },
-  teacherIconLabel: { fontSize: 9, fontWeight: '700', color: c.blazerText, letterSpacing: 0.5 },
+  teacherIconLabel: { fontSize: 9, fontWeight: '700', color: c.textSub, letterSpacing: 0.5 },
 
   // セクション共通
   todaySection: { gap: 10 },
