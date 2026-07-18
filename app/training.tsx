@@ -500,8 +500,9 @@ const styles = StyleSheet.create({
   doneScore: { fontSize: 13, color: c.textMid, marginBottom: 14 },
 
   zoomOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
-  zoomCircle: { width: 220, height: 220, borderRadius: 110, overflow: 'hidden', borderWidth: 4, borderColor: '#fde68a', backgroundColor: '#fff' },
-  zoomImage: { position: 'absolute', top: 0, width: 220, height: 290 },
+  zoomCircle: { width: 220, height: 220, borderRadius: 110, overflow: 'hidden', borderWidth: 4, borderColor: '#fcd34d', backgroundColor: '#fff' },
+  // 新しい校長画像は正方形なので、旧構図用の縦長クロップ（歪む）をやめて全体をcover表示にする
+  zoomImage: { width: '100%', height: '100%' },
 
   sheetContainer: { flex: 1, justifyContent: 'flex-end' },
   sheetOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
