@@ -394,13 +394,13 @@ const styles = StyleSheet.create({
   principalAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fde68a' },
   principalAvatarSmall: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fde68a' },
   // 1on1のチャット風バー（カードの器に入れず、部屋に浮かぶメッセージとして表示）
-  // 校長ヒーロー（研修ルームの主役。あたたかい応接カード）
-  principalHero: { backgroundColor: '#fffbeb', borderRadius: 24, borderWidth: 1, borderColor: '#fde68a', padding: 20 },
+  // 校長ヒーロー（研修ルームの主役。面は銀ルールで白、校長の識別は金縁アバターなど小アクセントが担う）
+  principalHero: { backgroundColor: 'white', borderRadius: 24, borderWidth: 1, borderColor: c.border, padding: 20 },
   principalHeroHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   principalHeroAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: 'white' },
   principalHeroName: { fontSize: 14, fontWeight: '900', color: c.text, marginBottom: 2 },
   principalHeroBubble: {
-    alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.8)', borderWidth: 1, borderColor: '#fde68a',
+    alignSelf: 'flex-start', backgroundColor: c.bgSub, borderWidth: 1, borderColor: c.border,
     borderRadius: 16, borderTopLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 12,
   },
   // 研修カードのヒーロー見出し（アイコン＋タイトル）
@@ -474,12 +474,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: c.bgSub,
   },
   pickerRowText: { flex: 1, fontSize: 13, color: c.textMid },
-  pickerRowTextSel: { fontWeight: '700', color: '#b45309' },
-  pickerCheck: { fontSize: 13, fontWeight: '700', color: '#f59e0b' },
+  pickerRowTextSel: { fontWeight: '700', color: c.primaryStrong },
+  pickerCheck: { fontSize: 13, fontWeight: '700', color: c.primaryStrong },
   chipBadge: { backgroundColor: '#fef3c7', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
   chipBadgeText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
 
-  primaryBtn: { backgroundColor: '#f59e0b', borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
+  primaryBtn: { backgroundColor: c.primaryStrong, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   primaryBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   secondaryBtn: { flex: 1, borderWidth: 1, borderColor: c.borderStrong, borderRadius: 12, paddingVertical: 12, alignItems: 'center', backgroundColor: '#fff' },
   secondaryBtnText: { fontSize: 13, fontWeight: '700', color: c.textMid },
