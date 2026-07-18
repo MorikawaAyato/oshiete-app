@@ -2,38 +2,38 @@ import type { TextStyle, ViewStyle } from 'react-native'
 
 // オシエテ先生 カラートークン
 // 色は役割ベースでここに一元管理する。画面側では必ずここから参照する。
-// 配色コンセプト「白と墨と、一撃のピンク」：基調は無彩色（ストーン）に統一し、
-// ショッキングピンクは主要CTAと選択状態だけの一点アクセントにする。
-// 淡ピンク・淡スカイの「面」は全廃（パステル面の多色使いが幼く見える原因のため）
+// 配色コンセプト「銀と墨と、一撃のピンク」：基調は明るいクールグレー（スレート＝銀）に統一し、
+// ショッキングピンクは主要CTAと選択状態だけの一点アクセントにする（寒色地はピンクの発色を増幅する）。
+// 淡ピンク・淡スカイの「面」は全廃（パステル面の多色使いが幼く見える原因のため）。暗面も作らない
 export const c = {
-  // ニュートラル（ストーン＝温かみのある無彩色）
-  bg: '#fafaf9',
-  bgSub: '#f5f5f4',
-  border: '#e7e5e4',
-  borderStrong: '#d6d3d1',
-  faint: '#a8a29e', // 装飾・アイコン専用。読ませる文字には textSub 以上を使う
-  textSub: '#78716c',
-  textMid: '#57534e',
-  text: '#44403c',
-  textStrong: '#292524',
-  ink: '#1c1917',
+  // ニュートラル（スレート＝青みの銀）
+  bg: '#f8fafc',
+  bgSub: '#f1f5f9',
+  border: '#e2e8f0',
+  borderStrong: '#cbd5e1',
+  faint: '#94a3b8', // 装飾・アイコン専用。読ませる文字には textSub 以上を使う
+  textSub: '#64748b',
+  textMid: '#475569',
+  text: '#334155',
+  textStrong: '#1e293b',
+  ink: '#0f172a',
 
   // ブランド（ピンク）＝主要CTA・選択状態だけの一点アクセント。淡色面は敷かない
-  pinkTint: '#fafaf9', // 旧・淡ピンク面 → 基調色に中和（選択状態は白地＋pinkBorderの枠線で表現）
-  pinkSoft: '#f5f5f4',
+  pinkTint: '#f8fafc', // 旧・淡ピンク面 → 基調色に中和（選択状態は白地＋pinkBorderの枠線で表現）
+  pinkSoft: '#f1f5f9',
   pinkBorder: '#fbcfe8',
   pinkMuted: '#f9a8d4',
   primary: '#ec4899',
   primaryStrong: '#db2777',
 
   // 情報・リンク（機能色として維持。淡スカイの面は基調色に中和）
-  skyTint: '#fafaf9',
-  skyBg: '#f5f5f4',
-  skyBorder: '#e7e5e4',
-  skySoft: '#d6d3d1',
+  skyTint: '#f8fafc',
+  skyBg: '#f1f5f9',
+  skyBorder: '#e2e8f0',
+  skySoft: '#cbd5e1',
   sky: '#0ea5e9',
   link: '#0369a1',
-  skyStrong: '#1c1917', // 見出し用途はインクに統一
+  skyStrong: '#0f172a', // 見出し用途はインクに統一
 
   // 紙もの（アンバー）＝ノート・虎の巻の専用色
   paper: '#fffbeb',
