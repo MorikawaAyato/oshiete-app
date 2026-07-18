@@ -85,7 +85,7 @@ function TypingPaws() {
 function EnteringRoom({ student }: { student: { name: string; avatar: ReturnType<typeof require>; color: string; tint: string } }) {
   const msgs = [
     `${student.name}のトークルームに接続中...`,
-    `${student.name}がノートを開いて待っています...`,
+    `${student.name}がノートの準備をしています...`,
     'もうすぐ始まります...',
   ]
   const [idx, setIdx] = useState(0)

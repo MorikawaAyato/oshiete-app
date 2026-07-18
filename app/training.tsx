@@ -397,13 +397,13 @@ const styles = StyleSheet.create({
   // 1on1のチャット風バー（カードの器に入れず、部屋に浮かぶメッセージとして表示）
   // 校長ヒーロー＝紺の「通信パネル」（通信室・先生証と同族の儀式面。接続中の1on1通信なのでダークが許される。
   // 黒モニターほど硬くせず、紺＋金縁＋発光する緑で「いかした」側に寄せる）
-  principalHero: { backgroundColor: c.ink, borderRadius: 24, borderWidth: 1, borderColor: '#1b2b42', padding: 20 },
-  principalHeroHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  principalHero: { backgroundColor: c.ink, borderRadius: 24, borderWidth: 1, borderColor: '#1b2b42', padding: 16 },
+  principalHeroHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   principalHeroAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fcd34d' },
   principalHeroName: { fontSize: 14, fontWeight: '900', color: '#f1f5f9', marginBottom: 2 },
   principalHeroBubble: {
     alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 16, borderTopLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 12,
+    borderRadius: 16, borderTopLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10,
   },
   // 研修カードのヒーロー見出し（アイコン＋タイトル）
   sectionHeroRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
