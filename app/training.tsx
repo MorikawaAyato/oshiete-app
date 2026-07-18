@@ -394,13 +394,14 @@ const styles = StyleSheet.create({
   principalAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fde68a' },
   principalAvatarSmall: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fde68a' },
   // 1on1のチャット風バー（カードの器に入れず、部屋に浮かぶメッセージとして表示）
-  // 校長ヒーロー（研修ルームの主役。面は銀ルールで白、校長の識別は金縁アバターなど小アクセントが担う）
-  principalHero: { backgroundColor: 'white', borderRadius: 24, borderWidth: 1, borderColor: c.border, padding: 20 },
+  // 校長ヒーロー＝紺の「通信パネル」（通信室・先生証と同族の儀式面。接続中の1on1通信なのでダークが許される。
+  // 黒モニターほど硬くせず、紺＋金縁＋発光する緑で「いかした」側に寄せる）
+  principalHero: { backgroundColor: c.ink, borderRadius: 24, borderWidth: 1, borderColor: '#1b2b42', padding: 20 },
   principalHeroHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  principalHeroAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: c.paperRule },
-  principalHeroName: { fontSize: 14, fontWeight: '900', color: c.text, marginBottom: 2 },
+  principalHeroAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fcd34d' },
+  principalHeroName: { fontSize: 14, fontWeight: '900', color: '#f1f5f9', marginBottom: 2 },
   principalHeroBubble: {
-    alignSelf: 'flex-start', backgroundColor: c.bgSub, borderWidth: 1, borderColor: c.border,
+    alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
     borderRadius: 16, borderTopLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 12,
   },
   // 研修カードのヒーロー見出し（アイコン＋タイトル）
@@ -411,16 +412,16 @@ const styles = StyleSheet.create({
   callAvatarDot: {
     position: 'absolute', bottom: 0, right: 0,
     width: 11, height: 11, borderRadius: 6,
-    backgroundColor: '#34d399', borderWidth: 2, borderColor: 'white',
+    backgroundColor: '#34d399', borderWidth: 2, borderColor: c.ink,
   },
   callNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   callName: { fontSize: 11, fontWeight: '700', color: c.textMid },
   connectedPill: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0',
+    backgroundColor: 'rgba(52,211,153,0.12)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.4)',
     borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1,
   },
-  connectedText: { fontSize: 8, fontWeight: '700', color: '#047857' },
+  connectedText: { fontSize: 8, fontWeight: '700', color: '#6ee7b7' },
   principalBubble: {
     marginTop: 10, alignSelf: 'flex-start',
     backgroundColor: 'white', borderWidth: 1, borderColor: c.border,
@@ -428,7 +429,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10,
   },
   principalBubbleFull: { marginTop: 0, alignSelf: 'stretch' },
-  principalLine: { fontSize: 13, color: c.textMid, lineHeight: 20 },
+  principalLine: { fontSize: 13, color: '#cbd5e1', lineHeight: 20 },
   principalComment: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19, backgroundColor: c.bgSub, borderRadius: 12, padding: 10 },
 
   sectionTitle: { fontSize: 14, fontWeight: '900', color: c.text, marginBottom: 4 },
