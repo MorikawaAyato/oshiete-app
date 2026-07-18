@@ -13,6 +13,7 @@ import { c, font } from '@/lib/theme'
 import { Feather } from '@expo/vector-icons'
 
 const PRINCIPAL_IMAGE = require('../assets/tora_koutyou.webp')
+const PRINCIPAL_IMAGE_DARK = require('../assets/tora_koutyou_dark.webp') // 紺の儀式面（通信パネル・ズーム）用
 const TITLE_RE = /^この(教材|文書|画像|写真)は[、，]?\s*/u
 
 // 研修（フラッシュカード）
@@ -194,7 +195,7 @@ export default function TrainingScreen() {
             <View style={styles.principalHero}>
               <View style={styles.principalHeroHead}>
                 <TouchableOpacity onPress={() => setShowPrincipalAvatar(true)} activeOpacity={0.8} style={{ position: 'relative' }}>
-                  <Image source={PRINCIPAL_IMAGE} style={styles.principalHeroAvatar} />
+                  <Image source={PRINCIPAL_IMAGE_DARK} style={styles.principalHeroAvatar} />
                   <View style={styles.callAvatarDot} />
                 </TouchableOpacity>
                 <View>
@@ -320,7 +321,7 @@ export default function TrainingScreen() {
       <Modal visible={showPrincipalAvatar} transparent animationType="fade" onRequestClose={() => setShowPrincipalAvatar(false)}>
         <Pressable style={styles.zoomOverlay} onPress={() => setShowPrincipalAvatar(false)}>
           <View style={styles.zoomCircle}>
-            <Image source={PRINCIPAL_IMAGE} style={styles.zoomImage} />
+            <Image source={PRINCIPAL_IMAGE_DARK} style={styles.zoomImage} />
           </View>
         </Pressable>
       </Modal>
