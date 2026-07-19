@@ -264,7 +264,7 @@ export default function LibraryScreen() {
         </TouchableOpacity>
         {isActive && (
           <View style={styles.activeBadge}>
-            <Text style={styles.activeBadgeText}>次の授業で使う</Text>
+            <Text style={styles.activeBadgeText}>選択中</Text>
           </View>
         )}
       </View>
@@ -277,7 +277,7 @@ export default function LibraryScreen() {
       {/* ヘッダー */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>教材ライブラリ</Text>
-        <Text style={styles.headerCount}>{history.length}件 <Text style={styles.headerCountMax}>/ 最大{HISTORY_MAX}件</Text></Text>
+        <Text style={styles.headerCount}>{history.length} <Text style={styles.headerCountMax}>/ {HISTORY_MAX}件</Text></Text>
       </View>
 
       {/* ボディ */}
