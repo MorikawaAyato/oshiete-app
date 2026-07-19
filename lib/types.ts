@@ -57,6 +57,7 @@ export type PrintItem = {
   choices?: string[] // 虎の巻（赤ペンのひとこと解説の候補。1つが正しい）
   teacherMark?: boolean // 先生の丸付け（模範解答なし）。授業の中の判定はこの○✕だけ
   redPen?: string // ✕の問題への先生のひとこと解説
+  redPenSkipped?: boolean // 先生が「わからない」で通した問（教われなかった記録。エコー・振り返りのメモ表示の対象外）
 }
 
 export type PrintStage = 'grading' | 'redpen' | 'done'

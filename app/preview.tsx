@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
   editNote: { fontSize: 11, lineHeight: 15, color: c.faint },
   editInput: { borderWidth: 1, borderColor: '#fca5a5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, fontSize: 13, color: c.text, backgroundColor: 'white', minHeight: 44 },
   editBtns: { flexDirection: 'row', gap: 8 },
-  editSave: { backgroundColor: '#e11d48', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
+  editSave: { backgroundColor: c.redpen, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
   editSaveText: { color: 'white', fontSize: 12, fontWeight: '700' },
   editCancel: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
   editCancelText: { color: c.textSub, fontSize: 12, fontWeight: '700' },

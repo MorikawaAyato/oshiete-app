@@ -129,3 +129,16 @@ export async function fetchPrint(
   return postJson('/api/print', { studentId, items, misconceptions }, 90_000)
 }
 
+// 赤ペンラリーの先生メッセージ4分類（分類だけAI・生徒のセリフは定型プール）。
+// 失敗・タイムアウトは explanation 扱い＝最悪ケースが従来挙動
+export type RallyReplyKind = 'explanation' | 'dont_know' | 'praise' | 'off_topic'
+const RALLY_KINDS: RallyReplyKind[] = ['explanation', 'dont_know', 'praise', 'off_topic']
+export async function classifyRallyReply(question: string, modelAnswer: string, reply: string): Promise<RallyReplyKind> {
+  try {
+    const res = (await postJson('/api/rally', { question, modelAnswer, reply }, 2_500)) as { kind?: string }
+    return RALLY_KINDS.includes(res.kind as RallyReplyKind) ? (res.kind as RallyReplyKind) : 'explanation'
+  } catch {
+    return 'explanation'
+  }
+}
+

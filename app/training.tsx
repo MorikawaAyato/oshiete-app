@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useApp } from '@/lib/AppContext'
-import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, saveCardProgress, splitUnits, getUnitStatuses, logWork } from '@/lib/storage'
+import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, saveCardProgress, splitUnits, getUnitStatuses, logWork, loadWorkLog, dateKeyAfterDays, examDateLabel } from '@/lib/storage'
+import type { WorkLog } from '@/lib/storage'
 import type { HistoryItem, QACard } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { c, font } from '@/lib/theme'
@@ -64,8 +65,8 @@ export default function TrainingScreen() {
 
   // 「まだ」のカードキー集合。残数バッジと校長のセリフに使う（markDrillで更新）
   const [drillPendingKeys, setDrillPendingKeys] = useState<Set<string>>(new Set())
-  // カードごとの接触記録。みがき状況サマリーに使う（markDrillで更新）
-  const [cardProgressMap, setCardProgressMap] = useState<Awaited<ReturnType<typeof loadCardProgress>>>({})
+  // 業務日誌（研修の記録行に使う。研修タブに出すのは研修のデータだけ）
+  const [workLog, setWorkLog] = useState<WorkLog>({})
   // 完了済みの単元があるか（校長の「みがき直し」の口上に使う）
   const [hasDoneUnits, setHasDoneUnits] = useState(false)
 
@@ -83,7 +84,7 @@ export default function TrainingScreen() {
         setHasDoneUnits(done)
       })
       void loadDrillPending().then(setDrillPendingKeys)
-      void loadCardProgress().then(setCardProgressMap)
+      void loadWorkLog().then(setWorkLog)
     }, [])
   )
 
@@ -145,12 +146,11 @@ export default function TrainingScreen() {
     }
     await saveDrillPending(pending)
     setDrillPendingKeys(new Set(pending))
-    // 研修も「触れた」として記録（間隔反復の並び順と、みがき状況サマリーの元データ）
+    // 研修も「触れた」として記録（間隔反復の並び順の元データ）
     const progress = await loadCardProgress()
     const key = drillKey(card)
     progress[key] = { seen: (progress[key]?.seen ?? 0) + 1, lastAt: Date.now(), lastResult: remembered }
     await saveCardProgress(progress)
-    setCardProgressMap(progress)
     if (drillIdx + 1 >= drillCards.length) {
       setDrillDone(true)
       void logWork('drill', { historyId: drillMaterialId !== 'all' ? drillMaterialId : undefined }) // 業務日誌へ（最後までめくった研修だけを記録）
@@ -175,17 +175,12 @@ export default function TrainingScreen() {
   // 「まだ」のカード残数（全体・教材ごと）。研修に戻ってくる理由を可視化する
   const pendingCountOf = (cards: QACard[]) => cards.filter((cd) => drillPendingKeys.has(drillKey(cd))).length
   const allPending = pendingCountOf(allCards)
-  // みがき状況の内訳：覚えた＝最後に触れたとき○/覚えた、まだ＝研修で「まだ」、これから＝それ以外（未着手や授業で✕のまま）。
-  // サマリー・教材行のミニバー・研修中の表示で同じ計算式を共用する（合計と内訳が必ず一致する）
-  const breakdownOf = (cards: QACard[]) => {
-    const pend = pendingCountOf(cards)
-    const rem = cards.filter((cd) => {
-      const k = drillKey(cd)
-      return !drillPendingKeys.has(k) && cardProgressMap[k]?.lastResult === true
-    }).length
-    return { rem, pend, fresh: cards.length - rem - pend }
-  }
-  const { rem: rememberedCount, fresh: freshCount } = breakdownOf(allCards)
+  // 研修の記録：研修タブに出す数字は研修由来のものだけ（「まだ」と実施記録）。
+  // 授業の丸付け結果はここには映さない＝研修と授業は別の部屋
+  const drillDayKeys = Object.keys(workLog).filter((k) => (workLog[k]?.drill ?? 0) > 0).sort()
+  const lastDrillKey = drillDayKeys[drillDayKeys.length - 1]
+  const recent7Keys = new Set(Array.from({ length: 7 }, (_, i) => dateKeyAfterDays(-i)))
+  const drillCount7 = drillDayKeys.filter((k) => recent7Keys.has(k)).reduce((sum, k) => sum + (workLog[k]?.drill ?? 0), 0)
   const principalLine =
     allCards.length === 0
       ? `${teacherCall}、よく来たね。だが研修はまだ早い。まずは教材を取り込んで、生徒に授業をしてきなさい。話はそれからだ。`
@@ -248,28 +243,10 @@ export default function TrainingScreen() {
                 <Text style={styles.emptyText}>教材を取り込むと、その内容からカードが用意されます</Text>
               ) : (
                 <>
-                  {/* みがき状況：研修の成果と残量。「まだ」の数字は校長のセリフと一致させる */}
-                  <View style={styles.statBox}>
-                    <View style={{ flexDirection: 'row' }}>
-                      {/* 「覚えた」はバーの緑と同系色にして対応を示す（まだ=ピンクも同様） */}
-                      <View style={styles.statCell}>
-                        <Text style={[styles.statNum, { color: '#059669' }]}>{rememberedCount}</Text>
-                        <Text style={styles.statLabel}>覚えた</Text>
-                      </View>
-                      <View style={styles.statCell}>
-                        <Text style={[styles.statNum, allPending > 0 && { color: c.primaryStrong }]}>{allPending}</Text>
-                        <Text style={styles.statLabel}>まだ</Text>
-                      </View>
-                      <View style={styles.statCell}>
-                        <Text style={styles.statNum}>{freshCount}</Text>
-                        <Text style={styles.statLabel}>これから</Text>
-                      </View>
-                    </View>
-                    <View style={styles.statBar}>
-                      <View style={{ width: `${(rememberedCount / allCards.length) * 100}%`, backgroundColor: '#10b981' }} />
-                      <View style={{ width: `${(allPending / allCards.length) * 100}%`, backgroundColor: c.primary }} />
-                    </View>
-                  </View>
+                  {/* 研修の記録：研修由来のデータだけを出す（授業の結果は映さない） */}
+                  {lastDrillKey && (
+                    <Text style={styles.drillRecordLine}>最終研修：{examDateLabel(lastDrillKey)} ・ この7日間 {drillCount7}回</Text>
+                  )}
                   <TouchableOpacity
                     style={[styles.primaryBtn, { flexDirection: 'row', justifyContent: 'center', gap: 6 }]}
                     onPress={() => { setDrillMaterialId('all'); void startDrill('all') }}
@@ -290,22 +267,13 @@ export default function TrainingScreen() {
               <View style={[styles.card, { paddingVertical: 10 }]}>
                 <Text style={styles.matListLabel}>教材ごとに始める</Text>
                 {materialsWithCards.map((h, i) => {
-                  const cards = h.factsheet?.cards ?? []
-                  const b = breakdownOf(cards)
-                  const total = cards.length || 1
+                  const pending = pendingCountOf(h.factsheet?.cards ?? [])
                   return (
                     <TouchableOpacity key={h.id} style={[styles.matRow, i > 0 && styles.matRowBorder]}
                       onPress={() => { setDrillMaterialId(h.id); void startDrill(h.id) }}>
                       <Feather name="layers" size={16} color={c.blazer} />
-                      {/* タイトル1行＋ミニバー（サマリーと同配色。緑=覚えた/ピンク=まだ/地=これから）。
-                          数字を並べるより教材が増えたときの比較が速い。正確な数字は開始後に出る */}
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.matRowTitle} numberOfLines={1}>{h.title.replace(TITLE_RE, '')}</Text>
-                        <View style={styles.matBar}>
-                          <View style={{ width: `${(b.rem / total) * 100}%`, backgroundColor: '#10b981' }} />
-                          <View style={{ width: `${(b.pend / total) * 100}%`, backgroundColor: c.primary }} />
-                        </View>
-                      </View>
+                      <Text style={[styles.matRowTitle, { flex: 1 }]} numberOfLines={1}>{h.title.replace(TITLE_RE, '')}</Text>
+                      {pending > 0 && <Text style={styles.matRowPending}>まだ{pending}</Text>}
                       <Text style={styles.matRowChevron}>›</Text>
                     </TouchableOpacity>
                   )
@@ -336,14 +304,9 @@ export default function TrainingScreen() {
           </>
         ) : (
           <>
-            {/* どの教材の研修かをフルタイトル＋内訳で明示（一覧はバーだけなので、正確な数字はここで出す） */}
+            {/* どの教材の研修かをフルタイトルで明示（一覧では見切れるため） */}
             <View>
               <Text style={styles.drillMaterialTitle}>{drillMaterialId === 'all' ? '全教材ミックス' : (history.find((h) => h.id === drillMaterialId)?.title.replace(TITLE_RE, '') ?? '')}</Text>
-              {(() => {
-                const b = breakdownOf(drillPool(drillMaterialId))
-                const parts = [b.rem > 0 ? `覚えた ${b.rem}` : null, b.pend > 0 ? `まだ ${b.pend}` : null, b.fresh > 0 ? `これから ${b.fresh}` : null].filter(Boolean)
-                return <Text style={styles.drillBreakdown}>{parts.join(' ・ ')}</Text>
-              })()}
               <Text style={[styles.drillProgress, { marginTop: 2 }]}>カード {drillIdx + 1} / {drillCards.length}</Text>
             </View>
             <View style={styles.drillCard}>
@@ -447,37 +410,15 @@ const styles = StyleSheet.create({
 
   sectionTitle: { fontSize: 14, fontWeight: '900', color: c.text, marginBottom: 4 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  // 「ふだんの練習」/「大一番」のアイブロウと、研修→試験の接続テキスト
-  eyebrowLight: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: '#d97706', marginBottom: 2 },
-  eyebrowDark: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: '#fcd34d', marginBottom: 2 },
-  // 昇進試験カード（証書ふうのダーク）
-  examCard: { backgroundColor: '#1e293b', borderRadius: 16, borderWidth: 1, borderColor: '#334155', padding: 16 },
-  examTitle: { fontSize: 14, fontWeight: '900', color: 'white', marginBottom: 4 },
-  examDesc: { fontSize: 12, color: '#cbd5e1', lineHeight: 18, marginBottom: 12 },
-  stakeRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12,
-  },
-  stakeLabel: { fontSize: 11, color: '#94a3b8' },
-  stakeCurrent: { fontSize: 12, fontWeight: '700', color: 'white', flexShrink: 1 },
-  stakeArrow: { fontSize: 12, color: '#64748b' },
-  stakeNext: { fontSize: 12, fontWeight: '900', letterSpacing: 3, color: '#fcd34d' },
-  examGoldBtn: { backgroundColor: '#fbbf24', borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  examGoldBtnText: { fontSize: 13, fontWeight: '900', color: '#1e293b' },
-  examLockedText: { fontSize: 12, color: '#94a3b8', lineHeight: 18 },
-  pendingBadge: { backgroundColor: '#fef3c7', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 4 },
-  pendingBadgeText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
+  // 「まだ」バッジはピンク系（まだ＝研修のあなたの判断＝ピンクの語彙で統一）
+  pendingBadge: { backgroundColor: '#fce7f3', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 4 },
+  pendingBadgeText: { fontSize: 10, fontWeight: '700', color: '#be185d' },
   sectionDesc: { fontSize: 12, color: c.textSub, lineHeight: 18, marginBottom: 12 },
   bold: { fontWeight: '700', color: c.textMid },
   emptyText: { fontSize: 12, color: c.textSub, lineHeight: 18 },
 
-  // みがき状況サマリー
-  statBox: { backgroundColor: c.bgSub, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 },
-  statCell: { flex: 1, alignItems: 'center' },
-  statNum: { fontSize: 17, fontWeight: '900', color: c.textStrong, fontVariant: ['tabular-nums'] },
-  statLabel: { fontSize: 9, color: c.textSub, marginTop: 1 },
-  statBar: { flexDirection: 'row', height: 5, borderRadius: 999, overflow: 'hidden', backgroundColor: 'white', marginTop: 8 },
+  // 研修の記録行（研修由来のデータだけ）
+  drillRecordLine: { fontSize: 11, color: c.textSub, marginBottom: 10 },
 
   drillLimitNote: { fontSize: 10, color: c.textSub, textAlign: 'center', marginTop: 6 },
 
@@ -486,12 +427,11 @@ const styles = StyleSheet.create({
   matRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   matRowBorder: { borderTopWidth: 1, borderTopColor: c.bgSub },
   matRowTitle: { fontSize: 13, fontWeight: '600', color: c.textMid },
-  matBar: { flexDirection: 'row', height: 4, borderRadius: 999, overflow: 'hidden', backgroundColor: c.bgSub, marginTop: 4 },
+  matRowPending: { fontSize: 11, fontWeight: '700', color: c.primaryStrong },
   matRowChevron: { fontSize: 15, color: c.faint },
 
-  // 研修中の教材表示（フルタイトル＋内訳）
+  // 研修中の教材表示（フルタイトル）
   drillMaterialTitle: { fontSize: 12, fontWeight: '700', color: c.textMid },
-  drillBreakdown: { fontSize: 10, color: c.textSub, marginTop: 1 },
 
   primaryBtn: { backgroundColor: c.primaryStrong, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   primaryBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
@@ -518,18 +458,6 @@ const styles = StyleSheet.create({
   // 新しい校長画像は正方形なので、旧構図用の縦長クロップ（歪む）をやめて全体をcover表示にする
   zoomImage: { width: '100%', height: '100%' },
 
-  examSpeech: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: c.bgSub, borderRadius: 14, padding: 12, marginBottom: 14 },
-  examSpeechText: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19 },
-  examProgress: { fontSize: 11, fontWeight: '700', color: c.faint, marginBottom: 4 },
-  examQuestion: { fontSize: 14, fontWeight: '700', color: c.text, lineHeight: 21, marginBottom: 10 },
-  examInput: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: 12, padding: 12, fontSize: 14, color: c.text, minHeight: 80, textAlignVertical: 'top' },
-  examNavBtn: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#fff' },
-  examNavBtnText: { fontSize: 12, fontWeight: '700', color: c.textMid },
-  examNextBtn: { flex: 1, backgroundColor: '#d97706', borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
-  examErrorText: { fontSize: 11, color: c.dangerText, marginTop: 8 },
-  examMsgText: { fontSize: 13, fontWeight: '700', color: c.textMid },
-  examVerdict: { fontSize: 22, fontWeight: '900', color: c.text, textAlign: 'center', marginBottom: 4 },
-  examScore: { fontSize: 13, color: c.textMid, textAlign: 'center', marginBottom: 14, lineHeight: 19 },
   examResultCard: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 10 },
   examResultQ: { fontSize: 12, fontWeight: '700', color: c.text, marginBottom: 4, lineHeight: 18 },
   examResultA: { fontSize: 12, color: c.textSub, lineHeight: 18 },

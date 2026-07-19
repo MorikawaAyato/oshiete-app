@@ -633,6 +633,20 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* 初回ヒーロー：コンセプトの一言と生徒の顔見せ（教材が1件もない間だけ）。
+            「AI」は約束しない：ラリーは定型なので、語るのは役割と教材だけ */}
+        {history.length === 0 && (
+          <View style={styles.heroCard}>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 10 }}>
+              {STUDENTS.map((s) => (
+                <Image key={s.id} source={s.avatar} style={[styles.heroAvatar, { backgroundColor: s.tint }]} />
+              ))}
+            </View>
+            <Text style={styles.heroTitle}>教えて、先生！</Text>
+            <Text style={styles.heroSub}>あなたが先生。覚えたい教材で、生徒に授業をしてみましょう。</Text>
+          </View>
+        )}
+
         {/* 今日の授業 */}
         <View style={styles.todaySection}>
           {/* ゾーン見出しは常時表示（アップロード前でもしごとゾーンの物語を保つ）。
@@ -1267,12 +1281,28 @@ export default function HomeScreen() {
               const now = new Date()
               const isCurrentMonth = journalMonth.y === now.getFullYear() && journalMonth.m === now.getMonth()
               const cells: (number | null)[] = [...Array(startPad).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
-              // 生徒のテストの予定日（存在する教材のものだけ）。未来の月にも印がつくので月送りは制限しない
-              const examMarks = new Set(
-                Object.entries(examDays)
-                  .filter(([hid, e]) => !e.doneAt && history.some((h) => h.id === hid))
-                  .map(([, e]) => e.date)
-              )
+              // テストに向けた授業の完了状況（詳細行と期日間近の強調に使う）
+              const examProgressOf = (hid: string) => {
+                const cards = history.find((h) => h.id === hid)?.factsheet?.cards ?? []
+                const units = splitUnits(cards.length)
+                if (units.length === 0) return null
+                const up = unitProgress[hid]
+                const statuses: Record<number, UnitStatus> = up && up.count === cards.length ? up.status : {}
+                return { done: units.filter((_, i) => statuses[i] === 'done').length, total: units.length }
+              }
+              // 生徒のテストの予定日（存在する教材のものだけ）。未来の月にも印がつくので月送りは制限しない。
+              // examRisk＝期日2日以内なのに授業が未完了の日（催促メールと同じ条件式）
+              const examMarks = new Set<string>()
+              const examRisk = new Set<string>()
+              const riskLimit = dateKeyAfterDays(2)
+              const todayKey = todayDateKey()
+              for (const [hid, e] of Object.entries(examDays)) {
+                if (e.doneAt || !history.some((h) => h.id === hid)) continue
+                examMarks.add(e.date)
+                if (e.date < todayKey || e.date > riskLimit) continue
+                const p = examProgressOf(hid)
+                if (p && p.done < p.total) examRisk.add(e.date)
+              }
               return (
                 <View style={{ paddingHorizontal: 4, paddingTop: 4 }}>
                   <View style={styles.journalHeader}>
@@ -1307,7 +1337,7 @@ export default function HomeScreen() {
                           <View style={styles.journalDots}>
                             {e?.lesson ? <View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /> : null}
                             {e?.drill ? <View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /> : null}
-                            {hasExam ? <View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }]} /> : null}
+                            {hasExam ? <View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }, examRisk.has(key) && { borderWidth: 2, borderColor: '#bae6fd' }]} /> : null}
                           </View>
                         </TouchableOpacity>
                       )
@@ -1329,10 +1359,18 @@ export default function HomeScreen() {
                         <Text style={styles.journalDetailDate}>{Number(parts[1])}月{Number(parts[2])}日</Text>
                         {exams.map(([hid, en]) => {
                           const st = STUDENTS.find((s) => s.id === en.studentId)
+                          const p = examProgressOf(hid)
+                          const near = p && p.done < p.total && en.date <= riskLimit
                           return (
                             <View key={`ex${hid}`} style={styles.journalDetailRow}>
                               <View style={[styles.journalDot, { backgroundColor: '#0ea5e9', marginTop: 5 }]} />
-                              <Text style={styles.journalDetailText}>{st ? `${st.name}の` : ''}「{matTitle(hid)}」のテスト{en.round > 1 ? '（追試）' : ''}</Text>
+                              <Text style={styles.journalDetailText}>
+                                {st ? `${st.name}の` : ''}「{matTitle(hid)}」のテスト{en.round > 1 ? '（追試）' : ''}
+                                {/* 準備状況：締切だけでなく安心/残作業も見せる */}
+                                {p && (p.done === p.total
+                                  ? <Text style={{ color: '#059669' }}> ・授業 ぜんぶ完了</Text>
+                                  : <Text style={near ? { color: c.primaryStrong, fontWeight: '700' } : undefined}> ・授業 {p.done}/{p.total} 完了</Text>)}
+                              </Text>
                             </View>
                           )
                         })}
@@ -1445,6 +1483,15 @@ const styles = StyleSheet.create({
   uploadCardIcon: { fontSize: 32 },
   uploadCardText: { fontSize: 19, color: c.link, fontWeight: '800' },
   uploadCardSub: { fontSize: 12, color: c.textSub, fontWeight: '400' },
+
+  // 初回ヒーロー（教材0件のときだけ）
+  heroCard: {
+    backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: c.border,
+    paddingVertical: 24, paddingHorizontal: 20, alignItems: 'center', marginBottom: 14,
+  },
+  heroAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: c.border },
+  heroTitle: { fontSize: 20, fontFamily: font.round, color: c.textStrong },
+  heroSub: { fontSize: 12, color: c.textSub, marginTop: 6, textAlign: 'center', lineHeight: 18 },
 
   // 状態2：ペンディング（createCardの中に入るため器の装飾は持たない）
   pendingCard: { gap: 12 },
@@ -1727,9 +1774,9 @@ const styles = StyleSheet.create({
   hwAnswerQ: { fontSize: 12, fontWeight: '700', color: c.textMid, marginBottom: 4, lineHeight: 18 },
   hwAnswerText: { fontSize: 13, color: c.text, lineHeight: 19, fontWeight: '600' },
   hwPenMark: { color: c.textSub, fontWeight: '400' },
-  hwModelText: { fontSize: 11, color: '#e11d48', lineHeight: 17, marginTop: 3 },
+  hwModelText: { fontSize: 11, color: c.redpen, lineHeight: 17, marginTop: 3 },
   hwModelMark: { fontWeight: '700' },
-  hwModelWord: { fontWeight: '700', color: '#e11d48' },
+  hwModelWord: { fontWeight: '700', color: c.redpen },
   hwMarkO: { fontWeight: '700', color: '#10b981' },
   hwMarkX: { fontWeight: '700', color: '#f43f5e' },
   hwMarkBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },

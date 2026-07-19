@@ -26,6 +26,8 @@ export const c = {
   pinkMuted: '#f9a8d4',
   primary: '#ec4899',
   primaryStrong: '#db2777',
+  redpen: '#e11d48', // 先生の赤ペン・✕採点（rose系の直書きはこの1色に統一する）
+  handwrite: '#1e40af', // 生徒の青ペン（ノートに書き取るメモの文字色）
 
   // 情報・リンク（機能色として維持。淡スカイの面は基調色に中和）
   skyTint: '#eef3fb',

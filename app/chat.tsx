@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useApp } from '@/lib/AppContext'
 import { getStudentById } from '@/lib/students'
-import { fetchPrint, fetchFactsheet } from '@/lib/api'
+import { fetchPrint, fetchFactsheet, classifyRallyReply } from '@/lib/api'
 import {
   loadFactsheet, updateHistoryFactsheet, saveRecapToHistory, loadHistory,
   loadCardProgress, saveCardProgress, loadDrillPending, saveDrillPending, drillKey,
@@ -254,14 +254,13 @@ export default function ChatScreen() {
     setShowPrint(false)
     const now = Date.now()
     void (async () => {
-      const [progress, drillPending] = await Promise.all([loadCardProgress(), loadDrillPending()])
+      const progress = await loadCardProgress()
       for (const it of items) {
         const prev = progress[it.cardKey]
+        // 「まだ」は先生自身の判断の記録なので授業では消さない（消せるのは研修の「覚えた」だけ＝研修と授業は別の部屋）
         progress[it.cardKey] = { seen: (prev?.seen ?? 0) + 1, lastAt: now, lastResult: it.teacherMark === true }
-        if (it.teacherMark === true) drillPending.delete(it.cardKey) // 研修の「まだ」は授業の○で解消する
       }
       await saveCardProgress(progress)
-      await saveDrillPending(drillPending)
       await logWork('lesson', { studentId: student.id, historyId: currentHistoryId ?? undefined, unitIndex: lessonUnit ?? undefined }) // 業務日誌へ（誰に何の授業か）
       // 単元はまず「実施済み」になる。「完了」に上げるかは振り返りのあとの先生の判断
       if (currentHistoryId && lessonUnit !== null) {
@@ -345,38 +344,58 @@ export default function ChatScreen() {
   }
 
   // 赤ペンラリー：✕の問題を生徒が1問ずつ聞いてくる。先生の返信で次の問いへ（相づちは定型＝AI待ちゼロ）
-  const sendRedpenChat = () => {
+  // 赤ペンラリー：✕の問題を生徒が1問ずつ聞いてくる。先生の返信は軽量AIで4分類し、
+  // 生徒のセリフは定型プールから選ぶ（分類だけAI・言葉は手書き＝口調の一貫と注入耐性）。
+  // 分類失敗・タイムアウトは「説明」扱い＝最悪ケースが従来挙動
+  const pickLine = (pool: string[]) => pool[Math.floor(Math.random() * pool.length)]
+  const sendRedpenChat = async () => {
     if (!student || studentTyping) return
     const text = redpenInput.trim()
     if (!text) return
     if (containsNG(text)) { setRedpenError('その内容は送信できません'); return }
-    const current = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
+    const current = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined && !it.redPenSkipped)
     if (!current) return
     setRedpenError(null)
     setRedpenInput('')
     setShowRedpenHints(false)
-    const items = printItems.map((it, i) => (i === current.i ? { ...it, redPen: text } : it))
-    setPrintItems(items)
     setChatMessages((prev) => [...prev, { role: 'user', text }])
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
-    const next = items.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
+    setStudentTyping(true) // 分類中（最大2.5秒）も「入力中…」の演出で待つ
+    const kind = await classifyRallyReply(current.it.question, current.it.modelAnswer, text)
+    if (kind === 'praise' || kind === 'off_topic') {
+      // 声かけ・脱線は問いを消費しない：受けて、同じ問いに引き戻す
+      pushBeats([pickLine(kind === 'praise' ? student.rallyPraise : student.rallyOffTopic)])
+      return
+    }
+    const skipped = kind === 'dont_know'
+    const items = printItems.map((it, i) => (i === current.i ? (skipped ? { ...it, redPenSkipped: true } : { ...it, redPen: text }) : it))
+    setPrintItems(items)
+    const next = items.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined && !it.redPenSkipped)
     if (next) {
-      pushBeats([{ text: fillAsk(student.redpenAskNext, next.i + 1, next.it.question), noteRef: next.i }])
+      // dont_knowの後は「メモしました」の相づちが使えないため、相づちなしの聞き方で次へ
+      pushBeats(skipped
+        ? [pickLine(student.rallyDontKnow), { text: fillAsk(student.rallyNextAsk, next.i + 1, next.it.question), noteRef: next.i }]
+        : [{ text: fillAsk(student.redpenAskNext, next.i + 1, next.it.question), noteRef: next.i }])
+    } else if (skipped) {
+      const anyMemo = items.some((it) => it.redPen?.trim())
+      finishLesson(items, { leadBeats: [pickLine(student.rallyDontKnow), anyMemo ? student.redpenClose : student.rallyCloseSoft] })
     } else {
       completeRally(items)
     }
   }
 
-  // 赤ペンラリーの締め：ズレの判定はしない（授業の中の判定は先生の○✕だけ）。そのまま授業を締める
+  // 赤ペンラリーの締め：ズレの判定はしない（授業の中の判定は先生の○✕だけ）。そのまま授業を締める。
+  // 「わからない」で通した問が混ざり1問もメモできなかった回は、締めの文言だけ柔らかい方に替える
   const completeRally = (items: PrintItem[]) => {
     if (!student) return
-    finishLesson(items, { leadBeats: [student.redpenClose] })
+    const anyMemo = items.some((it) => it.redPen?.trim())
+    finishLesson(items, { leadBeats: [anyMemo ? student.redpenClose : student.rallyCloseSoft] })
   }
 
   // 再開時の取りこぼし対策：赤ペンを全部書き終えた直後に中断されたセッションは、締めから続きを進める
   useEffect(() => {
     if (printStage !== 'redpen' || printItems.length === 0) return
-    const pendingAsk = printItems.some((it) => it.teacherMark === false && it.redPen === undefined)
+    const pendingAsk = printItems.some((it) => it.teacherMark === false && it.redPen === undefined && !it.redPenSkipped)
     if (!pendingAsk) completeRally(printItems)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [printStage])
@@ -388,7 +407,7 @@ export default function ChatScreen() {
       const idx = printItems.findIndex((it) => it.teacherMark === undefined)
       page = idx >= 0 ? idx : 0
     } else if (printStage === 'redpen') {
-      const idx = printItems.findIndex((it) => it.teacherMark === false && it.redPen === undefined)
+      const idx = printItems.findIndex((it) => it.teacherMark === false && it.redPen === undefined && !it.redPenSkipped)
       page = idx >= 0 ? idx : 0
     }
     setNotePage(page)
@@ -500,7 +519,7 @@ export default function ChatScreen() {
             const mark = it.teacherMark
             return (
               <Text key={i} style={styles.notebookCardLine} numberOfLines={1}>
-                <Text style={{ fontWeight: '700', color: mark === undefined ? c.paperLine : mark ? '#059669' : '#e11d48' }}>
+                <Text style={{ fontWeight: '700', color: mark === undefined ? c.paperLine : mark ? '#059669' : c.redpen }}>
                   {mark === undefined ? '・' : mark ? '○' : '✕'}
                 </Text>
                 {' '}{it.question}
@@ -604,7 +623,7 @@ export default function ChatScreen() {
           {printStage !== 'done' && (
             <View>
               {(() => {
-                const composerAsk = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined)
+                const composerAsk = printItems.map((it, i) => ({ it, i })).find(({ it }) => it.teacherMark === false && it.redPen === undefined && !it.redPenSkipped)
                 const canCompose = !studentTyping && (composeMode === 'return' || (composeMode === 'rally' && !!composerAsk))
                 const placeholder = studentTyping
                   ? `${student.name}が書いています…`
@@ -616,7 +635,7 @@ export default function ChatScreen() {
                 const guide = !studentTyping && composeMode === 'return'
                   ? 'そのまま送信するとこの下書きが届きます。書き直せば自分の言葉で返せます'
                   : null
-                const handleSend = () => { if (composeMode === 'rally') sendRedpenChat(); else sendTeacherLine() }
+                const handleSend = () => { if (composeMode === 'rally') void sendRedpenChat(); else sendTeacherLine() }
                 return (
                   <View>
                     {/* 虎の巻：入力の補助なので入力欄のそばに残す */}
@@ -719,7 +738,7 @@ export default function ChatScreen() {
                             style={[styles.pageDot,
                               j === page ? styles.pageDotActive : m === undefined ? null : m ? styles.pageDotOk : styles.pageDotNg]}>
                             <Text style={[styles.pageDotText,
-                              j === page ? { color: '#fff' } : m === undefined ? null : m ? { color: '#059669' } : { color: '#e11d48' }]}>{j + 1}</Text>
+                              j === page ? { color: '#fff' } : m === undefined ? null : m ? { color: '#059669' } : { color: c.redpen }]}>{j + 1}</Text>
                           </TouchableOpacity>
                         )
                       })}
@@ -752,7 +771,7 @@ export default function ChatScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 2 }}>
                         <Text style={[styles.handAnswer, { flex: 1 }, corrected && styles.handAnswerCorrected]}>{it.studentAnswer}</Text>
                         {mark !== undefined && (
-                          <StampText active style={[styles.pageMark, { color: mark ? '#059669' : '#e11d48' }]}>{mark ? '○' : '✕'}</StampText>
+                          <StampText active style={[styles.pageMark, { color: mark ? '#059669' : c.redpen }]}>{mark ? '○' : '✕'}</StampText>
                         )}
                       </View>
                       {/* 丸付けボタン（つけたら自動で次ページへ） */}
@@ -1000,7 +1019,7 @@ const styles = StyleSheet.create({
   bigMarkBtnText: { fontSize: 24, fontWeight: '700', color: c.borderStrong },
   memoBlock: { marginTop: 10, borderTopWidth: 1, borderTopColor: '#fcd34d', borderStyle: 'dashed', paddingTop: 8 },
   memoLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, color: c.faint, marginBottom: 2 },
-  memoText: { fontFamily: font.hand, fontSize: 14, lineHeight: 22, color: '#1e40af' },
+  memoText: { fontFamily: font.hand, fontSize: 14, lineHeight: 22, color: c.handwrite },
   notebookLineText: { fontSize: 13, color: c.text, lineHeight: 20, fontWeight: '600', marginTop: 2 },
   notebookPenMark: { color: c.textSub, fontWeight: '400' },
   notebookLineRow: {
@@ -1008,12 +1027,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: c.paperLine + 'cc',
     paddingVertical: 8,
   },
-  notebookReference: { fontSize: 11, color: '#e11d48', lineHeight: 17, marginTop: 3 },
+  notebookReference: { fontSize: 11, color: c.redpen, lineHeight: 17, marginTop: 3 },
   notebookReferenceMark: { fontWeight: '700' },
   redpenLine: { fontSize: 11, color: '#be123c', lineHeight: 17, marginTop: 3 },
   notebookMarkResult: { fontSize: 18, fontWeight: '700', paddingTop: 1 },
   notebookGradeHint: { fontSize: 12, color: c.textSub, lineHeight: 18, paddingTop: 12, paddingBottom: 8 },
-  modelAnswerWord: { fontWeight: '700', color: '#e11d48' },
+  modelAnswerWord: { fontWeight: '700', color: c.redpen },
   gradeMarkO: { fontWeight: '700', color: '#10b981' },
   gradeMarkX: { fontWeight: '700', color: '#f43f5e' },
   markRow: { flexDirection: 'row', gap: 6 },
