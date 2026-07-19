@@ -455,6 +455,8 @@ export default function HomeScreen() {
 
       const res = await analyzeImages(images, existingGroups)
       if (res.error) throw new Error(res.error)
+      // 空応答＝サーバは成功したが読み取れる文字が無かった（非教材写真など）。再試行を促さず理由を伝える
+      if (!res.imageDescription) throw new Error('教材として読み取れる文字が見つかりませんでした。文字の写った教材の写真を選んでください。')
 
       setImageDescription(res.imageDescription)
       setNotes(res.notes)
