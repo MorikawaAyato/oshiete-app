@@ -361,10 +361,14 @@ export default function ChatScreen() {
     setChatMessages((prev) => [...prev, { role: 'user', text }])
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
     setStudentTyping(true) // 分類中（最大2.5秒）も「入力中…」の演出で待つ
-    const kind = await classifyRallyReply(current.it.question, current.it.modelAnswer, text)
+    // 虎の巻の選択肢そのままの送信は分類不要（UI自身が提示した解説＝必ず説明として扱う。待ち時間もゼロに）
+    const kind = current.it.choices?.some((ch) => ch.trim() === text)
+      ? 'explanation' as const
+      : await classifyRallyReply(current.it.question, current.it.modelAnswer, text)
     if (kind === 'praise' || kind === 'off_topic') {
-      // 声かけ・脱線は問いを消費しない：受けて、同じ問いに引き戻す
-      pushBeats([pickLine(kind === 'praise' ? student.rallyPraise : student.rallyOffTopic)])
+      // 声かけ・脱線は問いを消費しない：受けて、同じ問いに引き戻す。
+      // noteRefで「この問題」の引用カードを添え、いまの問いがどれかを常に見えるようにする
+      pushBeats([{ text: pickLine(kind === 'praise' ? student.rallyPraise : student.rallyOffTopic), noteRef: current.i }])
       return
     }
     const skipped = kind === 'dont_know'
