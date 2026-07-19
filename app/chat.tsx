@@ -11,7 +11,7 @@ import { getStudentById } from '@/lib/students'
 import { fetchPrint, fetchFactsheet, classifyRallyReply } from '@/lib/api'
 import {
   loadFactsheet, updateHistoryFactsheet, saveRecapToHistory, loadHistory,
-  loadCardProgress, saveCardProgress, loadDrillPending, saveDrillPending, drillKey,
+  loadCardProgress, saveCardProgress, drillKey,
   splitUnits, defaultUnitIndex, getUnitStatuses, setUnitStatus, logWork,
   ensureExamDay, examMailFor, examDateLabel, addMail,
 } from '@/lib/storage'
@@ -362,9 +362,11 @@ export default function ChatScreen() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
     setStudentTyping(true) // 分類中（最大2.5秒）も「入力中…」の演出で待つ
     // 虎の巻の選択肢そのままの送信は分類不要（UI自身が提示した解説＝必ず説明として扱う。待ち時間もゼロに）
+    const gen = lessonGen.current
     const kind = current.it.choices?.some((ch) => ch.trim() === text)
       ? 'explanation' as const
       : await classifyRallyReply(current.it.question, current.it.modelAnswer, text)
+    if (gen !== lessonGen.current) return // 分類待ちの間に授業が退出・リセットされた：続きを捨てる
     if (kind === 'praise' || kind === 'off_topic') {
       // 声かけ・脱線は問いを消費しない：受けて、同じ問いに引き戻す。
       // noteRefで「この問題」の引用カードを添え、いまの問いがどれかを常に見えるようにする
@@ -449,6 +451,10 @@ export default function ChatScreen() {
   }
 
 
+  // 授業の世代番号：分類APIのawait（最大2.5秒）中に退出・リセットされた場合、
+  // await後の継続処理（記録・セリフ配信）を捨てるためのガード
+  const lessonGen = useRef(0)
+
   const handleBack = () => {
     if (chatMessages.length > 0 && printStage !== 'done') {
       Alert.alert(
@@ -460,6 +466,7 @@ export default function ChatScreen() {
             text: 'やめて戻る',
             style: 'destructive',
             onPress: () => {
+              lessonGen.current++
               resetChatSession()
               router.back()
             },
@@ -467,7 +474,7 @@ export default function ChatScreen() {
         ],
       )
     } else {
-      if (printStage === 'done') resetChatSession()
+      if (printStage === 'done') { lessonGen.current++; resetChatSession() }
       router.back()
     }
   }

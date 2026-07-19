@@ -369,7 +369,6 @@ const styles = StyleSheet.create({
 
   card: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: c.border, padding: 16 },
   heroRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  principalAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fde68a' },
   principalAvatarSmall: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fde68a' },
   // 1on1のチャット風バー（カードの器に入れず、部屋に浮かぶメッセージとして表示）
   // 校長ヒーロー＝紺の「通信パネル」（通信室・先生証と同族の儀式面。接続中の1on1通信なのでダークが許される。
@@ -383,28 +382,17 @@ const styles = StyleSheet.create({
   // 研修カードのヒーロー見出し（アイコン＋タイトル）
   sectionHeroRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   sectionHeroIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: c.bgSub, alignItems: 'center', justifyContent: 'center' },
-  callBar: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 4 },
-  callAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: c.border },
   callAvatarDot: {
     position: 'absolute', bottom: 0, right: 0,
     width: 11, height: 11, borderRadius: 6,
     backgroundColor: '#34d399', borderWidth: 2, borderColor: c.ink,
   },
-  callNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  callName: { fontSize: 11, fontWeight: '700', color: c.textMid },
   connectedPill: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     backgroundColor: 'rgba(52,211,153,0.12)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.4)',
     borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1,
   },
   connectedText: { fontSize: 8, fontWeight: '700', color: '#6ee7b7' },
-  principalBubble: {
-    marginTop: 10, alignSelf: 'flex-start',
-    backgroundColor: 'white', borderWidth: 1, borderColor: c.border,
-    borderRadius: 16, borderTopLeftRadius: 4,
-    paddingHorizontal: 14, paddingVertical: 10,
-  },
-  principalBubbleFull: { marginTop: 0, alignSelf: 'stretch' },
   principalLine: { fontSize: 13, color: '#cbd5e1', lineHeight: 20 },
   principalComment: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19, backgroundColor: c.bgSub, borderRadius: 12, padding: 10 },
 
@@ -447,8 +435,6 @@ const styles = StyleSheet.create({
   revealBtn: { backgroundColor: c.text, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   markBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   markBtnRow: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
-  markO: { color: '#10b981', fontWeight: '700' },
-  markX: { color: '#f43f5e', fontWeight: '700' },
 
   doneTitle: { fontSize: 20, fontWeight: '900', color: c.text, marginBottom: 4 },
   doneScore: { fontSize: 13, color: c.textMid, marginBottom: 14 },
@@ -458,10 +444,4 @@ const styles = StyleSheet.create({
   // 新しい校長画像は正方形なので、旧構図用の縦長クロップ（歪む）をやめて全体をcover表示にする
   zoomImage: { width: '100%', height: '100%' },
 
-  examResultCard: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 10 },
-  examResultQ: { fontSize: 12, fontWeight: '700', color: c.text, marginBottom: 4, lineHeight: 18 },
-  examResultA: { fontSize: 12, color: c.textSub, lineHeight: 18 },
-  examResultModel: { fontSize: 12, color: c.dangerText, marginTop: 3, lineHeight: 18 },
-  examResultComment: { fontSize: 12, color: '#b45309', marginTop: 3, lineHeight: 18 },
-  examCloseBtn: { backgroundColor: c.text, borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 12 },
 })
