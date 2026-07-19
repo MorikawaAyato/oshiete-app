@@ -251,8 +251,9 @@ export default function TrainingScreen() {
                   {/* みがき状況：研修の成果と残量。「まだ」の数字は校長のセリフと一致させる */}
                   <View style={styles.statBox}>
                     <View style={{ flexDirection: 'row' }}>
+                      {/* 「覚えた」はバーの緑と同系色にして対応を示す（まだ=ピンクも同様） */}
                       <View style={styles.statCell}>
-                        <Text style={styles.statNum}>{rememberedCount}</Text>
+                        <Text style={[styles.statNum, { color: '#059669' }]}>{rememberedCount}</Text>
                         <Text style={styles.statLabel}>覚えた</Text>
                       </View>
                       <View style={styles.statCell}>
