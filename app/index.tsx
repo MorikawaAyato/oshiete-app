@@ -1249,15 +1249,14 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                   {/* 実績バッジ：カード下部に配置（0回でも常時表示＝記録の置き場を最初から見せる）。
-                      タップで記録簿（全件リスト）が開く */}
+                      タップで記録簿（全件リスト）が開く。ICチップ装飾は「ボタンに見える」ため廃止 */}
                   <TouchableOpacity
-                    style={[styles.tcTitleBadge, { alignSelf: 'center' }]}
+                    style={[styles.tcTitleBadge, { alignSelf: 'center', marginBottom: 30 }]}
                     onPress={() => setShowExamLog(true)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.tcTitleText}>生徒のテスト大成功　{examSuccess}回 ›</Text>
+                    <Text style={styles.tcTitleText}>生徒の快挙　{examSuccess}回 ›</Text>
                   </TouchableOpacity>
-                  <View style={styles.tcChip} />
                   <View style={styles.tcEditHint}>
                     <Text style={styles.tcEditHintText}>タップして編集</Text>
                   </View>
@@ -1391,7 +1390,7 @@ export default function HomeScreen() {
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /><Text style={styles.journalLegendText}>授業</Text></View>
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /><Text style={styles.journalLegendText}>研修</Text></View>
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }]} /><Text style={styles.journalLegendText}>生徒のテスト</Text></View>
-                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#fcd34d' }]} /><Text style={styles.journalLegendText}>大成功</Text></View>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#fcd34d' }]} /><Text style={styles.journalLegendText}>快挙</Text></View>
                   </View>
                   {/* その日の詳細：予定されているテスト（誰の何の授業）・実施した授業/研修（誰に何を） */}
                   {journalDay && (() => {
@@ -1408,7 +1407,7 @@ export default function HomeScreen() {
                           return (
                             <View key={`sc${r.id}`} style={styles.journalDetailRow}>
                               <View style={[styles.journalDot, { backgroundColor: '#fcd34d', marginTop: 5 }]} />
-                              <Text style={styles.journalDetailText}>{st ? `${st.name}の` : ''}「{r.t}」のテスト <Text style={{ fontWeight: '700', color: '#b45309' }}>大成功</Text></Text>
+                              <Text style={styles.journalDetailText}>{st ? `${st.name}の` : ''}「{r.t}」のテスト <Text style={{ fontWeight: '700', color: '#b45309' }}>快挙達成</Text></Text>
                             </View>
                           )
                         })}
@@ -1467,9 +1466,9 @@ export default function HomeScreen() {
           <Pressable style={styles.studentSheetOverlay} onPress={() => setShowExamLog(false)} />
           <View style={[styles.studentSheetBottom, { maxHeight: '75%' }]}>
             <View style={styles.studentSheetHandle} />
-            <Text style={styles.examLogTitle}>大成功の記録　<Text style={styles.examLogCount}>{examSuccess}回</Text></Text>
+            <Text style={styles.examLogTitle}>快挙の記録　<Text style={styles.examLogCount}>{examSuccess}回</Text></Text>
             {examSuccessLog.length === 0 ? (
-              <Text style={styles.examLogEmpty}>まだ記録がありません。{'\n'}テストの日までに授業をぜんぶ終えると、ここに刻まれていきます</Text>
+              <Text style={styles.examLogEmpty}>まだ記録がありません。{'\n'}テストの日までに授業を全て終えると、ここに刻まれていきます</Text>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
                 {[...examSuccessLog].reverse().map((r, i) => {
@@ -1935,10 +1934,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
   },
   tcTitleText: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5 },
-  tcChip: {
-    alignSelf: 'flex-end', width: 36, height: 24, borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
-  },
   tcEditHint: { position: 'absolute', bottom: 10, left: 0, right: 0, alignItems: 'center' },
   tcEditHintText: { fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 },
 
