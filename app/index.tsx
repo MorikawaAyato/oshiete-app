@@ -660,7 +660,8 @@ export default function HomeScreen() {
           {!hasContent && (
             <>
               <View style={styles.studentBand}>
-                <Text style={styles.lessonEyebrow}>生徒</Text>
+                {/* 「今日の」＝生徒選択は日単位の割り当てであって、作る教材に紐付くものではない（誤認対策） */}
+                <Text style={styles.lessonEyebrow}>今日の生徒</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 36, paddingVertical: 4 }}>
                   {STUDENTS.map((s) => {
                     const sel = selectedStudentId === s.id
@@ -685,7 +686,8 @@ export default function HomeScreen() {
           {/* 教材未選択：アップロードUIも「アイブロウ付き白カード」の文法に揃える */}
           {!hasContent && (
           <View style={styles.createCard}>
-            <Text style={styles.lessonEyebrow}>教材を作る</Text>
+            {/* ラベルは「今日の生徒」と対句の名詞（作成ダイアログでなく「今日の仕事の材料置き場」の顔にする） */}
+            <Text style={styles.lessonEyebrow}>今日の教材</Text>
 
           {/* 入力モード タブ */}
           {!hasContent && (
@@ -706,7 +708,7 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.uploadCard} onPress={() => openPicker('replace')}>
               <Feather name="camera" size={30} color={c.faint} style={{ marginBottom: 6 }} />
               <Text style={styles.uploadCardText}>教材の写真を選ぶ</Text>
-              <Text style={styles.uploadCardSub}>PNG / JPG・最大{MAX_IMAGES}枚</Text>
+              <Text style={styles.uploadCardSub}>PNG / JPG / WEBP・最大{MAX_IMAGES}枚</Text>
             </TouchableOpacity>
           )}
 
