@@ -633,15 +633,10 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* 初回ヒーロー：コンセプトの一言と生徒の顔見せ（教材が1件もない間だけ）。
+        {/* 初回のみ：コンセプトの一言（生徒の顔は下の生徒カードが担う）。
             「AI」は約束しない：ラリーは定型なので、語るのは役割と教材だけ */}
         {history.length === 0 && (
           <View style={styles.heroCard}>
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 10 }}>
-              {STUDENTS.map((s) => (
-                <Image key={s.id} source={s.avatar} style={[styles.heroAvatar, { backgroundColor: s.tint }]} />
-              ))}
-            </View>
             <Text style={styles.heroTitle}>教えて、先生！</Text>
             <Text style={styles.heroSub}>あなたが先生。覚えたい教材で、生徒に授業をしてみましょう。</Text>
           </View>
@@ -659,6 +654,33 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* 組み立て台：生徒＋教材＝授業。生徒カード→＋→教材窓が縦に並び、
+              教材を取り込むと既存の一体カード（左＝教材／右＝生徒）に合体する */}
+          {!hasContent && (
+            <>
+              <View style={styles.studentBand}>
+                <Text style={styles.lessonEyebrow}>生徒</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 36, paddingVertical: 4 }}>
+                  {STUDENTS.map((s) => {
+                    const sel = selectedStudentId === s.id
+                    const dim = !!selectedStudentId && !sel
+                    return (
+                      <TouchableOpacity key={s.id} onPress={() => setSelectedStudentId(s.id)} activeOpacity={0.8}
+                        style={{ alignItems: 'center', gap: 5, width: 88, opacity: dim ? 0.55 : 1 }}>
+                        <View style={[styles.bandAvatarWrap, sel && styles.bandAvatarSel]}>
+                          <Image source={s.avatar} style={[styles.bandAvatar, { backgroundColor: s.tint }]} />
+                        </View>
+                        <Text style={[styles.bandName, dim && { color: c.textSub }]}>{s.name}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              </View>
+              {/* ＋＝授業の方程式（生徒＋教材）。装飾であり操作ではない */}
+              <Text style={styles.plusGlyph}>＋</Text>
+            </>
+          )}
 
           {/* 教材未選択：アップロードUIも「アイブロウ付き白カード」の文法に揃える */}
           {!hasContent && (
@@ -1485,14 +1507,18 @@ const styles = StyleSheet.create({
   uploadCardText: { fontSize: 19, color: c.link, fontWeight: '800' },
   uploadCardSub: { fontSize: 12, color: c.textSub, fontWeight: '400' },
 
-  // 初回ヒーロー（教材0件のときだけ）
-  heroCard: {
-    backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: c.border,
-    paddingVertical: 24, paddingHorizontal: 20, alignItems: 'center', marginBottom: 14,
-  },
-  heroAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: c.border },
+  // 初回ヒーロー（教材0件のときだけ。生徒の顔は生徒カード側が担う）
+  heroCard: { alignItems: 'center', paddingTop: 4, marginBottom: 12 },
   heroTitle: { fontSize: 20, fontFamily: font.round, color: c.textStrong },
   heroSub: { fontSize: 12, color: c.textSub, marginTop: 6, textAlign: 'center', lineHeight: 18 },
+
+  // 組み立て台の生徒カード（生徒＋教材＝授業）
+  studentBand: { backgroundColor: 'white', borderRadius: 20, borderWidth: 1, borderColor: c.border, padding: 12 },
+  bandAvatarWrap: { borderRadius: 999, padding: 2, borderWidth: 2, borderColor: 'transparent' },
+  bandAvatarSel: { borderColor: c.primary },
+  bandAvatar: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, borderColor: c.border },
+  bandName: { fontSize: 12, fontFamily: font.round, color: c.textStrong },
+  plusGlyph: { textAlign: 'center', fontSize: 16, fontWeight: '700', color: c.faint, marginVertical: -2 },
 
   // 状態2：ペンディング（createCardの中に入るため器の装飾は持たない）
   pendingCard: { gap: 12 },
