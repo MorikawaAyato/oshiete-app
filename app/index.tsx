@@ -721,6 +721,8 @@ export default function HomeScreen() {
               <Feather name="camera" size={30} color={c.faint} style={{ marginBottom: 6 }} />
               <Text style={styles.uploadCardText}>教材の写真を選ぶ</Text>
               <Text style={styles.uploadCardSub}>PNG / JPG / WEBP・最大{MAX_IMAGES}枚</Text>
+              {/* 守備範囲の一言：計算演習でなく「覚える勉強」のアプリ（入れる教材を決める瞬間に伝える） */}
+              <Text style={[styles.uploadCardSub, { fontSize: 11, marginTop: 4 }]}>用語・定義・年号など、覚える内容の教材に向いています</Text>
             </TouchableOpacity>
           )}
 
@@ -731,7 +733,7 @@ export default function HomeScreen() {
                 style={styles.textInputArea}
                 value={textInput}
                 onChangeText={(t) => setTextInput(t.slice(0, 3000))}
-                placeholder="テキストで入力する"
+                placeholder="覚えたい内容を入力（用語・年号・定義など）"
                 placeholderTextColor={c.faint}
                 multiline
                 textAlignVertical="top"
