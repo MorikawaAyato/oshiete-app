@@ -26,6 +26,7 @@ const KEYS = {
   unitProgress: 'oshiete_unit_progress',
   examDays: 'oshiete_exam_days',
   examSuccess: 'oshiete_exam_success_count',
+  examSuccessLog: 'oshiete_exam_success_log',
   workLog: 'oshiete_work_log',
   mail: 'senseigokko_mail',
   followupSent: 'oshiete_followup_sent',
@@ -137,6 +138,7 @@ async function importLocalOnce(): Promise<void> {
     unitProgress: await read(KEYS.unitProgress, {}),
     examDays: await read(KEYS.examDays, {}),
     examSuccessCount: Number(examSuccessRaw) || 0,
+    examSuccessLog: await read(KEYS.examSuccessLog, []),
     workLog: await read(KEYS.workLog, {}),
     mails: await read(KEYS.mail, []),
     followupSent: await read<string[]>(KEYS.followupSent, []),
@@ -153,6 +155,7 @@ async function pullToCache(): Promise<void> {
     drillPending?: string[]
     unitProgress?: Record<string, unknown>
     examDays?: Record<string, unknown>
+    examSuccessLog?: unknown[]
     stats?: { examSuccessCount?: number }
     workLog?: Record<string, unknown>
     mails?: Record<string, unknown>[]
@@ -166,6 +169,7 @@ async function pullToCache(): Promise<void> {
     setJson(KEYS.drillPending, data.drillPending ?? []),
     setJson(KEYS.unitProgress, data.unitProgress ?? {}),
     setJson(KEYS.examDays, data.examDays ?? {}),
+    setJson(KEYS.examSuccessLog, data.examSuccessLog ?? []),
     AsyncStorage.setItem(KEYS.examSuccess, String(data.stats?.examSuccessCount ?? 0)),
     setJson(KEYS.workLog, data.workLog ?? {}),
     setJson(KEYS.mail, data.mails ?? []),

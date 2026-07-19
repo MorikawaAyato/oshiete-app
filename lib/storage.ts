@@ -198,6 +198,28 @@ export async function saveExamDays(map: Record<string, ExamEntry>): Promise<void
   } catch {}
 }
 
+// 大成功の記録簿：追記専用のリスト（先生証のバッジから開く長期のトロフィー棚。決して減らない）。
+// 業務日誌は400日で刈り取られるため別ストア。教材削除後も残るようタイトルはスナップショットで持つ
+export type ExamSuccessRecord = { id: string; d: string; s?: string; t: string } // d=日付キー s=studentId t=教材タイトル
+const EXAM_SUCCESS_LOG_KEY = 'oshiete_exam_success_log'
+
+export async function loadExamSuccessLog(): Promise<ExamSuccessRecord[]> {
+  try {
+    const raw = await AsyncStorage.getItem(EXAM_SUCCESS_LOG_KEY)
+    return raw ? (JSON.parse(raw) as ExamSuccessRecord[]) : []
+  } catch {
+    return []
+  }
+}
+
+export async function appendExamSuccessLog(rec: ExamSuccessRecord): Promise<void> {
+  try {
+    const list = [...(await loadExamSuccessLog()), rec]
+    await AsyncStorage.setItem(EXAM_SUCCESS_LOG_KEY, JSON.stringify(list))
+    enqueue({ t: 'progress', p: { examSuccessLog: { add: [rec] } } })
+  } catch {}
+}
+
 // 生徒のテスト大成功（期日までに全単元完了）の累計。教材を消しても実績は残る
 export async function loadExamSuccessCount(): Promise<number> {
   try { return Number(await AsyncStorage.getItem(EXAM_SUCCESS_KEY)) || 0 } catch { return 0 }

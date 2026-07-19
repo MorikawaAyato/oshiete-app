@@ -23,8 +23,9 @@ import {
   loadWorkLog, workDateKey,
   loadExamDays, saveExamDays, makeExamEntry, ensureExamDay, examMailFor, examDateLabel, todayDateKey, dateKeyAfterDays,
   loadExamSuccessCount, bumpExamSuccessCount,
+  loadExamSuccessLog, appendExamSuccessLog,
 } from '@/lib/storage'
-import type { ExamEntry, MailMessage, WorkLog } from '@/lib/storage'
+import type { ExamEntry, ExamSuccessRecord, MailMessage, WorkLog } from '@/lib/storage'
 import type { HistoryItem, UnitProgress, UnitStatus } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
@@ -106,6 +107,8 @@ export default function HomeScreen() {
   const [journalDay, setJournalDay] = useState<string | null>(null) // タップした日付（その日の詳細を出す）
   const [examDays, setExamDays] = useState<Record<string, ExamEntry>>({}) // 生徒のテストの予定
   const [examSuccess, setExamSuccess] = useState(0) // 生徒のテスト大成功の累計（先生証の実績）
+  const [examSuccessLog, setExamSuccessLog] = useState<ExamSuccessRecord[]>([]) // 大成功の記録簿（追記専用）
+  const [showExamLog, setShowExamLog] = useState(false) // 記録簿シート（先生証のバッジから開く）
   const [showTeacherAvatar, setShowTeacherAvatar] = useState(false)
   const [showStudentAvatar, setShowStudentAvatar] = useState(false)
   const [cardFlipped, setCardFlipped] = useState(false)
@@ -203,6 +206,13 @@ export default function HomeScreen() {
           if (units.length > 0 && doneCount === units.length) {
             map[hid] = { ...entry, doneAt: Date.now() }
             await bumpExamSuccessCount()
+            // 記録簿へ刻む（教材削除後も残るようタイトルをスナップショット）
+            await appendExamSuccessLog({
+              id: `${hid}-${entry.round}-${Date.now()}`,
+              d: today,
+              s: entry.studentId ?? sender.id,
+              t: item.title.replace(/^この(教材|文書|画像|写真)は[、，]?\s*/u, '').slice(0, 24),
+            })
             mails.push(examMailFor(sender, item, 'full', '', entry.round))
           } else {
             const next = makeExamEntry(Math.max(1, units.length - doneCount), entry.round + 1, entry.studentId, hid)
@@ -218,6 +228,7 @@ export default function HomeScreen() {
         if (mails.length > 0) setMailMessages(await loadMail())
         setExamDays(await loadExamDays())
         setExamSuccess(await loadExamSuccessCount())
+        setExamSuccessLog(await loadExamSuccessLog())
       } catch { /* メールは任意機能。失敗は無視 */ }
     })()
   }, [])
@@ -227,8 +238,9 @@ export default function HomeScreen() {
       flipScaleAnim.setValue(1)
       setCardFlipped(false)
     } else {
-      // 業務日誌を最新化してから見せる
+      // 業務日誌・記録簿を最新化してから見せる
       void loadWorkLog().then(setWorkLog)
+      void loadExamSuccessLog().then(setExamSuccessLog)
       const d = new Date()
       setJournalMonth({ y: d.getFullYear(), m: d.getMonth() })
     }
@@ -1235,13 +1247,16 @@ export default function HomeScreen() {
                         : <Text style={styles.tcNameEmpty}>（名前未設定）</Text>
                       }
                     </Text>
-                    {/* 実績：期日までに全単元を教えきり、生徒がテストで大成功した回数（出来事の記録） */}
-                    {examSuccess > 0 && (
-                      <View style={styles.tcTitleBadge}>
-                        <Text style={styles.tcTitleText}>生徒のテスト大成功　{examSuccess}回</Text>
-                      </View>
-                    )}
                   </View>
+                  {/* 実績バッジ：カード下部に配置（0回でも常時表示＝記録の置き場を最初から見せる）。
+                      タップで記録簿（全件リスト）が開く */}
+                  <TouchableOpacity
+                    style={[styles.tcTitleBadge, { alignSelf: 'center' }]}
+                    onPress={() => setShowExamLog(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.tcTitleText}>生徒のテスト大成功　{examSuccess}回 ›</Text>
+                  </TouchableOpacity>
                   <View style={styles.tcChip} />
                   <View style={styles.tcEditHint}>
                     <Text style={styles.tcEditHintText}>タップして編集</Text>
@@ -1321,6 +1336,8 @@ export default function HomeScreen() {
               const examRisk = new Set<string>()
               const riskLimit = dateKeyAfterDays(2)
               const todayKey = todayDateKey()
+              // 大成功の日＝金の印（記録簿と同じ金 #fcd34d。達成の痕跡がカレンダーにも残る）
+              const successDates = new Set(examSuccessLog.map((r) => r.d))
               for (const [hid, e] of Object.entries(examDays)) {
                 if (e.doneAt || !history.some((h) => h.id === hid)) continue
                 examMarks.add(e.date)
@@ -1351,8 +1368,9 @@ export default function HomeScreen() {
                       const key = workDateKey(journalMonth.y, journalMonth.m, day)
                       const e = workLog[key]
                       const hasExam = examMarks.has(key)
+                      const hasSuccess = successDates.has(key)
                       const isToday = isCurrentMonth && day === now.getDate()
-                      const hasAny = !!e || hasExam
+                      const hasAny = !!e || hasExam || hasSuccess
                       const selected = journalDay === key
                       return (
                         <TouchableOpacity key={`d${day}`} activeOpacity={0.6}
@@ -1363,6 +1381,7 @@ export default function HomeScreen() {
                             {e?.lesson ? <View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /> : null}
                             {e?.drill ? <View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /> : null}
                             {hasExam ? <View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }, examRisk.has(key) && { borderWidth: 2, borderColor: '#bae6fd' }]} /> : null}
+                            {hasSuccess ? <View style={[styles.journalDot, { backgroundColor: '#fcd34d' }]} /> : null}
                           </View>
                         </TouchableOpacity>
                       )
@@ -1372,16 +1391,27 @@ export default function HomeScreen() {
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /><Text style={styles.journalLegendText}>授業</Text></View>
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /><Text style={styles.journalLegendText}>研修</Text></View>
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }]} /><Text style={styles.journalLegendText}>生徒のテスト</Text></View>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#fcd34d' }]} /><Text style={styles.journalLegendText}>大成功</Text></View>
                   </View>
                   {/* その日の詳細：予定されているテスト（誰の何の授業）・実施した授業/研修（誰に何を） */}
                   {journalDay && (() => {
                     const matTitle = (hid?: string) => history.find((h) => h.id === hid)?.title.replace(/^この(教材|文書|画像|写真)は[、，]?\s*/u, '').slice(0, 20) ?? '教材'
                     const parts = journalDay.split('-')
                     const exams = Object.entries(examDays).filter(([hid, en]) => en.date === journalDay && !en.doneAt && history.some((h) => h.id === hid))
+                    const daySuccesses = examSuccessLog.filter((r) => r.d === journalDay)
                     const entries = workLog[journalDay]?.entries ?? []
                     return (
                       <View style={styles.journalDetail}>
                         <Text style={styles.journalDetailDate}>{Number(parts[1])}月{Number(parts[2])}日</Text>
+                        {daySuccesses.map((r) => {
+                          const st = STUDENTS.find((s) => s.id === r.s)
+                          return (
+                            <View key={`sc${r.id}`} style={styles.journalDetailRow}>
+                              <View style={[styles.journalDot, { backgroundColor: '#fcd34d', marginTop: 5 }]} />
+                              <Text style={styles.journalDetailText}>{st ? `${st.name}の` : ''}「{r.t}」のテスト <Text style={{ fontWeight: '700', color: '#b45309' }}>大成功</Text></Text>
+                            </View>
+                          )
+                        })}
                         {exams.map(([hid, en]) => {
                           const st = STUDENTS.find((s) => s.id === en.studentId)
                           const p = examProgressOf(hid)
@@ -1430,6 +1460,34 @@ export default function HomeScreen() {
           <Image key={i} source={src} style={{ width: 1, height: 1 }} />
         ))}
       </View>
+
+      {/* 大成功の記録簿：追記専用の全件リスト（ずらっと増えていくこと自体が報酬） */}
+      <Modal visible={showExamLog} transparent animationType="slide" onRequestClose={() => setShowExamLog(false)}>
+        <View style={styles.studentSheetContainer}>
+          <Pressable style={styles.studentSheetOverlay} onPress={() => setShowExamLog(false)} />
+          <View style={[styles.studentSheetBottom, { maxHeight: '75%' }]}>
+            <View style={styles.studentSheetHandle} />
+            <Text style={styles.examLogTitle}>大成功の記録　<Text style={styles.examLogCount}>{examSuccess}回</Text></Text>
+            {examSuccessLog.length === 0 ? (
+              <Text style={styles.examLogEmpty}>まだ記録がありません。{'\n'}テストの日までに授業をぜんぶ終えると、ここに刻まれていきます</Text>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+                {[...examSuccessLog].reverse().map((r, i) => {
+                  const st = STUDENTS.find((s) => s.id === r.s)
+                  return (
+                    <View key={r.id} style={[styles.examLogRow, i > 0 && styles.examLogRowBorder]}>
+                      <View style={styles.examLogDot} />
+                      <Text style={styles.examLogDate}>{examDateLabel(r.d)}</Text>
+                      {st && <Image source={st.avatar} style={[styles.examLogAvatar, { backgroundColor: st.tint }]} />}
+                      <Text style={styles.examLogText} numberOfLines={1}>{st ? `${st.name}・` : ''}「{r.t}」のテスト</Text>
+                    </View>
+                  )
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       <BottomTabBar active="home" />
     </SafeAreaView>
@@ -1883,6 +1941,17 @@ const styles = StyleSheet.create({
   },
   tcEditHint: { position: 'absolute', bottom: 10, left: 0, right: 0, alignItems: 'center' },
   tcEditHintText: { fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 },
+
+  // 大成功の記録簿（追記専用の全件リスト。金＝儀式の金 #fcd34d）
+  examLogTitle: { fontSize: 15, fontWeight: '900', color: c.textStrong, marginBottom: 10 },
+  examLogCount: { fontSize: 12, fontWeight: '700', color: c.textSub },
+  examLogEmpty: { fontSize: 12, color: c.textSub, textAlign: 'center', lineHeight: 20, paddingVertical: 40 },
+  examLogRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
+  examLogRowBorder: { borderTopWidth: 1, borderTopColor: c.bgSub },
+  examLogDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fcd34d' },
+  examLogDate: { width: 56, fontSize: 11, fontWeight: '700', color: c.textSub, fontVariant: ['tabular-nums'] },
+  examLogAvatar: { width: 26, height: 26, borderRadius: 13, borderWidth: 1, borderColor: c.border },
+  examLogText: { flex: 1, fontSize: 13, fontWeight: '600', color: c.textMid },
   tcBackHeader: {
     paddingHorizontal: 14, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: c.bgSub,
