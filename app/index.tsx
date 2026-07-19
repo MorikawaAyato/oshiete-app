@@ -936,8 +936,9 @@ export default function HomeScreen() {
               <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/training')} activeOpacity={0.8} disabled={analyzing}>
                 <Ionicons name="school-outline" size={15} color={c.blazer} />
                 <Text style={styles.jobTitle} numberOfLines={1}>研修を受ける</Text>
+                {/* 「まだ」バッジはピンク系（研修タブと統一。まだ＝研修のあなたの判断の記録） */}
                 {pendingCount > 0 && (
-                  <View style={[styles.jobBadge, { backgroundColor: '#fef3c7' }]}><Text style={[styles.jobBadgeText, { color: '#b45309' }]}>まだ {pendingCount}</Text></View>
+                  <View style={[styles.jobBadge, { backgroundColor: '#fce7f3' }]}><Text style={[styles.jobBadgeText, { color: '#be185d' }]}>まだ {pendingCount}</Text></View>
                 )}
               </TouchableOpacity>
             </View>
