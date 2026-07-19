@@ -238,7 +238,8 @@ export default function TrainingScreen() {
                   )}
                 </View>
               </View>
-              <Text style={styles.sectionDesc}>授業前の準備にも、終えた授業の忘れ防止にも。カードをめくって自分の言葉で答え、「覚えた／まだ」を付けていきます。「まだ」のカードと、完了した授業のしばらく触れていないカードが優先して出ます。</Text>
+              {/* 説明は2行まで（案内板化するとCTAが沈む） */}
+              <Text style={styles.sectionDesc}>カードをめくって自分の言葉で答え、「覚えた／まだ」を付けます。「まだ」と、しばらく触れていないカードが優先して出ます。</Text>
               {allCards.length === 0 ? (
                 <Text style={styles.emptyText}>教材を取り込むと、その内容からカードが用意されます</Text>
               ) : (
@@ -258,28 +259,28 @@ export default function TrainingScreen() {
                   </TouchableOpacity>
                   {/* 問数はボタンの外に（小さい端末での文字あふれ対策） */}
                   <Text style={styles.drillLimitNote}>1回の研修は最大{DRILL_SESSION_SIZE}問</Text>
+                  {/* 教材ごとの入口：同じ道具の入口なので別カードにせず研修カード内に収める（画面の断片化を防ぐ）。
+                      行タップで即研修（ピッカーはこのリストで置き換え、選択UIの二重化を避ける） */}
+                  {materialsWithCards.length >= 2 && (
+                    <View style={styles.matListSection}>
+                      <Text style={styles.matListLabel}>教材ごとに始める</Text>
+                      {materialsWithCards.map((h, i) => {
+                        const pending = pendingCountOf(h.factsheet?.cards ?? [])
+                        return (
+                          <TouchableOpacity key={h.id} style={[styles.matRow, i > 0 && styles.matRowBorder]}
+                            onPress={() => { setDrillMaterialId(h.id); void startDrill(h.id) }}>
+                            <Feather name="layers" size={16} color={c.blazer} />
+                            <Text style={[styles.matRowTitle, { flex: 1 }]} numberOfLines={1}>{h.title.replace(TITLE_RE, '')}</Text>
+                            {pending > 0 && <Text style={styles.matRowPending}>まだ{pending}</Text>}
+                            <Text style={styles.matRowChevron}>›</Text>
+                          </TouchableOpacity>
+                        )
+                      })}
+                    </View>
+                  )}
                 </>
               )}
             </View>
-
-            {/* 教材ごとの入口：行タップで即研修（ピッカーはこのリストで置き換え、選択UIの二重化を避ける） */}
-            {allCards.length > 0 && materialsWithCards.length >= 2 && (
-              <View style={[styles.card, { paddingVertical: 10 }]}>
-                <Text style={styles.matListLabel}>教材ごとに始める</Text>
-                {materialsWithCards.map((h, i) => {
-                  const pending = pendingCountOf(h.factsheet?.cards ?? [])
-                  return (
-                    <TouchableOpacity key={h.id} style={[styles.matRow, i > 0 && styles.matRowBorder]}
-                      onPress={() => { setDrillMaterialId(h.id); void startDrill(h.id) }}>
-                      <Feather name="layers" size={16} color={c.blazer} />
-                      <Text style={[styles.matRowTitle, { flex: 1 }]} numberOfLines={1}>{h.title.replace(TITLE_RE, '')}</Text>
-                      {pending > 0 && <Text style={styles.matRowPending}>まだ{pending}</Text>}
-                      <Text style={styles.matRowChevron}>›</Text>
-                    </TouchableOpacity>
-                  )
-                })}
-              </View>
-            )}
           </>
         ) : drillDone ? (
           <>
@@ -410,8 +411,9 @@ const styles = StyleSheet.create({
 
   drillLimitNote: { fontSize: 10, color: c.textSub, textAlign: 'center', marginTop: 6 },
 
-  // 教材ごとの入口（行タップで即研修）
-  matListLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: c.faint, paddingTop: 2, paddingBottom: 2 },
+  // 教材ごとの入口（研修カード内の下段。行タップで即研修）
+  matListSection: { marginTop: 14, borderTopWidth: 1, borderTopColor: c.bgSub, paddingTop: 10 },
+  matListLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: c.faint, paddingBottom: 2 },
   matRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   matRowBorder: { borderTopWidth: 1, borderTopColor: c.bgSub },
   matRowTitle: { fontSize: 13, fontWeight: '600', color: c.textMid },
