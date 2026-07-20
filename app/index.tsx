@@ -659,12 +659,13 @@ export default function HomeScreen() {
         {/* 今日の授業 */}
         <View style={styles.todaySection}>
           {/* ゾーン見出しは常時表示（アップロード前でもしごとゾーンの物語を保つ）。
-              ＋教材を作るリンクは教材選択後のみ（選択前はアップロードUI自体が"作る"） */}
+              「教材を外す」は教材選択後のみ（押すと未選択状態＝作成・選び直しUIに戻る。
+              テスターが「どう消すの」で迷ったため、名前は結果側＝外すに寄せて視認できるピルにする） */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>今日の仕事</Text>
             {hasContent && (
-              <TouchableOpacity onPress={clearSelection}>
-                <Text style={styles.sectionClear}>＋ 教材を作る</Text>
+              <TouchableOpacity onPress={clearSelection} style={styles.sectionClearPill}>
+                <Text style={styles.sectionClear}>教材を外す ×</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1532,7 +1533,8 @@ const styles = StyleSheet.create({
   todaySection: { gap: 10 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { fontSize: 13, fontFamily: font.round, color: c.skyStrong, letterSpacing: 0.8 },
-  sectionClear: { fontSize: 11, color: c.textSub, fontWeight: '500' },
+  sectionClearPill: { borderWidth: 1, borderColor: c.pinkBorder, backgroundColor: 'white', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  sectionClear: { fontSize: 11, color: c.primaryStrong, fontWeight: '700' },
 
   // 状態1：アップロード
   // 教材を作るカード（アップロードUIの器。選択後の授業カードと同じ文法）
