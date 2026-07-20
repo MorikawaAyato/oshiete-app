@@ -1,4 +1,4 @@
-import type { Factsheet } from './types'
+import type { Factsheet, QACard } from './types'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? ''
 
@@ -120,13 +120,27 @@ export async function fetchFactsheet(
   return postJson('/api/factsheet', { imageDescription, notes }, 300_000)
 }
 
-// プリント授業：答案（正誤つき）と虎の巻（ひとこと解説の候補）の生成
+// 教材ファクトシートの追補（二段構えのフェーズ2）：網羅補完の追加カードと、
+// 全カードから作った誤解素材を受け取る
+export async function fetchFactsheetRefine(
+  imageDescription: string,
+  notes: string,
+  cards: QACard[],
+  sectionTitles: string[],
+): Promise<{ cards?: QACard[]; misconceptions?: string[]; error?: string }> {
+  return postJson('/api/factsheet/refine', { imageDescription, notes, cards, sectionTitles }, 300_000)
+}
+
+// プリント授業：答案（正誤つき）と虎の巻（ひとこと解説の候補）の生成。
+// facts＝誤解素材が未生成のとき（追補の完了前に授業開始）のオンデマンド生成用。
+// 作られた誤解はレスポンスで返るので、呼び出し元がファクトシートに保存する
 export async function fetchPrint(
   studentId: string,
   items: { question: string; modelAnswer: string }[],
   misconceptions: string[],
-): Promise<{ items?: { studentAnswer: string; truth: 'correct' | 'wrong'; choices?: string[] }[]; error?: string }> {
-  return postJson('/api/print', { studentId, items, misconceptions }, 90_000)
+  facts?: string[],
+): Promise<{ items?: { studentAnswer: string; truth: 'correct' | 'wrong'; choices?: string[] }[]; misconceptions?: string[]; error?: string }> {
+  return postJson('/api/print', { studentId, items, misconceptions, ...(facts?.length ? { facts } : {}) }, 90_000)
 }
 
 // 赤ペンラリーの先生メッセージ4分類（分類だけAI・生徒のセリフは定型プール）。

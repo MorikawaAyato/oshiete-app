@@ -12,14 +12,14 @@ import PawGlyph from '@/components/PawGlyph'
 import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, normalizeAvatarId } from '@/lib/teacherProfile'
-import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet } from '@/lib/api'
+import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFactsheetRefine } from '@/lib/api'
 import { needsFactsheetUpgrade } from '@/lib/factsheet'
 import { onSyncComplete } from '@/lib/sync'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, loadMail, saveMail, markMailRead, addMail,
   loadDrillPending, drillKey,
-  splitUnits, unitLabel, defaultUnitIndex, loadUnitProgressMap, getUnitStatuses,
+  unitLabel, defaultUnitIndex, loadUnitProgressMap, getUnitStatuses, unitsFromEntry, unitsFor, extendUnitProgressAfterRefine,
   loadWorkLog, workDateKey,
   loadExamDays, saveExamDays, makeExamEntry, ensureExamDay, examMailFor, examDateLabel, todayDateKey, dateKeyAfterDays,
   loadExamSuccessCount, bumpExamSuccessCount,
@@ -83,6 +83,7 @@ export default function HomeScreen() {
     currentHistoryId, setCurrentHistoryId,
     pendingMaterialAnimation, setPendingMaterialAnimation,
     setLessonUnit,
+    printItems,
     resetChatSession,
   } = useApp()
 
@@ -90,6 +91,9 @@ export default function HomeScreen() {
   // ファクトシート生成に失敗した教材のID。CTAを無限スピナーにせず再試行に切り替えるための状態
   const [factsheetErrorIds, setFactsheetErrorIds] = useState<Set<string>>(new Set())
   const factsheetInFlight = useRef<Set<string>>(new Set())
+  const refineInFlight = useRef<Set<string>>(new Set()) // 網羅追補（フェーズ2）の多重発火防止
+  // 授業中の教材ID：授業（＋振り返り）が続いている間は追補をマージしない（単元区切りを足元から動かさない）
+  const lessonMaterialRef = useRef<string | null>(null)
   const [inputMode, setInputMode] = useState<'photo' | 'text'>('photo')
   const [textInput, setTextInput] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -129,6 +133,11 @@ export default function HomeScreen() {
 
   // ライブラリ等で currentHistoryId が変わったら activeHistoryId も追従させる（①）
   useEffect(() => { setActiveHistoryId(currentHistoryId) }, [currentHistoryId])
+
+  // 授業セッションの有無を追補マージのガードに写す（printItems は退出時の resetChatSession で消える）
+  useEffect(() => {
+    lessonMaterialRef.current = printItems.length > 0 ? currentHistoryId : null
+  }, [printItems, currentHistoryId])
 
   const materialScale = useRef(new Animated.Value(1)).current
   const pendingAnimRef = useRef(pendingMaterialAnimation)
@@ -188,7 +197,7 @@ export default function HomeScreen() {
           if (!item) { delete map[hid]; changed = true; continue }
           if (entry.doneAt) continue
           const cards = item.factsheet?.cards ?? []
-          const units = splitUnits(cards.length)
+          const units = await unitsFor(hid, cards.length)
           const statuses = await getUnitStatuses(hid, cards.length)
           const doneCount = units.filter((_, i) => statuses[i] === 'done').length
           // 差出人はテストを受けた生徒（entryに記録済み）。selectedStudentId はこの時点で
@@ -318,15 +327,14 @@ export default function HomeScreen() {
         await updateHistoryFactsheet(histId, res.factsheet)
         const items = await loadHistory()
         setHistory(items)
-        // カードバンクが揃った＝授業の予定が立つ。生徒のテストの日取りもここで決まる
         if (cardCount > 0) {
-          const student = STUDENTS.find((s) => s.id === selectedStudentId) ?? STUDENTS[0]
-          const entry = await ensureExamDay(histId, splitUnits(cardCount).length, student.id)
-          if (entry) {
-            const title = items.find((h) => h.id === histId)?.title ?? '教材'
-            await addMail(examMailFor(student, { id: histId, title }, 'propose', examDateLabel(entry.date), 1))
-            setMailMessages(await loadMail())
-            setExamDays(await loadExamDays())
+          if (res.factsheet.partial) {
+            // 二段構え：第1回の授業はもう始められる。網羅の追補を裏で続ける。
+            // テストの日取りは授業回数が確定してから（追補のマージ時に）立てる
+            void refineFactsheetBg(histId)
+          } else {
+            // カードバンクが揃った＝授業の予定が立つ。生徒のテストの日取りもここで決まる
+            await proposeExamDay(histId, cardCount)
           }
         }
       }
@@ -336,6 +344,64 @@ export default function HomeScreen() {
       setFactsheetErrorIds((prev) => new Set(prev).add(histId))
     } finally {
       factsheetInFlight.current.delete(histId)
+    }
+  }
+
+  // テストの予定を立てる（まだ無ければ）＋提案メール
+  const proposeExamDay = async (histId: string, cardCount: number) => {
+    const student = STUDENTS.find((s) => s.id === selectedStudentId) ?? STUDENTS[0]
+    const entry = await ensureExamDay(histId, (await unitsFor(histId, cardCount)).length, student.id)
+    if (entry) {
+      const title = (await loadHistory()).find((h) => h.id === histId)?.title ?? '教材'
+      await addMail(examMailFor(student, { id: histId, title }, 'propose', examDateLabel(entry.date), 1))
+      setMailMessages(await loadMail())
+      setExamDays(await loadExamDays())
+    }
+  }
+
+  // 網羅の追補（二段構えのフェーズ2）：partial のファクトシートに修復・総仕上げの追加カードを
+  // 末尾マージする。失敗しても partial が残るので、次にその教材を開いたときに再試行される
+  const refineFactsheetBg = async (histId: string) => {
+    if (refineInFlight.current.has(histId)) return
+    const it = (await loadHistory()).find((h) => h.id === histId)
+    const fs = it?.factsheet
+    if (!it || !fs?.partial || !fs.cards?.length) return
+    refineInFlight.current.add(histId)
+    try {
+      const res = await fetchFactsheetRefine(it.imageDescription, it.notes, fs.cards, (fs.sections ?? []).map((s) => s.title))
+      if (res.error || !Array.isArray(res.cards)) return
+      // 授業中はマージしない：丸付け中のプリントの単元区切りを足元から動かさないため、
+      // 教室を出るまで待ってから適用する（30分で諦め＝partialのまま次回に持ち越し）
+      for (let waited = 0; lessonMaterialRef.current === histId; waited += 5) {
+        if (waited >= 1800) return
+        await new Promise((r) => setTimeout(r, 5000))
+      }
+      // マージは保存済みの最新状態に対して行う（追補中に先生が訂正した場合も消さない）。
+      // 作り直し等で partial が外れていたら追補は破棄する
+      const latest = (await loadHistory()).find((h) => h.id === histId)
+      const lfs = latest?.factsheet
+      if (!latest || !lfs?.partial || !lfs.cards?.length) return
+      const oldCount = lfs.cards.length
+      const added = res.cards.slice(0, Math.max(0, 100 - oldCount))
+      const { partial: _done, ...rest } = lfs
+      await updateHistoryFactsheet(histId, {
+        ...rest,
+        cards: [...lfs.cards, ...added],
+        facts: [...lfs.facts, ...added.map((cd) => cd.statement)],
+        // 誤解素材は全カードから作ったrefine側を常に勝たせる（接続中のオンデマンド生成より質が良い）
+        misconceptions: res.misconceptions?.length ? res.misconceptions : lfs.misconceptions,
+      })
+      setHistory(await loadHistory())
+      const newCount = oldCount + added.length
+      // 授業を始めていた教材は区切りを凍結して増分を末尾の単元に（未開始なら均等分割し直し）
+      if (added.length > 0) await extendUnitProgressAfterRefine(histId, oldCount, newCount)
+      setUnitProgress(await loadUnitProgressMap())
+      // 授業回数が確定したので、保留していたテストの日取りをここで立てる
+      await proposeExamDay(histId, newCount)
+    } catch {
+      // 追補は任意の底上げ。失敗は partial のまま残し、次に開いたとき再試行
+    } finally {
+      refineInFlight.current.delete(histId)
     }
   }
 
@@ -520,9 +586,12 @@ export default function HomeScreen() {
     setThumbnails(item.thumbnails)
     // 教材ビューはバンク描画が主。旧プレビューは保存済みのものだけフォールバック表示に使う（新規生成はしない）
     setPreviewContent(item.previewContent ?? null)
-    // ファクトシート（一問一答バンク）が未生成・または旧版の教材はここで自動更新（FACTSHEET_AUTO_UPGRADE）
+    // ファクトシート（一問一答バンク）が未生成・または旧版の教材はここで自動更新（FACTSHEET_AUTO_UPGRADE）。
+    // 追補待ち（partial）の教材は追補を再発火
     if (needsFactsheetUpgrade(item.factsheet)) {
       void backgroundFetchFactsheet(item.imageDescription, item.notes, item.id)
+    } else if (item.factsheet?.partial && item.factsheet.cards?.length) {
+      void refineFactsheetBg(item.id)
     }
   }
 
@@ -541,23 +610,13 @@ export default function HomeScreen() {
     ])
   }
 
-  const handlePreview = async () => {
-    if (previewContent) { router.push('/preview'); return }
-    if (previewLoading) return
-    setPreviewLoading(true)
-    try {
-      const content = await fetchPreviewContent(imageDescription)
-      if ((content as any).error) throw new Error(String((content as any).error))
-      const pc = content as any
-      setPreviewContent(pc)
-      if (currentHistoryId) await updateHistoryPreview(currentHistoryId, pc)
-      setHistory(await loadHistory())
-      router.push('/preview')
-    } catch {
-      Alert.alert('エラー', '教材の読み込みに失敗しました。もう一度試してください。')
-    } finally {
-      setPreviewLoading(false)
-    }
+  // 教材ビューを開ける状態か：バンク（カード）または旧プレビューがあること。
+  // 無いうちに開くと空の準備中画面に落ちるだけなので、開く導線側で止める
+  const materialViewReady = !!(history.find((h) => h.id === currentHistoryId)?.factsheet?.cards?.length || previewContent)
+
+  const handlePreview = () => {
+    // 準備中（バンクも旧プレビューも無い）は開かない：バッジが「準備中…」を出しているのでここは何もしない
+    if (materialViewReady) router.push('/preview')
   }
 
   // 教材を切り替えたらホームの単元選択をリセット（既定＝最初の未完了単元）
@@ -566,13 +625,14 @@ export default function HomeScreen() {
   // 単元マップ：選択中教材のカードを授業①〜に分け、選択単元（既定=最初の未完了）を解決する。
   // カード枚数が変わった教材（バンク再生成など）は区切りがズレるためステータスをリセット扱いにする
   const unitInfo = (() => {
-    const cards = history.find((h) => h.id === currentHistoryId)?.factsheet?.cards ?? []
-    const units = splitUnits(cards.length)
-    if (units.length === 0) return null
+    const fs = history.find((h) => h.id === currentHistoryId)?.factsheet
+    const cards = fs?.cards ?? []
     const entry = currentHistoryId ? unitProgress[currentHistoryId] : undefined
+    const units = unitsFromEntry(entry, cards.length)
+    if (units.length === 0) return null
     const statuses: Record<number, UnitStatus> = entry && entry.count === cards.length ? entry.status : {}
-    const selected = Math.min(homeUnitIdx ?? defaultUnitIndex(cards.length, statuses), units.length - 1)
-    return { units, statuses, selected, doneCount: units.filter((_, i) => statuses[i] === 'done').length }
+    const selected = Math.min(homeUnitIdx ?? defaultUnitIndex(units.length, statuses), units.length - 1)
+    return { units, statuses, selected, doneCount: units.filter((_, i) => statuses[i] === 'done').length, partial: !!fs?.partial }
   })()
 
   // 履歴に保存されたタイトルを優先（アップロード直後と履歴選択時でタイトルが食い違わないように）
@@ -815,9 +875,11 @@ export default function HomeScreen() {
                         // 幅を測ってノートの中心をボックス中央に合わせる（端末サイズによらず中央表示）
                         <NotePlaceholder style={styles.lessonThumb} />
                       )}
-                      {/* さりげないアフォーダンス：タップで開けることを示す */}
+                      {/* さりげないアフォーダンス：タップで開けることを示す（準備中はその旨に差し替え） */}
                       <View style={styles.lessonThumbOpenBadge}>
-                        {previewLoading ? <ActivityIndicator color="#fff" size={10} /> : <Text style={styles.lessonThumbOpenText}>開く ›</Text>}
+                        {previewLoading ? <ActivityIndicator color="#fff" size={10} />
+                          : materialViewReady ? <Text style={styles.lessonThumbOpenText}>開く ›</Text>
+                          : <Text style={styles.lessonThumbOpenText}>準備中…</Text>}
                       </View>
                     </View>
                     <Text style={styles.lessonMaterialTitle} numberOfLines={2}>{shortTitle}</Text>
@@ -874,7 +936,10 @@ export default function HomeScreen() {
                   <View style={styles.unitMap}>
                     <View style={styles.unitMapHeader}>
                       <Text style={styles.unitMapEyebrow}>授業を選ぶ</Text>
-                      <Text style={styles.unitMapCount}>完了 {unitInfo.doneCount} / {unitInfo.units.length}</Text>
+                      {/* 追補中は総数を出さない（あとから増えて「アプリが間違えた」ように見えるため） */}
+                      {unitInfo.partial
+                        ? <Text style={styles.unitMapCount}>残りの単元を整理中…</Text>
+                        : <Text style={styles.unitMapCount}>完了 {unitInfo.doneCount} / {unitInfo.units.length}</Text>}
                     </View>
                     {/* 丸ノード：単元が増えても折り返して全体が一目で見える（ノートのページ送りドットと同じ文法）。
                         色＝状態（緑=完了・橙=未完了・白=未開始）、選択中はページ送りと同じ「塗り」で示す */}
@@ -899,6 +964,8 @@ export default function HomeScreen() {
                           </TouchableOpacity>
                         )
                       })}
+                      {/* 追補中のゴーストノード：あとから単元が増えることを予告する（確定時に実ノードへ置き換わる） */}
+                      {unitInfo.partial && <View style={styles.unitNodeGhost} />}
                     </View>
                     {/* 選択中の単元の詳細（左）と生徒のテスト（右）を同じ行に振り分ける（左偏りの解消） */}
                     {(() => {
@@ -1328,7 +1395,7 @@ export default function HomeScreen() {
               // テストに向けた授業の完了状況（詳細行と期日間近の強調に使う）
               const examProgressOf = (hid: string) => {
                 const cards = history.find((h) => h.id === hid)?.factsheet?.cards ?? []
-                const units = splitUnits(cards.length)
+                const units = unitsFromEntry(unitProgress[hid], cards.length)
                 if (units.length === 0) return null
                 const up = unitProgress[hid]
                 const statuses: Record<number, UnitStatus> = up && up.count === cards.length ? up.status : {}

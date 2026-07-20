@@ -1,7 +1,7 @@
 import {
   View, Text, FlatList, TouchableOpacity, Image, StyleSheet,
   Modal, TextInput, KeyboardAvoidingView, Platform, Pressable,
-  ScrollView, Dimensions,
+  ScrollView, Dimensions, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -11,7 +11,7 @@ import {
   loadHistory, deleteFromHistory, renameHistoryItem, HISTORY_MAX,
   loadSavedGroups, saveGroupsList, moveItemToGroup,
   renameGroupInStorage, deleteGroupFromStorage, updateHistoryPreview,
-  loadUnitProgressMap, splitUnits,
+  loadUnitProgressMap, unitsFromEntry,
 } from '@/lib/storage'
 import type { UnitProgress } from '@/lib/types'
 import { fetchPreviewContent } from '@/lib/api'
@@ -96,6 +96,8 @@ export default function LibraryScreen() {
   // 旧プレビューが無い教材は、裏で生成して保存だけ試みる（コンテキストには触らない）
   const viewItem = (item: HistoryItem) => {
     closeSheet()
+    // 準備中（バンクも旧プレビューも無い）は開かない：空の準備中画面に落とさず、その場で伝える。
+    // 裏で旧プレビューの生成だけ仕掛けておく（次に開くときの保険）
     if (!item.previewContent && !item.factsheet?.cards?.length) {
       const attempt = async () => {
         const content = await fetchPreviewContent(item.imageDescription)
@@ -113,6 +115,8 @@ export default function LibraryScreen() {
           await refresh()
         } catch {}
       })()
+      Alert.alert('準備中', '教材を準備しています。少し待ってから開いてください。')
+      return
     }
     // from=library＋id: 教材ビューは選択と独立にこのidを表示し、「この教材を選択する」CTAを出す
     requestAnimationFrame(() => router.push({ pathname: '/preview', params: { from: 'library', id: item.id } }))
@@ -213,8 +217,8 @@ export default function LibraryScreen() {
     const lastStudent = lastLesson ? STUDENTS.find((s) => s.id === lastLesson.studentId) : null
     // 授業の達成度：この教材の単元のうち完了した数（先生の判断の記録）
     const cardCount = item.factsheet?.cards?.length ?? 0
-    const units = splitUnits(cardCount)
     const entry = unitProgress[item.id]
+    const units = unitsFromEntry(entry, cardCount)
     const statuses = entry && entry.count === cardCount ? entry.status : {}
     const doneUnits = units.filter((_, i) => statuses[i] === 'done').length
     return (
@@ -244,11 +248,11 @@ export default function LibraryScreen() {
               ) : (
                 <Text style={styles.cardDateFaint}>授業はこれから</Text>
               )}
-              {/* 授業の達成度（完了単元数）。全単元完了は緑で強調 */}
+              {/* 授業の達成度（完了単元数）。全単元完了は緑で強調。追補中は総数を確定表示しない */}
               {units.length > 0 && (
-                <View style={[styles.progressBadge, doneUnits === units.length && styles.progressBadgeDone]}>
-                  <Text style={[styles.progressBadgeText, doneUnits === units.length && styles.progressBadgeTextDone]}>
-                    {doneUnits === units.length ? '✓ ' : ''}{doneUnits}/{units.length}
+                <View style={[styles.progressBadge, doneUnits === units.length && !item.factsheet?.partial && styles.progressBadgeDone]}>
+                  <Text style={[styles.progressBadgeText, doneUnits === units.length && !item.factsheet?.partial && styles.progressBadgeTextDone]}>
+                    {item.factsheet?.partial ? '整理中…' : `${doneUnits === units.length ? '✓ ' : ''}${doneUnits}/${units.length}`}
                   </Text>
                 </View>
               )}

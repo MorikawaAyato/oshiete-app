@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useApp } from '@/lib/AppContext'
-import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, saveCardProgress, splitUnits, getUnitStatuses, logWork, loadWorkLog, dateKeyAfterDays, examDateLabel } from '@/lib/storage'
+import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, saveCardProgress, unitsFor, getUnitStatuses, logWork, loadWorkLog, dateKeyAfterDays, examDateLabel } from '@/lib/storage'
 import type { WorkLog } from '@/lib/storage'
 import type { HistoryItem, QACard } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
@@ -79,7 +79,7 @@ export default function TrainingScreen() {
           const cards = h.factsheet?.cards ?? []
           if (cards.length === 0) continue
           const statuses = await getUnitStatuses(h.id, cards.length)
-          if (splitUnits(cards.length).some((_, i) => statuses[i] === 'done')) { done = true; break }
+          if ((await unitsFor(h.id, cards.length)).some((_, i) => statuses[i] === 'done')) { done = true; break }
         }
         setHasDoneUnits(done)
       })
@@ -108,7 +108,7 @@ export default function TrainingScreen() {
       const cards = h.factsheet?.cards ?? []
       if (cards.length === 0) continue
       const statuses = await getUnitStatuses(h.id, cards.length)
-      splitUnits(cards.length).forEach((u, i) => {
+      ;(await unitsFor(h.id, cards.length)).forEach((u, i) => {
         if (statuses[i] !== 'done') return
         for (let k = u.start; k < u.start + u.size; k++) keys.add(drillKey(cards[k]))
       })

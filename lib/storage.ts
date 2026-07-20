@@ -93,10 +93,43 @@ export function unitLabel(i: number): string {
 }
 
 // 次にやる単元の既定値：カード順で最初の「完了でない」単元（全部完了なら先頭）
-export function defaultUnitIndex(cardCount: number, statuses: Record<number, UnitStatus>): number {
-  const unitCount = splitUnits(cardCount).length
+export function defaultUnitIndex(unitCount: number, statuses: Record<number, UnitStatus>): number {
   for (let i = 0; i < unitCount; i++) if (statuses[i] !== 'done') return i
   return 0
+}
+
+// この教材の単元の区切り：凍結済み（bounds）ならそれを正とし、なければ枚数からの均等分割
+export function unitsFromEntry(entry: UnitProgress | undefined, cardCount: number): { start: number; size: number }[] {
+  if (entry && entry.count === cardCount && entry.bounds && entry.bounds.reduce((a, b) => a + b, 0) === cardCount) {
+    const units: { start: number; size: number }[] = []
+    let start = 0
+    for (const size of entry.bounds) { units.push({ start, size }); start += size }
+    return units
+  }
+  return splitUnits(cardCount)
+}
+
+export async function unitsFor(historyId: string | null, cardCount: number): Promise<{ start: number; size: number }[]> {
+  const entry = historyId ? (await loadUnitProgressMap())[historyId] : undefined
+  return unitsFromEntry(entry, cardCount)
+}
+
+// 網羅追補でカードが増えたときの進度の引き継ぎ：授業を始めた教材（statusあり）は
+// 既存の区切りを凍結して増分を末尾の新単元にする（授業①の中身を後から動かさない）。
+// 未開始の教材は何もしない＝枚数からの均等分割にきれいに再計算される
+export async function extendUnitProgressAfterRefine(historyId: string, oldCount: number, newCount: number): Promise<void> {
+  if (newCount <= oldCount) return
+  try {
+    const map = await loadUnitProgressMap()
+    const entry = map[historyId]
+    if (!entry || entry.count !== oldCount || Object.keys(entry.status).length === 0) return
+    const oldSizes = entry.bounds && entry.bounds.reduce((a, b) => a + b, 0) === oldCount
+      ? entry.bounds
+      : splitUnits(oldCount).map((u) => u.size)
+    map[historyId] = { count: newCount, status: entry.status, bounds: [...oldSizes, ...splitUnits(newCount - oldCount).map((u) => u.size)] }
+    await AsyncStorage.setItem(UNIT_PROGRESS_KEY, JSON.stringify(map))
+    enqueue({ t: 'progress', p: { unitProgress: [{ materialId: historyId, count: newCount, status: entry.status }] } })
+  } catch {}
 }
 
 // 単元ステータスの保存。カード枚数が変わった教材（バンク再生成など）は区切りがズレるためリセットする
@@ -121,8 +154,8 @@ export async function setUnitStatus(historyId: string, cardCount: number, unitIn
   try {
     const map = await loadUnitProgressMap()
     const prev = map[historyId]
-    const statusMap = prev && prev.count === cardCount ? prev.status : {}
-    map[historyId] = { count: cardCount, status: { ...statusMap, [unitIndex]: status } }
+    const keep = prev && prev.count === cardCount
+    map[historyId] = { count: cardCount, status: { ...(keep ? prev.status : {}), [unitIndex]: status }, ...(keep && prev.bounds ? { bounds: prev.bounds } : {}) }
     await AsyncStorage.setItem(UNIT_PROGRESS_KEY, JSON.stringify(map))
     enqueue({ t: 'progress', p: { unitProgress: [{ materialId: historyId, count: cardCount, status: map[historyId].status }] } })
   } catch {}

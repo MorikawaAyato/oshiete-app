@@ -12,7 +12,7 @@ import { fetchPrint, fetchFactsheet, classifyRallyReply } from '@/lib/api'
 import {
   loadFactsheet, updateHistoryFactsheet, saveRecapToHistory, loadHistory,
   loadCardProgress, saveCardProgress, drillKey,
-  splitUnits, defaultUnitIndex, getUnitStatuses, setUnitStatus, logWork,
+  unitsFor, defaultUnitIndex, getUnitStatuses, setUnitStatus, logWork,
   ensureExamDay, examMailFor, examDateLabel, addMail,
 } from '@/lib/storage'
 import type { PrintItem, Recap } from '@/lib/types'
@@ -192,16 +192,25 @@ export default function ChatScreen() {
         return
       }
       // 単元の確定：ホームで選ばれた単元、なければ最初の「完了でない」単元
-      const units = splitUnits(cards.length)
+      const units = await unitsFor(currentHistoryId, cards.length)
       const statuses = await getUnitStatuses(currentHistoryId, cards.length)
-      const unitIdx = Math.min(lessonUnit ?? defaultUnitIndex(cards.length, statuses), units.length - 1)
+      const unitIdx = Math.min(lessonUnit ?? defaultUnitIndex(units.length, statuses), units.length - 1)
       const unit = units[unitIdx]
       const picked = cards.slice(unit.start, unit.start + unit.size).map((card, k) => ({ card, index: unit.start + k }))
       const res = await fetchPrint(
         student.id,
         picked.map((p) => ({ question: p.card.q, modelAnswer: p.card.a })),
         factsheet?.misconceptions ?? [],
+        // 誤解素材が未生成（追補の完了前）なら、接続中の演出の裏でサーバに作ってもらう
+        (factsheet?.misconceptions?.length ?? 0) === 0 ? factsheet?.facts ?? [] : undefined,
       )
+      // 接続中に作られた誤解素材は保存して使い回す（追補が完了していたら追補側を勝たせるので上書きしない）
+      if (res.misconceptions?.length && currentHistoryId) {
+        const cur = await loadFactsheet(currentHistoryId)
+        if (cur && (cur.misconceptions?.length ?? 0) === 0) {
+          await updateHistoryFactsheet(currentHistoryId, { ...cur, misconceptions: res.misconceptions })
+        }
+      }
       if (!res.items || res.items.length !== picked.length) {
         setStartError(true)
         return
@@ -267,11 +276,14 @@ export default function ChatScreen() {
         const cardCount = (await loadFactsheet(currentHistoryId))?.cards?.length ?? 0
         if (cardCount > 0) {
           await setUnitStatus(currentHistoryId, cardCount, lessonUnit, 'tried')
-          // テストの予定がまだ無い教材（試験日導入前の教材）はここで立てる
-          const entry = await ensureExamDay(currentHistoryId, splitUnits(cardCount).length, student.id)
-          if (entry) {
-            const title = (await loadHistory()).find((h) => h.id === currentHistoryId)?.title ?? '教材'
-            await addMail(examMailFor(student, { id: currentHistoryId, title }, 'propose', examDateLabel(entry.date), 1))
+          // テストの予定がまだ無い教材（試験日導入前の教材）はここで立てる。
+          // 追補待ち（partial）は回数が確定していないので立てない（追補のマージ時に立つ）
+          if (!(await loadFactsheet(currentHistoryId))?.partial) {
+            const entry = await ensureExamDay(currentHistoryId, (await unitsFor(currentHistoryId, cardCount)).length, student.id)
+            if (entry) {
+              const title = (await loadHistory()).find((h) => h.id === currentHistoryId)?.title ?? '教材'
+              await addMail(examMailFor(student, { id: currentHistoryId, title }, 'propose', examDateLabel(entry.date), 1))
+            }
           }
         }
       }

@@ -43,6 +43,7 @@ export type Factsheet = {
   sections?: FactsheetSection[] // 教材ビューのセクション見出し（v3以降。バンク描画の骨格）
   version?: number // バンク生成ルールの版。旧版はバックフィルで再生成される
   errata?: Erratum[] // 先生による訂正。あれば自動再生成しない
+  partial?: boolean // 二段構えのフェーズ1のみ完了（網羅補完が未実施）。/api/factsheet/refine で追補する
 }
 
 // プリント授業の1問。truth（答案の正誤）は生成時にサーバが決め打ちしており、
@@ -66,9 +67,10 @@ export type PrintStage = 'grading' | 'redpen' | 'done'
 export type CardProgress = { seen: number; lastAt: number; lastResult?: boolean }
 
 // 単元ステータス：未実施（エントリなし）／実施済み（tried）／完了（done）。
-// 「完了」は集計値ではなく先生の判断の記録（振り返りを見て決める）
+// 「完了」は集計値ではなく先生の判断の記録（振り返りを見て決める）。
+// bounds＝網羅追補でカードが増えた開始済み教材の、凍結した単元区切り（各単元の枚数）
 export type UnitStatus = 'tried' | 'done'
-export type UnitProgress = { count: number; status: Record<number, UnitStatus> }
+export type UnitProgress = { count: number; status: Record<number, UnitStatus>; bounds?: number[] }
 
 export type HistoryItem = {
   id: string
