@@ -1384,7 +1384,6 @@ export default function HomeScreen() {
                             {e?.lesson ? <View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /> : null}
                             {e?.drill ? <View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /> : null}
                             {hasExam ? <View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }, examRisk.has(key) && { borderWidth: 2, borderColor: '#bae6fd' }]} /> : null}
-                            {hasSuccess ? <View style={[styles.journalDot, { backgroundColor: '#fcd34d' }]} /> : null}
                           </View>
                         </TouchableOpacity>
                       )
@@ -1394,7 +1393,6 @@ export default function HomeScreen() {
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /><Text style={styles.journalLegendText}>授業</Text></View>
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /><Text style={styles.journalLegendText}>研修</Text></View>
                     <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }]} /><Text style={styles.journalLegendText}>生徒のテスト</Text></View>
-                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#fcd34d' }]} /><Text style={styles.journalLegendText}>快挙</Text></View>
                   </View>
                   {/* その日の詳細：予定されているテスト（誰の何の授業）・実施した授業/研修（誰に何を） */}
                   {journalDay && (() => {
