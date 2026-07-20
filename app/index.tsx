@@ -1406,15 +1406,13 @@ export default function HomeScreen() {
                     return (
                       <View style={styles.journalDetail}>
                         <Text style={styles.journalDetailDate}>{Number(parts[1])}月{Number(parts[2])}日</Text>
-                        {daySuccesses.map((r) => {
-                          const st = STUDENTS.find((s) => s.id === r.s)
-                          return (
-                            <View key={`sc${r.id}`} style={styles.journalDetailRow}>
-                              <View style={[styles.journalDot, { backgroundColor: '#fcd34d', marginTop: 5 }]} />
-                              <Text style={styles.journalDetailText}>{st ? `${st.name}の` : ''}「{r.t}」のテスト <Text style={{ fontWeight: '700', color: '#b45309' }}>快挙達成</Text></Text>
-                            </View>
-                          )
-                        })}
+                        {/* カレンダーは出来事の印だけ軽く（何を・誰とは先生証の記録簿が正式に持つ） */}
+                        {daySuccesses.map((r) => (
+                          <View key={`sc${r.id}`} style={styles.journalDetailRow}>
+                            <View style={[styles.journalDot, { backgroundColor: '#fcd34d', marginTop: 5 }]} />
+                            <Text style={styles.journalDetailText}>生徒の快挙 <Text style={{ fontWeight: '700', color: '#b45309' }}>達成</Text></Text>
+                          </View>
+                        ))}
                         {exams.map(([hid, en]) => {
                           const st = STUDENTS.find((s) => s.id === en.studentId)
                           const p = examProgressOf(hid)
@@ -1472,7 +1470,7 @@ export default function HomeScreen() {
             <View style={styles.studentSheetHandle} />
             <Text style={styles.examLogTitle}>快挙の記録　<Text style={styles.examLogCount}>{examSuccess}回</Text></Text>
             {examSuccessLog.length === 0 ? (
-              <Text style={styles.examLogEmpty}>まだ記録がありません。{'\n'}テストの日までに授業を全て終えると、ここに刻まれていきます</Text>
+              <Text style={styles.examLogEmpty}>まだ記録がありません。{'\n'}テストの日までに授業を全て終えて、生徒がテストに成功すると、ここに刻まれていきます</Text>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
                 {[...examSuccessLog].reverse().map((r, i) => {
@@ -1480,7 +1478,8 @@ export default function HomeScreen() {
                   return (
                     <View key={r.id} style={[styles.examLogRow, i > 0 && styles.examLogRowBorder]}>
                       <View style={styles.examLogDot} />
-                      <Text style={styles.examLogDate}>{examDateLabel(r.d)}</Text>
+                      {/* 長期リストなので年つき（YYYY/M/D） */}
+                      <Text style={styles.examLogDate}>{r.d.split('-').map(Number).join('/')}</Text>
                       {st && <Image source={st.avatar} style={[styles.examLogAvatar, { backgroundColor: st.tint }]} />}
                       <Text style={styles.examLogText} numberOfLines={1}>{st ? `${st.name}・` : ''}「{r.t}」のテスト</Text>
                     </View>
@@ -1948,7 +1947,7 @@ const styles = StyleSheet.create({
   examLogRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
   examLogRowBorder: { borderTopWidth: 1, borderTopColor: c.bgSub },
   examLogDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fcd34d' },
-  examLogDate: { width: 56, fontSize: 11, fontWeight: '700', color: c.textSub, fontVariant: ['tabular-nums'] },
+  examLogDate: { width: 78, fontSize: 11, fontWeight: '700', color: c.textSub, fontVariant: ['tabular-nums'] },
   examLogAvatar: { width: 26, height: 26, borderRadius: 13, borderWidth: 1, borderColor: c.border },
   examLogText: { flex: 1, fontSize: 13, fontWeight: '600', color: c.textMid },
   tcBackHeader: {
