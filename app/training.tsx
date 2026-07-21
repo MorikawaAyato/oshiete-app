@@ -466,7 +466,7 @@ export default function TrainingScreen() {
                                   <Text style={styles.listCardA}>{cd.a}</Text>
                                   {/* 動作ボタン：状態は角のピルが語り、ボタンは次の動作だけを語る（再生⇄一時停止方式） */}
                                   <TouchableOpacity style={styles.listActionBtn} onPress={() => void toggleListMada(cd)}>
-                                    <Text style={styles.listActionText}>{st === 'mada' ? 'おぼえた' : 'まだ'}</Text>
+                                    <Text style={styles.listActionText}>{st === 'mada' ? '覚えた' : 'まだ'}</Text>
                                   </TouchableOpacity>
                                 </>
                               ) : (
