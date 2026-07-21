@@ -139,6 +139,7 @@ export default function HomeScreen() {
     lessonMaterialRef.current = printItems.length > 0 ? currentHistoryId : null
   }, [printItems, currentHistoryId])
 
+  const homeScrollRef = useRef<ScrollView>(null) // 教材読み込み完了時に先頭へ戻す
   const materialScale = useRef(new Animated.Value(1)).current
   const pendingAnimRef = useRef(pendingMaterialAnimation)
   useEffect(() => { pendingAnimRef.current = pendingMaterialAnimation }, [pendingMaterialAnimation])
@@ -489,6 +490,8 @@ export default function HomeScreen() {
       setHistory(await loadHistory())
       setTextInput('')
       triggerMaterialAnimation()
+      // 完成した「次の授業」カードが画面上部に現れる着地にする（入力位置のスクロールを引き継がない）
+      homeScrollRef.current?.scrollTo({ y: 0, animated: false })
       void backgroundFetchFactsheet(finalDesc, finalNotes, saved.id)
     } catch (e) {
       // 冒頭で先行して立てた「教材あり」状態を戻す。戻さないと履歴未保存のまま
@@ -552,6 +555,8 @@ export default function HomeScreen() {
       setActiveHistoryId(saved.id)
       setHistory(await loadHistory())
       triggerMaterialAnimation()
+      // 完成した「次の授業」カードが画面上部に現れる着地にする（アップロードUIのスクロールを引き継がない）
+      homeScrollRef.current?.scrollTo({ y: 0, animated: false })
       // 教材ビューはバンク（ファクトシート）から描画するため、旧プレビューの生成は行わない
       void backgroundFetchFactsheet(res.imageDescription, res.notes, saved.id)
     } catch (e) {
@@ -655,6 +660,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
+        ref={homeScrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"

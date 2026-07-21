@@ -8,7 +8,7 @@ import { useFocusEffect } from 'expo-router'
 import { useApp } from '@/lib/AppContext'
 import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, saveCardProgress, unitsFor, getUnitStatuses, logWork, loadWorkLog, dateKeyAfterDays, examDateLabel } from '@/lib/storage'
 import type { WorkLog } from '@/lib/storage'
-import type { HistoryItem, QACard } from '@/lib/types'
+import type { CardProgress, HistoryItem, QACard } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
 import { c, font } from '@/lib/theme'
 import { Feather } from '@expo/vector-icons'
@@ -65,6 +65,13 @@ export default function TrainingScreen() {
 
   // 「まだ」のカードキー集合。残数バッジと校長のセリフに使う（markDrillで更新）
   const [drillPendingKeys, setDrillPendingKeys] = useState<Set<string>>(new Set())
+  // カード進度（確認済み判定・カバレッジに使う。markDrill/一覧のめくりで更新）
+  const [cardProgressMap, setCardProgressMap] = useState<Record<string, CardProgress>>({})
+  // 終了サマリの「確認したカード X → Y / N枚」用（研修開始時のカバレッジを控える）
+  const [drillCoverageBefore, setDrillCoverageBefore] = useState<{ seen: number; total: number } | null>(null)
+  // カード一覧（研修室の第2モード：自分のペースでめくる）
+  const [cardListMaterialId, setCardListMaterialId] = useState<string | null>(null)
+  const [cardListFlipped, setCardListFlipped] = useState<Set<string>>(new Set())
   // 業務日誌（研修の記録行に使う。研修タブに出すのは研修のデータだけ）
   const [workLog, setWorkLog] = useState<WorkLog>({})
   // 完了済みの単元があるか（校長の「みがき直し」の口上に使う）
@@ -84,6 +91,7 @@ export default function TrainingScreen() {
         setHasDoneUnits(done)
       })
       void loadDrillPending().then(setDrillPendingKeys)
+      void loadCardProgress().then(setCardProgressMap)
       void loadWorkLog().then(setWorkLog)
     }, [])
   )
@@ -116,17 +124,27 @@ export default function TrainingScreen() {
     return keys
   }
 
-  // 研修＝練習場：授業前のならしにも、完了後のわすれ防止にも同じ入口で応える。
-  // 出題優先度は ①「まだ」 ②完了済み単元のカードを触れてから古い順（間隔反復） ③残りシャッフル
-  const startDrill = async (materialId: string) => {
+  // 網羅カバレッジ：一度でも確認した（出題された・一覧でめくった）カードの数
+  const drillCoverageOf = (materialId: string, progress: Record<string, CardProgress>) => {
     const pool = drillPool(materialId)
-    if (pool.length === 0) return
+    return { seen: pool.filter((cd) => progress[drillKey(cd)]).length, total: pool.length }
+  }
+
+  // 研修＝練習場：授業前のならしにも、完了後のわすれ防止にも同じ入口で応える。
+  // 出題優先度は ①「まだ」 ②完了済み単元のカードを触れてから古い順（間隔反復） ③残りシャッフル。
+  // gapsOnly＝カード一覧の「まだと未確認だけで研修する」（網羅の穴だけを埋める回）
+  const startDrill = async (materialId: string, gapsOnly = false) => {
     const [pending, progress, doneKeys] = await Promise.all([loadDrillPending(), loadCardProgress(), collectDoneUnitKeys()])
+    let pool = drillPool(materialId)
+    if (gapsOnly) pool = pool.filter((cd) => pending.has(drillKey(cd)) || !progress[drillKey(cd)])
+    if (pool.length === 0) return
     const pendingCards = shuffleCards(pool.filter((cd) => pending.has(drillKey(cd))))
     const maintainCards = pool
       .filter((cd) => !pending.has(drillKey(cd)) && doneKeys.has(drillKey(cd)))
       .sort((a, b) => (progress[drillKey(a)]?.lastAt ?? 0) - (progress[drillKey(b)]?.lastAt ?? 0))
     const restCards = shuffleCards(pool.filter((cd) => !pending.has(drillKey(cd)) && !doneKeys.has(drillKey(cd))))
+    setCardProgressMap(progress)
+    setDrillCoverageBefore(drillCoverageOf(materialId, progress))
     setDrillCards([...pendingCards, ...maintainCards, ...restCards].slice(0, DRILL_SESSION_SIZE))
     setDrillIdx(0)
     setDrillRevealed(false)
@@ -151,6 +169,7 @@ export default function TrainingScreen() {
     const key = drillKey(card)
     progress[key] = { seen: (progress[key]?.seen ?? 0) + 1, lastAt: Date.now(), lastResult: remembered }
     await saveCardProgress(progress)
+    setCardProgressMap({ ...progress })
     if (drillIdx + 1 >= drillCards.length) {
       setDrillDone(true)
       void logWork('drill', { historyId: drillMaterialId !== 'all' ? drillMaterialId : undefined }) // 業務日誌へ（最後までめくった研修だけを記録）
@@ -165,6 +184,41 @@ export default function TrainingScreen() {
     setDrillDone(false)
     setDrillIdx(0)
     setDrillRevealed(false)
+  }
+
+  // カード一覧（研修室の第2モード）：開く・めくる・「まだ」の付け外し
+  const openCardList = (materialId: string) => {
+    setCardListFlipped(new Set())
+    setCardListMaterialId(materialId)
+  }
+
+  // 表→裏にめくったら「確認済み」として記録（1枚ずつの意図的操作＝出題と同じ「確認」の単位。
+  // 覚えた/まだの判定は変えないので lastResult は据え置き）
+  const flipListCard = async (card: QACard) => {
+    const key = drillKey(card)
+    const willFlip = !cardListFlipped.has(key)
+    setCardListFlipped((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+    if (willFlip) {
+      const progress = await loadCardProgress()
+      const prev = progress[key]
+      progress[key] = { seen: (prev?.seen ?? 0) + 1, lastAt: Date.now(), ...(prev?.lastResult !== undefined ? { lastResult: prev.lastResult } : {}) }
+      await saveCardProgress(progress)
+      setCardProgressMap({ ...progress })
+    }
+  }
+
+  // 動作ボタン：まだ状態のカード→「おぼえた」（外す）／それ以外→「まだ」（付ける）。
+  // おまかせ出題の判定と同じ記録に書く＝2モードの結果は合流する
+  const toggleListMada = async (card: QACard) => {
+    const key = drillKey(card)
+    const pending = await loadDrillPending()
+    if (pending.has(key)) pending.delete(key); else pending.add(key)
+    await saveDrillPending(pending)
+    setDrillPendingKeys(new Set(pending))
   }
 
   const [showPrincipalAvatar, setShowPrincipalAvatar] = useState(false)
@@ -260,20 +314,27 @@ export default function TrainingScreen() {
                   {/* 問数はボタンの外に（小さい端末での文字あふれ対策） */}
                   <Text style={styles.drillLimitNote}>1回の研修は最大{DRILL_SESSION_SIZE}問</Text>
                   {/* 教材ごとの入口：同じ道具の入口なので別カードにせず研修カード内に収める（画面の断片化を防ぐ）。
-                      行タップで即研修（ピッカーはこのリストで置き換え、選択UIの二重化を避ける） */}
-                  {materialsWithCards.length >= 2 && (
+                      行タップで即研修（＝おまかせ出題）、右端の独立ボタンでカード一覧（対等な第2モード）。
+                      教材1件でも一覧の入口が要るため常時表示 */}
+                  {materialsWithCards.length >= 1 && (
                     <View style={styles.matListSection}>
                       <Text style={styles.matListLabel}>教材ごとに始める</Text>
                       {materialsWithCards.map((h, i) => {
                         const pending = pendingCountOf(h.factsheet?.cards ?? [])
                         return (
-                          <TouchableOpacity key={h.id} style={[styles.matRow, i > 0 && styles.matRowBorder]}
-                            onPress={() => { setDrillMaterialId(h.id); void startDrill(h.id) }}>
-                            <Feather name="layers" size={16} color={c.blazer} />
-                            <Text style={[styles.matRowTitle, { flex: 1 }]} numberOfLines={1}>{h.title.replace(TITLE_RE, '')}</Text>
-                            {pending > 0 && <Text style={styles.matRowPending}>まだ{pending}</Text>}
-                            <Text style={styles.matRowChevron}>›</Text>
-                          </TouchableOpacity>
+                          <View key={h.id} style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }, i > 0 && styles.matRowBorder]}>
+                            <TouchableOpacity style={[styles.matRow, { flex: 1 }]}
+                              onPress={() => { setDrillMaterialId(h.id); void startDrill(h.id) }}>
+                              <Feather name="layers" size={16} color={c.blazer} />
+                              <Text style={[styles.matRowTitle, { flex: 1 }]} numberOfLines={1}>{h.title.replace(TITLE_RE, '')}</Text>
+                              {pending > 0 && <Text style={styles.matRowPending}>まだ{pending}</Text>}
+                              <Text style={styles.matRowChevron}>›</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.listBtn} onPress={() => openCardList(h.id)}>
+                              <Feather name="layers" size={13} color={c.textSub} />
+                              <Text style={styles.listBtnText}>一覧</Text>
+                            </TouchableOpacity>
+                          </View>
                         )
                       })}
                     </View>
@@ -287,6 +348,16 @@ export default function TrainingScreen() {
             <View style={[styles.card, { alignItems: 'center' }]}>
               <Text style={styles.doneTitle}>{drillOkCount === drillCards.length ? '全部覚えた！' : 'おつかれさまでした'}</Text>
               <Text style={styles.doneScore}>{drillOkCount} / {drillCards.length} 枚覚えた</Text>
+              {/* 網羅の前後差分：「ちゃんと前に進んでいる」証拠を毎回渡す */}
+              {drillCoverageBefore && (() => {
+                const after = drillCoverageOf(drillMaterialId, cardProgressMap)
+                if (after.total === 0) return null
+                return (
+                  <Text style={styles.doneCoverage}>
+                    {drillMaterialId === 'all' ? '確認したカード' : 'この教材で確認したカード'}：{drillCoverageBefore.seen} → <Text style={{ color: '#0f766e', fontWeight: '700' }}>{after.seen}</Text> / {after.total}枚
+                  </Text>
+                )
+              })()}
               <View style={styles.heroRow}>
                 <Image source={PRINCIPAL_IMAGE} style={styles.principalAvatarSmall} />
                 <Text style={styles.principalComment}>
@@ -302,6 +373,12 @@ export default function TrainingScreen() {
                 <Text style={styles.secondaryBtnText}>終わる</Text>
               </TouchableOpacity>
             </View>
+            {/* 不安になる瞬間＝終了直後のそばに一覧への導線を置く */}
+            {drillMaterialId !== 'all' && (
+              <TouchableOpacity style={styles.listGhostBtn} onPress={() => { exitDrill(); openCardList(drillMaterialId) }}>
+                <Text style={styles.listGhostBtnText}>カード一覧を見る</Text>
+              </TouchableOpacity>
+            )}
           </>
         ) : (
           <>
@@ -349,6 +426,82 @@ export default function TrainingScreen() {
             <Image source={PRINCIPAL_IMAGE_DARK} style={styles.zoomImage} />
           </View>
         </Pressable>
+      </Modal>
+
+      {/* カード一覧シート（研修室の第2モード）：紙のカードUIでバンク全体を俯瞰し、タップで裏返して確かめる */}
+      <Modal visible={cardListMaterialId !== null} transparent animationType="slide" onRequestClose={() => setCardListMaterialId(null)}>
+        {(() => {
+          const listItem = history.find((h) => h.id === cardListMaterialId)
+          const listCards = listItem?.factsheet?.cards ?? []
+          if (!listItem || listCards.length === 0) return <View />
+          const statusOf = (cd: QACard) => drillPendingKeys.has(drillKey(cd)) ? 'mada' : cardProgressMap[drillKey(cd)] ? 'seen' : 'none'
+          const madaCount = listCards.filter((cd) => statusOf(cd) === 'mada').length
+          const seenCount = listCards.filter((cd) => statusOf(cd) === 'seen').length
+          const noneCount = listCards.length - madaCount - seenCount
+          const gapCount = madaCount + noneCount
+          const secs = (listItem.factsheet?.sections ?? []).filter((s) => listCards.some((cd) => cd.sectionTitle === s.title))
+          const hasOther = listCards.some((cd) => !secs.some((s) => s.title === cd.sectionTitle))
+          const groups = [
+            ...secs.map((s) => ({ title: s.title, rows: listCards.filter((cd) => cd.sectionTitle === s.title) })),
+            ...(hasOther ? [{ title: secs.length > 0 ? 'その他' : '', rows: listCards.filter((cd) => !secs.some((s) => s.title === cd.sectionTitle)) }] : []),
+          ]
+          return (
+            <Pressable style={styles.listOverlay} onPress={() => setCardListMaterialId(null)}>
+              <Pressable style={styles.listSheet} onPress={() => {}}>
+                <View style={styles.listHead}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.listTitle} numberOfLines={1}>{listItem.title.replace(TITLE_RE, '')}</Text>
+                    <Text style={styles.listCounts}>カード一覧　{listCards.length}枚　<Text style={{ fontWeight: '600' }}>まだ{madaCount}・確認済み{seenCount}・未確認{noneCount}</Text></Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setCardListMaterialId(null)} hitSlop={8}>
+                    <Text style={styles.listClose}>×</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
+                  {groups.map((g, gi) => (
+                    <View key={gi} style={{ marginTop: 10 }}>
+                      {!!g.title && <Text style={styles.listSecLabel}>{secs.length > 0 ? `${gi + 1}. ` : ''}{g.title}</Text>}
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                        {g.rows.map((cd) => {
+                          const key = drillKey(cd)
+                          const st = statusOf(cd)
+                          const flipped = cardListFlipped.has(key)
+                          return (
+                            <TouchableOpacity key={key} activeOpacity={0.8} onPress={() => void flipListCard(cd)}
+                              style={[styles.listCard, flipped && styles.listCardFlip, st === 'none' && !flipped && { opacity: 0.55 }]}>
+                              <View style={[styles.listPill, st === 'mada' ? styles.listPillMada : st === 'seen' ? styles.listPillSeen : styles.listPillNone]}>
+                                <Text style={[styles.listPillText, st === 'mada' ? { color: '#be185d' } : st === 'seen' ? { color: '#059669' } : { color: c.textSub }]}>
+                                  {st === 'mada' ? 'まだ' : st === 'seen' ? '確認済み' : '未確認'}
+                                </Text>
+                              </View>
+                              {flipped ? (
+                                <>
+                                  <Text style={styles.listCardA}>{cd.a}</Text>
+                                  {/* 動作ボタン：状態は角のピルが語り、ボタンは次の動作だけを語る（再生⇄一時停止方式） */}
+                                  <TouchableOpacity style={styles.listActionBtn} onPress={() => void toggleListMada(cd)}>
+                                    <Text style={styles.listActionText}>{st === 'mada' ? 'おぼえた' : 'まだ'}</Text>
+                                  </TouchableOpacity>
+                                </>
+                              ) : (
+                                <Text style={styles.listCardQ}>{cd.q}</Text>
+                              )}
+                            </TouchableOpacity>
+                          )
+                        })}
+                      </View>
+                    </View>
+                  ))}
+                  {gapCount > 0 && (
+                    <TouchableOpacity style={[styles.primaryBtn, { marginTop: 16 }]}
+                      onPress={() => { const id = listItem.id; setCardListMaterialId(null); setDrillMaterialId(id); void startDrill(id, true) }}>
+                      <Text style={styles.primaryBtnText}>「まだ」と未確認だけで研修する</Text>
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
+              </Pressable>
+            </Pressable>
+          )
+        })()}
       </Modal>
 
     </SafeAreaView>
@@ -419,6 +572,32 @@ const styles = StyleSheet.create({
   matRowTitle: { fontSize: 13, fontWeight: '600', color: c.textMid },
   matRowPending: { fontSize: 11, fontWeight: '700', color: c.primaryStrong },
   matRowChevron: { fontSize: 15, color: c.faint },
+  // カード一覧の入口ボタン（行タップ=おまかせ出題と押し分けられる独立ボタン）
+  listBtn: { alignItems: 'center', gap: 2, borderWidth: 1, borderColor: c.border, backgroundColor: c.bg, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 6 },
+  listBtnText: { fontSize: 8, fontWeight: '700', color: c.textSub },
+  // カード一覧シート
+  listOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  listSheet: { backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 18, paddingTop: 18, maxHeight: '88%' },
+  listHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  listTitle: { fontSize: 14, fontFamily: font.round, color: c.textStrong },
+  listCounts: { fontSize: 11, fontWeight: '700', color: c.textSub, marginTop: 2 },
+  listClose: { fontSize: 18, color: c.textSub, fontWeight: '700', paddingHorizontal: 4 },
+  listSecLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, color: c.textSub, marginBottom: 6 },
+  // 紙のカード（研修フラッシュカードと同族の紙色）
+  listCard: { width: '48%', minHeight: 88, borderRadius: 12, borderWidth: 1, borderColor: '#fde68a', backgroundColor: '#fffbeb', padding: 10, paddingTop: 14, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  listCardFlip: { backgroundColor: 'white', borderColor: c.pinkMuted },
+  listCardQ: { fontSize: 11, color: c.textMid, lineHeight: 16, textAlign: 'center' },
+  listCardA: { fontSize: 11, fontWeight: '700', color: c.textStrong, lineHeight: 16, textAlign: 'center' },
+  listPill: { position: 'absolute', top: -7, right: 8, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
+  listPillMada: { backgroundColor: '#fce7f3' },
+  listPillSeen: { backgroundColor: '#ecfdf5' },
+  listPillNone: { backgroundColor: c.bgSub },
+  listPillText: { fontSize: 9, fontWeight: '700' },
+  listActionBtn: { borderWidth: 1, borderColor: c.pinkMuted, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 3, backgroundColor: 'white' },
+  listActionText: { fontSize: 10, fontWeight: '700', color: c.primaryStrong },
+  // 終了サマリの一覧導線
+  listGhostBtn: { borderWidth: 1, borderColor: c.pinkBorder, backgroundColor: 'white', borderRadius: 12, paddingVertical: 11, alignItems: 'center' },
+  listGhostBtnText: { fontSize: 13, fontWeight: '700', color: c.primaryStrong },
 
   // 研修中の教材表示（フルタイトル）
   drillMaterialTitle: { fontSize: 12, fontWeight: '700', color: c.textMid },
@@ -440,6 +619,7 @@ const styles = StyleSheet.create({
 
   doneTitle: { fontSize: 20, fontWeight: '900', color: c.text, marginBottom: 4 },
   doneScore: { fontSize: 13, color: c.textMid, marginBottom: 14 },
+  doneCoverage: { fontSize: 11, color: c.textSub, marginTop: -8, marginBottom: 14 },
 
   zoomOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
   zoomCircle: { width: 220, height: 220, borderRadius: 110, overflow: 'hidden', borderWidth: 4, borderColor: '#fcd34d', backgroundColor: '#fff' },
