@@ -114,21 +114,22 @@ export async function unitsFor(historyId: string | null, cardCount: number): Pro
   return unitsFromEntry(entry, cardCount)
 }
 
-// 網羅追補でカードが増えたときの進度の引き継ぎ：授業を始めた教材（statusあり）は
-// 既存の区切りを凍結して増分を末尾の新単元にする（授業①の中身を後から動かさない）。
-// 未開始の教材は何もしない＝枚数からの均等分割にきれいに再計算される
+// 網羅追補でカードが増えたときの進度の引き継ぎ：**常に**既存の区切りを凍結して増分を末尾の
+// 新単元にする（一度表示した授業①〜の区切りは、開始前でも後から動かさない。増えた分は
+// ゴーストノードの位置に新しい単元として現れるだけ、という一貫した見え方にする）
 export async function extendUnitProgressAfterRefine(historyId: string, oldCount: number, newCount: number): Promise<void> {
   if (newCount <= oldCount) return
   try {
     const map = await loadUnitProgressMap()
     const entry = map[historyId]
-    if (!entry || entry.count !== oldCount || Object.keys(entry.status).length === 0) return
-    const oldSizes = entry.bounds && entry.bounds.reduce((a, b) => a + b, 0) === oldCount
+    const keep = entry && entry.count === oldCount
+    const oldSizes = keep && entry.bounds && entry.bounds.reduce((a, b) => a + b, 0) === oldCount
       ? entry.bounds
       : splitUnits(oldCount).map((u) => u.size)
-    map[historyId] = { count: newCount, status: entry.status, bounds: [...oldSizes, ...splitUnits(newCount - oldCount).map((u) => u.size)] }
+    const status = keep ? entry.status : {}
+    map[historyId] = { count: newCount, status, bounds: [...oldSizes, ...splitUnits(newCount - oldCount).map((u) => u.size)] }
     await AsyncStorage.setItem(UNIT_PROGRESS_KEY, JSON.stringify(map))
-    enqueue({ t: 'progress', p: { unitProgress: [{ materialId: historyId, count: newCount, status: entry.status }] } })
+    enqueue({ t: 'progress', p: { unitProgress: [{ materialId: historyId, count: newCount, status }] } })
   } catch {}
 }
 
@@ -294,8 +295,8 @@ export async function ensureExamDay(historyId: string, unitCount: number, studen
 }
 
 // テストのお知らせ・結果メール（生徒のトーンに合わせた定型。AIコールなし）。
-// 文面は各種類4パターンのプールから教材IDのハッシュで安定選択：同時に複数届いても機械的に
-// 見えず、同じメールが再生成されても文面は変わらない（重複配信が二重事故に見えない）
+// 文面は各種類6パターンのプールから教材ID＋種類＋回のハッシュで安定選択：同時に複数届いても
+// 機械的に見えず、同じメールが再生成されても文面は変わらない（重複配信が二重事故に見えない）
 export type ExamMailKind = 'propose' | 'full' | 'partial' | 'none' | 'remind'
 const EXAM_MAIL_POOL: Record<ExamMailKind, { subject: string; siete: string; sowal: string }[]> = {
   propose: [
@@ -311,6 +312,12 @@ const EXAM_MAIL_POOL: Record<ExamMailKind, { subject: string; siete: string; sow
     { subject: 'たいへんです、テストです！',
       siete: '【{日付}】に「{教材}」のテストがあります！ちょっとどきどきしていますが、先生とじゅんびすればだいじょうぶな気がします！',
       sowal: '【{日付}】に「{教材}」のテストがあります...。どきどきします...。先生とじゅんびしたいです...🐾' },
+    { subject: 'テストのお知らせです',
+      siete: '先生に報告です！【{日付}】に「{教材}」のテストをやることになりました。当日までに、授業でぜんぶ教えてほしいです！✨',
+      sowal: '報告です...。【{日付}】に「{教材}」のテストをやることになりました...。当日までに、授業でおしえてほしいです🐾' },
+    { subject: 'いっしょにがんばってほしいです！',
+      siete: '「{教材}」のテストが【{日付}】にあります！ひとりだとふあんだけど、先生とならがんばれる気がします！😊',
+      sowal: '「{教材}」のテスト...【{日付}】にあります...。ひとりだとふあんですが...先生とならがんばれそうです🐾' },
   ],
   full: [
     { subject: 'テストの結果、聞いてください！！',
@@ -325,6 +332,12 @@ const EXAM_MAIL_POOL: Record<ExamMailKind, { subject: string; siete: string; sow
     { subject: 'テスト、だいせいこうでした！',
       siete: 'きょうの「{教材}」のテスト、じしんをもって書けました！先生の授業のおかげです✨ ありがとうございました！',
       sowal: 'きょうの「{教材}」のテスト...じしんをもって書けました...！先生の授業のおかげです...🐾' },
+    { subject: 'ほうこくがあります！',
+      siete: 'じつは…「{教材}」のテスト、だいせいこうでした！！✨ 授業のノート、ぜんぶ役に立ちました！先生、さいこうです！',
+      sowal: 'ほうこくです...。「{教材}」のテスト、だいせいこうでした...！授業のノート、ぜんぶ役に立ちました🐾' },
+    { subject: '先生のおかげです！',
+      siete: '「{教材}」のテスト、むずかしい問題もぜんぶ書けました！授業でやったことを思い出しながら解きました😊 ありがとうございました！',
+      sowal: '「{教材}」のテスト...むずかしい問題も、書けました...。授業を思い出しながら解きました😊 ありがとうございました🐾' },
   ],
   partial: [
     { subject: 'テスト、がんばりました…！',
@@ -339,6 +352,12 @@ const EXAM_MAIL_POOL: Record<ExamMailKind, { subject: string; siete: string; sow
     { subject: 'もういちどチャンスがあります！',
       siete: '「{教材}」のテスト、やったところはばっちりでした！【{日付}】に追試があるって言われました。こんどこそ全部できるようになりたいです！',
       sowal: '「{教材}」のテスト...やったところは書けました...。【{日付}】に追試があります...。こんどこそ、ぜんぶできるようになりたいです🐾' },
+    { subject: 'おしかったです…！',
+      siete: '「{教材}」のテスト、おしかったです…！授業でやったところはできたのに、のこりが…。【{日付}】の追試でとりかえしたいです！おねがいします！',
+      sowal: '「{教材}」のテスト...おしかったです...。授業でやったところは、できたのに...。【{日付}】の追試で、とりかえしたいです🐾' },
+    { subject: 'はんぶんは、ばっちりでした！',
+      siete: '「{教材}」のテスト、はんぶんはばっちりでした！のこりのところ、【{日付}】の追試までに教えてほしいです！😊',
+      sowal: '「{教材}」のテスト...はんぶんは、ばっちりでした...。のこりを【{日付}】の追試までに、おしえてほしいです🐾' },
   ],
   none: [
     { subject: 'テスト、むずかしかったです…',
@@ -353,6 +372,12 @@ const EXAM_MAIL_POOL: Record<ExamMailKind, { subject: string; siete: string; sow
     { subject: '追試があります…！',
       siete: '「{教材}」のテスト、こんかいはだめでした…。でも【{日付}】に追試があるんです。こんどは先生といっしょにじゅんびしたいです！',
       sowal: '「{教材}」のテスト...こんかいはだめでした...。【{日付}】に追試があるので、こんどは先生とじゅんびしたいです🐾' },
+    { subject: 'きょうはくやしい日です…',
+      siete: '「{教材}」のテスト、ほとんど書けませんでした…。くやしいです…。【{日付}】の追試まで、先生の授業にかけます…！',
+      sowal: '「{教材}」のテスト...ほとんど書けませんでした...。くやしいです...。【{日付}】の追試まで、先生の授業にかけます...🐾' },
+    { subject: 'こんどこそ、です…！',
+      siete: 'テストのけっか…「{教材}」はまだまだでした…。でもだいじょうぶ、【{日付}】に追試があります！先生、じかんをください！',
+      sowal: 'テストのけっか...「{教材}」は、まだまだでした...。【{日付}】に追試があります...。じかんをください...🐾' },
   ],
   remind: [
     { subject: 'もうすぐテストです…！',
@@ -367,6 +392,12 @@ const EXAM_MAIL_POOL: Record<ExamMailKind, { subject: string; siete: string; sow
     { subject: '先生、じかんがないです…！',
       siete: '気づいたら【{日付}】の「{教材}」のテストがすぐそこです…！のこりのところ、先生といっしょにやりたいです！',
       sowal: '気づいたら...【{日付}】の「{教材}」のテスト、すぐそこです...。のこりのところ、いっしょにやりたいです🐾' },
+    { subject: 'そわそわしています…！',
+      siete: '【{日付}】の「{教材}」のテストのこと、かんがえるとそわそわします…！のこりの授業、おねがいしてもいいですか…？',
+      sowal: '【{日付}】の「{教材}」のテスト...かんがえると、そわそわします...。のこりの授業...できたら、うれしいです🐾' },
+    { subject: 'カレンダーを見てしまいます…',
+      siete: '【{日付}】の「{教材}」のテストまで、あとすこしです！カレンダーを何回も見ちゃいます…。つづきの授業、おねがいします！',
+      sowal: '【{日付}】の「{教材}」のテストまで...あとすこしです...。カレンダーを何回も見てしまいます...🐾' },
   ],
 }
 

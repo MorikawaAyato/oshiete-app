@@ -355,11 +355,19 @@ export default function ChatScreen() {
     if (composeMode === 'return') performReturn()
   }
 
-  // 赤ペンラリー：✕の問題を生徒が1問ずつ聞いてくる。先生の返信で次の問いへ（相づちは定型＝AI待ちゼロ）
-  // 赤ペンラリー：✕の問題を生徒が1問ずつ聞いてくる。先生の返信は軽量AIで4分類し、
+  // 赤ペンラリー：✕の問題を生徒が1問ずつ聞いてくる。先生の返信は軽量AIで5分類し、
   // 生徒のセリフは定型プールから選ぶ（分類だけAI・言葉は手書き＝口調の一貫と注入耐性）。
-  // 分類失敗・タイムアウトは「説明」扱い＝最悪ケースが従来挙動
-  const pickLine = (pool: string[]) => pool[Math.floor(Math.random() * pool.length)]
+  // 分類失敗・タイムアウトは「説明」扱い＝最悪ケースが従来挙動。
+  // 定型は直近に使った文を避けて選ぶ（連続同文＝機械感の最大要因）
+  const lastLineRef = useRef<Map<string[], number>>(new Map())
+  const pickLine = (pool: string[]) => {
+    if (pool.length <= 1) return pool[0]
+    const last = lastLineRef.current.get(pool)
+    let idx = Math.floor(Math.random() * pool.length)
+    if (idx === last) idx = (idx + 1) % pool.length
+    lastLineRef.current.set(pool, idx)
+    return pool[idx]
+  }
   const sendRedpenChat = async () => {
     if (!student || studentTyping) return
     const text = redpenInput.trim()
@@ -379,10 +387,14 @@ export default function ChatScreen() {
       ? 'explanation' as const
       : await classifyRallyReply(current.it.question, current.it.modelAnswer, text)
     if (gen !== lessonGen.current) return // 分類待ちの間に授業が退出・リセットされた：続きを捨てる
-    if (kind === 'praise' || kind === 'off_topic') {
-      // 声かけ・脱線は問いを消費しない：受けて、同じ問いに引き戻す。
-      // noteRefで「この問題」の引用カードを添え、いまの問いがどれかを常に見えるようにする
-      pushBeats([{ text: pickLine(kind === 'praise' ? student.rallyPraise : student.rallyOffTopic), noteRef: current.i }])
+    if (kind === 'praise' || kind === 'off_topic' || kind === 'ask_student') {
+      // 声かけ・脱線・問い返しは問いを消費しない：受けて、同じ問いに引き戻す。
+      // noteRefで「この問題」の引用カードを添え、いまの問いがどれかを常に見えるようにする。
+      // 問い返し（君はどう思う？）には自分の答案の抜粋を機械差し込みで示す＝自由生成なしで正面から応じる
+      const line = kind === 'ask_student'
+        ? pickLine(student.rallyAskStudent).replace('{answer}', current.it.studentAnswer.slice(0, 30) + (current.it.studentAnswer.length > 30 ? '…' : ''))
+        : pickLine(kind === 'praise' ? student.rallyPraise : student.rallyOffTopic)
+      pushBeats([{ text: line, noteRef: current.i }])
       return
     }
     const skipped = kind === 'dont_know'
