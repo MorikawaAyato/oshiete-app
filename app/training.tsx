@@ -69,6 +69,8 @@ export default function TrainingScreen() {
   const [cardProgressMap, setCardProgressMap] = useState<Record<string, CardProgress>>({})
   // 終了サマリの「確認したカード X → Y / N枚」用（研修開始時のカバレッジを控える）
   const [drillCoverageBefore, setDrillCoverageBefore] = useState<{ seen: number; total: number } | null>(null)
+  // 進行バー用：各カードの開始時点の種別（まだ/未確認/確認済み）。途中の判定で塗り変えない＝地図は固定
+  const [drillCategories, setDrillCategories] = useState<('mada' | 'unseen' | 'seen')[]>([])
   // カード一覧（研修室の第2モード：自分のペースでめくる）
   const [cardListMaterialId, setCardListMaterialId] = useState<string | null>(null)
   const [cardListFlipped, setCardListFlipped] = useState<Set<string>>(new Set())
@@ -130,7 +132,9 @@ export default function TrainingScreen() {
       .sort((a, b) => (progress[drillKey(a)]?.lastAt ?? 0) - (progress[drillKey(b)]?.lastAt ?? 0))
     setCardProgressMap(progress)
     setDrillCoverageBefore(drillCoverageOf(materialId, progress))
-    setDrillCards([...pendingCards, ...unseenCards, ...seenCards].slice(0, DRILL_SESSION_SIZE))
+    const session = [...pendingCards, ...unseenCards, ...seenCards].slice(0, DRILL_SESSION_SIZE)
+    setDrillCards(session)
+    setDrillCategories(session.map((cd) => pending.has(drillKey(cd)) ? 'mada' : progress[drillKey(cd)] ? 'seen' : 'unseen'))
     setDrillIdx(0)
     setDrillRevealed(false)
     setDrillOkCount(0)
@@ -371,6 +375,22 @@ export default function TrainingScreen() {
             <View>
               <Text style={styles.drillMaterialTitle}>{drillMaterialId === 'all' ? '全教材ミックス' : (history.find((h) => h.id === drillMaterialId)?.title.replace(TITLE_RE, '') ?? '')}</Text>
               <Text style={[styles.drillProgress, { marginTop: 2 }]}>カード {drillIdx + 1} / {drillCards.length}</Text>
+              {/* 進行バー：出題順（まだ→未確認→確認済み）を体験として裏付ける地図。
+                  色は開始時点の種別で固定（途中の判定で塗り変えない）、現在位置は枠で強調 */}
+              <View style={{ flexDirection: 'row', gap: 4, marginTop: 8 }}>
+                {drillCards.map((_, i) => (
+                  <View key={i} style={[
+                    { flex: 1, height: 6, borderRadius: 3, backgroundColor: drillCategories[i] === 'mada' ? '#f472b6' : drillCategories[i] === 'seen' ? '#2dd4bf' : '#cbd5e1' },
+                    i === drillIdx && { borderWidth: 1.5, borderColor: '#475569', height: 8, borderRadius: 4 },
+                    i < drillIdx && { opacity: 0.35 },
+                  ]} />
+                ))}
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 6 }}>
+                {drillCategories.includes('mada') && <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#f472b6' }]} /><Text style={styles.barLegendText}>まだ</Text></View>}
+                {drillCategories.includes('unseen') && <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#cbd5e1' }]} /><Text style={styles.barLegendText}>未確認</Text></View>}
+                {drillCategories.includes('seen') && <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#2dd4bf' }]} /><Text style={styles.barLegendText}>確認済み</Text></View>}
+              </View>
             </View>
             <View style={styles.drillCard}>
               <Text style={styles.drillLabelQ}>Q</Text>
@@ -606,6 +626,9 @@ const styles = StyleSheet.create({
   doneTitle: { fontSize: 20, fontWeight: '900', color: c.text, marginBottom: 4 },
   doneScore: { fontSize: 13, color: c.textMid, marginBottom: 14 },
   doneCoverage: { fontSize: 11, color: c.textSub, marginTop: -8, marginBottom: 14 },
+  barLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  barLegendDot: { width: 6, height: 6, borderRadius: 3 },
+  barLegendText: { fontSize: 9, fontWeight: '700', color: c.textSub },
 
   zoomOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
   zoomCircle: { width: 220, height: 220, borderRadius: 110, overflow: 'hidden', borderWidth: 4, borderColor: '#fcd34d', backgroundColor: '#fff' },

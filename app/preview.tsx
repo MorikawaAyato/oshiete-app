@@ -30,6 +30,8 @@ export default function PreviewScreen() {
 
   // バンク描画ビュー：一問一答バンク（v3: sections付き）がある教材はカードから機械描画する。
   // 表示＝台帳そのものなので、✎でカードを直せばこの画面も判定も一斉に変わる（旧プレビューはフォールバック）
+  // 教材ビューの1表示ページに載せるカードの上限（超えるセクションは「（続き）」ページに表示だけ分割）
+  const PREVIEW_PAGE_CARDS = 15
   const [bankFs, setBankFs] = useState<Factsheet | null>(null)
   const [materialTitle, setMaterialTitle] = useState('教材')
   const [viewItemData, setViewItemData] = useState<HistoryItem | null>(null)
@@ -63,6 +65,24 @@ export default function PreviewScreen() {
       sections.push({ title: 'その他', memo: '' })
     }
     return sections
+  })()
+
+  // 表示ページ：1ページ最大PREVIEW_PAGE_CARDS枚。超えるセクションは「◯◯（続き）」ページに
+  // 表示だけ分割する（単語リスト型教材の1ページ数十枚対策。データ・意味のまとまりは不変）
+  const bankPages = (() => {
+    if (!bankSections || !bankFs?.cards) return null
+    const cards = bankFs.cards
+    const pages: { title: string; memo: string; num: number; rows: { cd: (typeof cards)[number]; gi: number }[] }[] = []
+    bankSections.forEach((section, num) => {
+      const isOther = section.title === 'その他'
+      const rows = cards
+        .map((cd, gi) => ({ cd, gi }))
+        .filter(({ cd }) => (isOther ? !bankSections.some((s) => s.title !== 'その他' && s.title === cd.sectionTitle) : cd.sectionTitle === section.title))
+      for (let i = 0; i < rows.length; i += PREVIEW_PAGE_CARDS) {
+        pages.push({ title: i === 0 ? section.title : `${section.title}（続き）`, memo: i === 0 ? section.memo : '', num, rows: rows.slice(i, i + PREVIEW_PAGE_CARDS) })
+      }
+    })
+    return pages
   })()
 
   const saveCardCorrectionFromView = async (cardIdx: number) => {
@@ -118,7 +138,7 @@ export default function PreviewScreen() {
     )
   }
 
-  const totalSteps = bankSections ? 2 + bankSections.length : 2 + (doc?.sections.length ?? 0)
+  const totalSteps = bankSections ? 2 + (bankPages?.length ?? bankSections.length) : 2 + (doc?.sections.length ?? 0)
   const isFirst = step === 0
   const isLast = step === totalSteps - 1
 
@@ -162,22 +182,19 @@ export default function PreviewScreen() {
         </ScrollView>
       )
     } else {
-      const section = bankSections[step - 2]
-      const isOther = section.title === 'その他'
-      const rows = cards
-        .map((cd, gi) => ({ cd, gi }))
-        .filter(({ cd }) => (isOther ? !bankSections.some((s) => s.title !== 'その他' && s.title === cd.sectionTitle) : cd.sectionTitle === section.title))
+      const page = bankPages![step - 2]
+      const rows = page.rows
       content = (
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNum}>
-              <Text style={styles.sectionNumText}>{step - 1}</Text>
+              <Text style={styles.sectionNumText}>{page.num + 1}</Text>
             </View>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <Text style={styles.sectionTitle}>{page.title}</Text>
           </View>
-          {!!section.memo && (
+          {!!page.memo && (
             <View style={styles.summaryBox}>
-              <Text style={styles.summaryText}>{section.memo}</Text>
+              <Text style={styles.summaryText}>{page.memo}</Text>
             </View>
           )}
           <View style={styles.detailsBox}>
