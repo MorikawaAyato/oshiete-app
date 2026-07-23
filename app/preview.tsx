@@ -160,7 +160,7 @@ export default function PreviewScreen() {
         <View style={styles.centerContent}>
           <Text style={styles.stepLabel}>この教材のテーマ</Text>
           <Text style={styles.themeText}>{materialTitle}</Text>
-          <Text style={styles.bankMeta}>{bankSections.length}つのまとまり・{cards.length}個のポイント{bankFs?.partial ? '（残りを整理中…）' : ''}</Text>
+          <Text style={styles.bankMeta}>{bankSections.length}つのまとまり・{cards.length}個のポイント{bankFs?.partial ? '（整理中…）' : ''}</Text>
           <Text style={styles.hint}>次のページで全体の概要を確認できます →</Text>
         </View>
       )

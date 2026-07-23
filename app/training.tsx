@@ -300,8 +300,17 @@ export default function TrainingScreen() {
                       {materialsWithCards.length >= 2 ? '全教材ミックスで始める' : '研修を始める'}
                     </Text>
                   </TouchableOpacity>
-                  {/* 問数と出題順はボタンの外に。出題順の明示＝「普通に始めるのが常に最適」を信じてもらうための表示 */}
-                  <Text style={styles.drillLimitNote}>1回の研修は最大{DRILL_SESSION_SIZE}問・出題順：まだ → 未確認 → 確認済み</Text>
+                  {/* 問数と出題順はボタンの外に。出題順の明示＝「普通に始めるのが常に最適」を信じてもらうための表示。
+                      色ドットは研修中の進行バーと同じ視覚言語 */}
+                  <Text style={styles.drillLimitNote}>1回の研修は最大{DRILL_SESSION_SIZE}問</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 }}>
+                    <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#f472b6' }]} /><Text style={styles.barLegendText}>まだ</Text></View>
+                    <Text style={styles.barLegendText}>→</Text>
+                    <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#cbd5e1' }]} /><Text style={styles.barLegendText}>未確認</Text></View>
+                    <Text style={styles.barLegendText}>→</Text>
+                    <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#2dd4bf' }]} /><Text style={styles.barLegendText}>確認済み</Text></View>
+                    <Text style={styles.barLegendText}>の順に出ます</Text>
+                  </View>
                   {/* 教材ごとの入口：同じ道具の入口なので別カードにせず研修カード内に収める（画面の断片化を防ぐ）。
                       行タップで即研修（＝おまかせ出題）、右端の独立ボタンでカード一覧（対等な第2モード）。
                       教材1件でも一覧の入口が要るため常時表示 */}
@@ -319,8 +328,9 @@ export default function TrainingScreen() {
                               {pending > 0 && <Text style={styles.matRowPending}>まだ{pending}</Text>}
                               <Text style={styles.matRowChevron}>›</Text>
                             </TouchableOpacity>
+                            {/* 行頭のlayers（教材の印）と記号を重ねない：一覧＝並べて見る、はグリッドで語る */}
                             <TouchableOpacity style={styles.listBtn} onPress={() => openCardList(h.id)}>
-                              <Feather name="layers" size={13} color={c.textSub} />
+                              <Feather name="grid" size={13} color={c.textSub} />
                               <Text style={styles.listBtnText}>一覧</Text>
                             </TouchableOpacity>
                           </View>
@@ -457,6 +467,9 @@ export default function TrainingScreen() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.listTitle} numberOfLines={1}>{listItem.title.replace(TITLE_RE, '')}</Text>
                     <Text style={styles.listCounts}>カード一覧　確認済み {checkedCount} / {listCards.length}枚{madaCount > 0 ? <Text style={{ color: '#be185d' }}>　まだ{madaCount}</Text> : null}</Text>
+                    <View style={styles.listCovBar}>
+                      <View style={[styles.listCovFill, { width: `${Math.round((checkedCount / listCards.length) * 100)}%` }]} />
+                    </View>
                   </View>
                   <TouchableOpacity onPress={() => setCardListMaterialId(null)} hitSlop={8}>
                     <Text style={styles.listClose}>×</Text>
@@ -498,12 +511,14 @@ export default function TrainingScreen() {
                       </View>
                     </View>
                   ))}
-                  {/* 通常の研修開始と同じ挙動・同じ言葉（出題順が「まだ→未確認→確認済み」なので、これで常に最適） */}
-                  <TouchableOpacity style={[styles.primaryBtn, { marginTop: 16 }]}
+                </ScrollView>
+                {/* 通常の研修開始と同じ挙動・同じ言葉。下部固定＝長い教材でも「見た→やる」が1タップで届く */}
+                <View style={styles.listFooter}>
+                  <TouchableOpacity style={styles.primaryBtn}
                     onPress={() => { const id = listItem.id; setCardListMaterialId(null); setDrillMaterialId(id); void startDrill(id) }}>
                     <Text style={styles.primaryBtnText}>研修を始める</Text>
                   </TouchableOpacity>
-                </ScrollView>
+                </View>
               </Pressable>
             </Pressable>
           )
@@ -589,6 +604,9 @@ const styles = StyleSheet.create({
   listCounts: { fontSize: 11, fontWeight: '700', color: c.textSub, marginTop: 2 },
   listClose: { fontSize: 18, color: c.textSub, fontWeight: '700', paddingHorizontal: 4 },
   listSecLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, color: c.textSub, marginBottom: 6 },
+  listCovBar: { height: 4, borderRadius: 999, backgroundColor: c.bgSub, overflow: 'hidden', marginTop: 6, maxWidth: 220 },
+  listCovFill: { height: '100%', borderRadius: 999, backgroundColor: '#2dd4bf' },
+  listFooter: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: 10, paddingBottom: 18 },
   // 紙のカード（研修フラッシュカードと同族の紙色）
   listCard: { width: '48%', minHeight: 88, borderRadius: 12, borderWidth: 1, borderColor: '#fde68a', backgroundColor: '#fffbeb', padding: 10, paddingTop: 14, alignItems: 'center', justifyContent: 'center', gap: 6 },
   listCardFlip: { backgroundColor: 'white', borderColor: c.pinkMuted },

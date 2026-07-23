@@ -250,6 +250,15 @@ export default function ChatScreen() {
     setPrintItems((prev) => prev.map((it, j) => (j === i ? { ...it, teacherMark: val } : it)))
   }
 
+  // 答案の引用抜粋（ask_studentの機械差し込み用）：30字以内、文の途中で切れるときは
+  // 直近の句読点まで戻して切る（ぶつ切れの不自然さを避ける）
+  const quoteAnswer = (answer: string) => {
+    if (answer.length <= 30) return answer
+    const head = answer.slice(0, 30)
+    const cut = Math.max(head.lastIndexOf('、'), head.lastIndexOf('。'))
+    return (cut >= 10 ? head.slice(0, cut) : head) + '…'
+  }
+
   // セリフのテンプレ埋め（{n}=問番号 {q}=問題文。長い問題文は詰める）
   const fillAsk = (template: string, n: number, q: string) =>
     template.replace('{n}', String(n)).replace('{q}', q.length > 24 ? q.slice(0, 24) + '…' : q)
@@ -392,7 +401,7 @@ export default function ChatScreen() {
       // noteRefで「この問題」の引用カードを添え、いまの問いがどれかを常に見えるようにする。
       // 問い返し（君はどう思う？）には自分の答案の抜粋を機械差し込みで示す＝自由生成なしで正面から応じる
       const line = kind === 'ask_student'
-        ? pickLine(student.rallyAskStudent).replace('{answer}', current.it.studentAnswer.slice(0, 30) + (current.it.studentAnswer.length > 30 ? '…' : ''))
+        ? pickLine(student.rallyAskStudent).replace('{answer}', quoteAnswer(current.it.studentAnswer))
         : pickLine(kind === 'praise' ? student.rallyPraise : student.rallyOffTopic)
       pushBeats([{ text: line, noteRef: current.i }])
       return
