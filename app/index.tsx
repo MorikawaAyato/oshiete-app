@@ -724,13 +724,12 @@ export default function HomeScreen() {
             「AI」は約束しない：ラリーは定型なので、語るのは役割と教材だけ */}
         {history.length === 0 && (
           <View style={styles.heroCard}>
-            {/* 生徒の呼び声＝アプリ名の原型。話者を生徒に帰属させる吹き出し＋手書き（Yomogi）。
-                「手書き＝生徒の書くもの」の原則上、手書きにできる唯一のUI文言 */}
-            <View style={styles.heroBubble}>
-              <Text style={styles.heroTitle}>教えて、先生<Text style={{ color: c.primary }}>！</Text></Text>
-              <View style={styles.heroBubbleTail} />
+            {/* 初回＝接続前の教室。語りかけず「世界の状態」を見せる（銀の日常→紺の接続の物語に編入） */}
+            <View style={styles.heroOfflinePill}>
+              <View style={styles.heroOfflineDot} />
+              <Text style={styles.heroOfflineText}>生徒はオフラインです</Text>
             </View>
-            <Text style={styles.heroSub}>あなたが先生。教材を取り込むと、生徒との授業が始まります。</Text>
+            <Text style={styles.heroSub}>教材を机に置くと、生徒がオンラインになります。</Text>
           </View>
         )}
 
@@ -1668,6 +1667,9 @@ const styles = StyleSheet.create({
   // 初回ヒーロー（教材0件のときだけ。生徒の顔は生徒カード側が担う）
   heroCard: { alignItems: 'center', paddingTop: 4, marginBottom: 12 },
   heroTitle: { fontSize: 22, fontFamily: 'Yomogi_400Regular', fontWeight: 'bold', color: c.textStrong },
+  heroOfflinePill: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'center', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 8 },
+  heroOfflineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.borderStrong },
+  heroOfflineText: { fontSize: 12, fontWeight: '700', color: c.textSub },
   heroBubble: { alignSelf: 'center', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 18, paddingHorizontal: 18, paddingVertical: 8, transform: [{ rotate: '-2deg' }], marginBottom: 10 },
   heroBubbleTail: { position: 'absolute', bottom: -6, left: '50%', marginLeft: -6, width: 12, height: 12, backgroundColor: 'white', borderRightWidth: 1, borderBottomWidth: 1, borderColor: c.border, transform: [{ rotate: '45deg' }] },
   heroSub: { fontSize: 12, color: c.textSub, marginTop: 6, textAlign: 'center', lineHeight: 18 },
