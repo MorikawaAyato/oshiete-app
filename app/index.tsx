@@ -730,7 +730,7 @@ export default function HomeScreen() {
               <Text style={styles.heroTitle}>教えて、先生<Text style={{ color: c.primary }}>！</Text></Text>
               <View style={styles.heroBubbleTail} />
             </View>
-            <Text style={styles.heroSub}>あなたが先生。覚えたい教材で、生徒に授業をしてみましょう。</Text>
+            <Text style={styles.heroSub}>あなたが先生。教材を取り込むと、生徒との授業が始まります。</Text>
           </View>
         )}
 
