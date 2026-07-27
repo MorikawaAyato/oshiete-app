@@ -729,7 +729,7 @@ export default function HomeScreen() {
               <View style={styles.heroOfflineDot} />
               <Text style={styles.heroOfflineText}>生徒はオフラインです</Text>
             </View>
-            <Text style={styles.heroSub}>教材を机に置くと、生徒がオンラインになります。</Text>
+            <Text style={styles.heroSub}>教材を読み込むと、生徒がオンラインになります。</Text>
           </View>
         )}
 
