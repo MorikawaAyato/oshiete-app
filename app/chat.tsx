@@ -15,6 +15,7 @@ import {
   unitsFor, defaultUnitIndex, getUnitStatuses, setUnitStatus, logWork,
   ensureExamDay, examMailFor, examDateLabel, addMail,
 } from '@/lib/storage'
+import { isCardHidden } from '@/lib/factsheet'
 import type { PrintItem, Recap } from '@/lib/types'
 import { btn, c, font } from '@/lib/theme'
 import { Feather } from '@expo/vector-icons'
@@ -196,7 +197,16 @@ export default function ChatScreen() {
       const statuses = await getUnitStatuses(currentHistoryId, cards.length)
       const unitIdx = Math.min(lessonUnit ?? defaultUnitIndex(units.length, statuses), units.length - 1)
       const unit = units[unitIdx]
-      const picked = cards.slice(unit.start, unit.start + unit.size).map((card, k) => ({ card, index: unit.start + k }))
+      // 先生が外したカードは出題しない（インデックスは元配列基準のまま＝進度キーが揺れない）
+      const picked = cards
+        .slice(unit.start, unit.start + unit.size)
+        .map((card, k) => ({ card, index: unit.start + k }))
+        .filter((p) => !isCardHidden(factsheet ?? undefined, p.card.source))
+      if (picked.length === 0) {
+        setStarting(false)
+        setStartError(true)
+        return
+      }
       const res = await fetchPrint(
         student.id,
         picked.map((p) => ({ question: p.card.q, modelAnswer: p.card.a })),

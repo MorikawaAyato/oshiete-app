@@ -13,7 +13,7 @@ import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import { TEACHER_AVATARS, TEACHER_AVATAR_IMAGES, getTeacherAvatarImage, normalizeAvatarId } from '@/lib/teacherProfile'
 import { analyzeImages, analyzeText, fetchPreviewContent, fetchFactsheet, fetchFactsheetRefine } from '@/lib/api'
-import { needsFactsheetUpgrade } from '@/lib/factsheet'
+import { needsFactsheetUpgrade, visibleCards } from '@/lib/factsheet'
 import { onSyncComplete } from '@/lib/sync'
 import {
   loadHistory, saveToHistory, deleteFromHistory, updateHistoryPreview, updateHistoryFactsheet, HISTORY_MAX,
@@ -45,7 +45,11 @@ function PulseDot({ color, size = 6 }: { color: string; size?: number }) {
   return <Animated.View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity: v }} />
 }
 
-type ImageData = { data: string; mimeType: string; uri: string }
+// wide=横長（本の見開きを1枚で撮ったケース）。読み取りAPIは画像の短辺を768pxに縮めてから
+// 読むため、見開きは1ページあたりの実効解像度が半分になり、小さい文字を読み損なう。
+// 実地事故：辞書の見開き写真で病名が別語に化けた（メラーバロー病→スコーブィ病）ため、
+// 取り込み前に撮り方を案内する
+type ImageData = { data: string; mimeType: string; uri: string; wide?: boolean }
 
 const MAX_IMAGES = 3
 
@@ -286,6 +290,7 @@ export default function HomeScreen() {
       data: a.base64!,
       mimeType: a.mimeType ?? 'image/jpeg',
       uri: a.uri,
+      wide: !!a.width && !!a.height && a.width / a.height > 1.15,
     }))
 
     if (mode === 'replace') {
@@ -637,7 +642,9 @@ export default function HomeScreen() {
     if (units.length === 0) return null
     const statuses: Record<number, UnitStatus> = entry && entry.count === cards.length ? entry.status : {}
     const selected = Math.min(homeUnitIdx ?? defaultUnitIndex(units.length, statuses), units.length - 1)
-    return { units, statuses, selected, doneCount: units.filter((_, i) => statuses[i] === 'done').length, partial: !!fs?.partial }
+    // 単元が増えた（luna化で標準8〜11単元）ため、番号だけでは中身が分からない。選択中単元の見出しを添える
+    const sectionTitle = cards[units[Math.min(homeUnitIdx ?? defaultUnitIndex(units.length, statuses), units.length - 1)]?.start]?.sectionTitle ?? ''
+    return { units, statuses, selected, doneCount: units.filter((_, i) => statuses[i] === 'done').length, partial: !!fs?.partial, sectionTitle }
   })()
 
   // 履歴に保存されたタイトルを優先（アップロード直後と履歴選択時でタイトルが食い違わないように）
@@ -717,7 +724,12 @@ export default function HomeScreen() {
             「AI」は約束しない：ラリーは定型なので、語るのは役割と教材だけ */}
         {history.length === 0 && (
           <View style={styles.heroCard}>
-            <Text style={styles.heroTitle}>教えて、先生！</Text>
+            {/* 生徒の呼び声＝アプリ名の原型。話者を生徒に帰属させる吹き出し＋手書き（Yomogi）。
+                「手書き＝生徒の書くもの」の原則上、手書きにできる唯一のUI文言 */}
+            <View style={styles.heroBubble}>
+              <Text style={styles.heroTitle}>教えて、先生<Text style={{ color: c.primary }}>！</Text></Text>
+              <View style={styles.heroBubbleTail} />
+            </View>
             <Text style={styles.heroSub}>あなたが先生。覚えたい教材で、生徒に授業をしてみましょう。</Text>
           </View>
         )}
@@ -830,6 +842,16 @@ export default function HomeScreen() {
                 </ScrollView>
                 <Text style={styles.thumbCounter}>{pendingImages.length}/{MAX_IMAGES}</Text>
               </View>
+              {/* 見開き（横長）の写真は1ページあたりの実効解像度が半分になり、小さい文字を
+                  読み損なう（実地で病名が別語に化けた）。禁止はせず、撮り直しの機会だけ渡す。
+                  紙のアンバー＝学びの紙の機能色で、エラーでなく助言として見せる */}
+              {pendingImages.some((im) => im.wide) && !analyzing && (
+                <View style={styles.spreadHint}>
+                  <Text style={styles.spreadHintText}>
+                    見開きのまま撮った写真があります。文字が小さいと読み取りを間違えることがあるので、1ページずつ近づけて撮り直すと精度が上がります。
+                  </Text>
+                </View>
+              )}
               <BouncyPressable
                 style={[styles.analyzeBtn, analyzing && styles.analyzeBtnLoading]}
                 onPress={analyzeFromPending}
@@ -944,7 +966,7 @@ export default function HomeScreen() {
                       <Text style={styles.unitMapEyebrow}>授業を選ぶ</Text>
                       {/* 追補中は総数を出さない（あとから増えて「アプリが間違えた」ように見えるため） */}
                       {unitInfo.partial
-                        ? <Text style={styles.unitMapCount}>残りの単元を整理中…</Text>
+                        ? <Text style={styles.unitMapCount}>仕上げ中…</Text>
                         : <Text style={styles.unitMapCount}>完了 {unitInfo.doneCount} / {unitInfo.units.length}</Text>}
                     </View>
                     {/* 丸ノード：単元が増えても折り返して全体が一目で見える（ノートのページ送りドットと同じ文法）。
@@ -970,8 +992,8 @@ export default function HomeScreen() {
                           </TouchableOpacity>
                         )
                       })}
-                      {/* 追補中のゴーストノード：あとから単元が増えることを予告する（確定時に実ノードへ置き換わる） */}
-                      {unitInfo.partial && <View style={styles.unitNodeGhost} />}
+                      {/* ゴーストノード（単元が増える予告）は撤去：修復パスの休眠（luna単段化）で
+                          カードはあとから増えない。増えない未来の予告は嘘になる */}
                     </View>
                     {/* 選択中の単元の詳細（左）と生徒のテスト（右）を同じ行に振り分ける（左偏りの解消） */}
                     {(() => {
@@ -979,8 +1001,9 @@ export default function HomeScreen() {
                       const showExam = entry && !entry.doneAt
                       return (
                         <View style={styles.unitDetailRow}>
-                          <Text style={styles.unitDetail}>
+                          <Text style={styles.unitDetail} numberOfLines={1}>
                             ▸ 授業{unitLabel(unitInfo.selected)}（{unitInfo.units[unitInfo.selected].size}問）・{unitInfo.statuses[unitInfo.selected] === 'done' ? '完了' : unitInfo.statuses[unitInfo.selected] === 'tried' ? '未完了' : '未開始'}
+                            {unitInfo.sectionTitle ? <Text style={styles.unitDetailSection}>　{unitInfo.sectionTitle}</Text> : null}
                           </Text>
                           {showExam && (
                             <View style={styles.unitExamRow}>
@@ -1039,7 +1062,7 @@ export default function HomeScreen() {
         {/* しごとカード：「今日の仕事」ゾーンの続き。動詞タイトル＋行き先サブ＋状態バッジで自己紹介する
             （並びはタブ順＝教材が左・研修が右） */}
         {history.length > 0 && (() => {
-          const pendingCount = history.flatMap((h) => h.factsheet?.cards ?? []).filter((cd) => drillPendingKeys.has(cd.statement.replace(/[\s　]/g, ''))).length
+          const pendingCount = history.flatMap((h) => visibleCards(h.factsheet?.cards ?? [], h.factsheet?.hidden)).filter((cd) => drillPendingKeys.has(cd.statement.replace(/[\s　]/g, ''))).length
           return (
             <View style={styles.quickRow}>
               <TouchableOpacity style={styles.jobCard} onPress={() => router.push('/library')} activeOpacity={0.8} disabled={analyzing}>
@@ -1644,7 +1667,9 @@ const styles = StyleSheet.create({
 
   // 初回ヒーロー（教材0件のときだけ。生徒の顔は生徒カード側が担う）
   heroCard: { alignItems: 'center', paddingTop: 4, marginBottom: 12 },
-  heroTitle: { fontSize: 20, fontFamily: font.round, color: c.textStrong },
+  heroTitle: { fontSize: 22, fontFamily: 'Yomogi_400Regular', fontWeight: 'bold', color: c.textStrong },
+  heroBubble: { alignSelf: 'center', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 18, paddingHorizontal: 18, paddingVertical: 8, transform: [{ rotate: '-2deg' }], marginBottom: 10 },
+  heroBubbleTail: { position: 'absolute', bottom: -6, left: '50%', marginLeft: -6, width: 12, height: 12, backgroundColor: 'white', borderRightWidth: 1, borderBottomWidth: 1, borderColor: c.border, transform: [{ rotate: '45deg' }] },
   heroSub: { fontSize: 12, color: c.textSub, marginTop: 6, textAlign: 'center', lineHeight: 18 },
 
   // 組み立て台の生徒カード（生徒＋教材＝授業）
@@ -1661,6 +1686,12 @@ const styles = StyleSheet.create({
   thumbRow: { flex: 1 },
   thumb: { width: 72, height: 72, borderRadius: 12, marginRight: 8 },
   thumbCounter: { paddingLeft: 10, fontSize: 15, fontWeight: '700', color: c.textSub },
+  // 見開き写真の助言（エラーの赤ではなく「学びの紙」のアンバー面）
+  spreadHint: {
+    marginBottom: 12, paddingVertical: 10, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: c.paperLine, backgroundColor: c.paper, borderRadius: 14,
+  },
+  spreadHintText: { fontSize: 13, lineHeight: 19, color: c.paperText },
   analyzeBtn: { ...btn.primary, borderRadius: 14, paddingVertical: 16 },
   analyzeBtnLoading: { backgroundColor: c.pinkMuted },
   analyzeBtnText: { ...btn.primaryText, fontSize: 16 },
@@ -1727,6 +1758,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: c.border, backgroundColor: 'white',
     alignItems: 'center', justifyContent: 'center',
   },
+  unitDetailSection: { fontWeight: '400', color: c.textSub },
   unitNodeGhost: {
     width: 32, height: 32, borderRadius: 16,
     borderWidth: 1, borderColor: c.borderStrong, borderStyle: 'dashed', backgroundColor: c.bgSub,

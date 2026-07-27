@@ -44,6 +44,8 @@ export type Factsheet = {
   version?: number // バンク生成ルールの版。旧版はバックフィルで再生成される
   errata?: Erratum[] // 先生による訂正。あれば自動再生成しない
   partial?: boolean // 二段構えのフェーズ1のみ完了（網羅補完が未実施）。/api/factsheet/refine で追補する
+  capped?: boolean // カード枚数の暴走止め（サーバMAX_CARDS）に当たり後半をカード化できなかった（可視化フラグ）
+  hidden?: string[] // 先生が非表示にしたカードのsource一覧。物理削除しない（単元の区切り・進度を壊さない）。errataと同じく原本不変・可逆
 }
 
 // プリント授業の1問。truth（答案の正誤）は生成時にサーバが決め打ちしており、

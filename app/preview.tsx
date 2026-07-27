@@ -8,7 +8,7 @@ import { useApp } from '@/lib/AppContext'
 import { STUDENTS } from '@/lib/students'
 import type { Section, Factsheet, FactsheetSection, QACard, HistoryItem } from '@/lib/types'
 import { loadFactsheet, loadHistory, updateHistoryFactsheet } from '@/lib/storage'
-import { applyCardCorrection, undoCardCorrection } from '@/lib/factsheet'
+import { applyCardCorrection, undoCardCorrection, hideCard, unhideCard, isCardHidden } from '@/lib/factsheet'
 import { c, font } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 
@@ -124,6 +124,31 @@ export default function PreviewScreen() {
     }
   }
 
+  // カードの非表示/復帰（先生の取捨選択。物理削除せずhiddenオーバーレイ＝進度を壊さない・可逆）
+  const toggleHiddenFromView = async (source: string) => {
+    if (!viewId || !bankFs?.cards) return
+    if (isCardHidden(bankFs, source)) {
+      const hidden = unhideCard(bankFs, source)
+      if (!hidden) return
+      const nextFs = { ...bankFs, hidden }
+      await updateHistoryFactsheet(viewId, nextFs)
+      setBankFs(nextFs)
+      setPrincipalToast('カードを戻しました')
+    } else {
+      const hidden = hideCard(bankFs, source)
+      if (!hidden) {
+        setPrincipalToast('最後の1枚は外せません')
+        setTimeout(() => setPrincipalToast(null), 2400)
+        return
+      }
+      const nextFs = { ...bankFs, hidden }
+      await updateHistoryFactsheet(viewId, nextFs)
+      setBankFs(nextFs)
+      setPrincipalToast('カードを外しました（授業・研修に出なくなります）')
+    }
+    setTimeout(() => setPrincipalToast(null), 2400)
+  }
+
   if (!fsLoaded || (!bankSections && !doc)) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -168,6 +193,12 @@ export default function PreviewScreen() {
       content = (
         <ScrollView showsVerticalScrollIndicator={false}>
           <Text style={styles.stepLabel}>全体の概要</Text>
+          {/* 暴走止め（サーバMAX_CARDS）に当たった教材：黙って切らない原則。後半が入っていないことを明示 */}
+          {bankFs?.capped && (
+            <View style={styles.cappedNote}>
+              <Text style={styles.cappedNoteText}>この教材は内容がとても多く、後半の一部をカードにできていません。分けて取り込むと全体をカバーできます。</Text>
+            </View>
+          )}
           {bankSections.map((s, i) => (
             <View key={i} style={styles.flowItem}>
               <View style={styles.flowNum}>
@@ -217,7 +248,15 @@ export default function PreviewScreen() {
                 <View key={gi} style={styles.bankRow}>
                   <Text style={styles.bankNum}>{j + 1}.</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.bankStatement}>{cd.statement}</Text>
+                    <Text style={isCardHidden(bankFs ?? undefined, cd.source) ? styles.bankStatementHidden : styles.bankStatement}>{cd.statement}</Text>
+                    {isCardHidden(bankFs ?? undefined, cd.source) && (
+                      <View style={styles.correctedRow}>
+                        <Text style={styles.hiddenTag}>外し済み（授業・研修に出ません）</Text>
+                        <TouchableOpacity onPress={() => void toggleHiddenFromView(cd.source)}>
+                          <Text style={styles.undoLink}>戻す</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     {bankFs?.errata?.some((e) => e.source === cd.source) && (
                       <View style={styles.correctedRow}>
                         <Text style={styles.correctedTag}>先生が訂正</Text>
@@ -227,9 +266,16 @@ export default function PreviewScreen() {
                       </View>
                     )}
                   </View>
-                  <TouchableOpacity onPress={() => confirmEditThen(() => { setEditingCardIdx(gi); setEditCardValue(cd.a) })} style={styles.bankEditBtn} hitSlop={6}>
-                    <Text style={styles.bankEditBtnText}>✎</Text>
-                  </TouchableOpacity>
+                  {!isCardHidden(bankFs ?? undefined, cd.source) && (
+                    <>
+                      <TouchableOpacity onPress={() => confirmEditThen(() => { setEditingCardIdx(gi); setEditCardValue(cd.a) })} style={styles.bankEditBtn} hitSlop={6}>
+                        <Text style={styles.bankEditBtnText}>✎</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => void toggleHiddenFromView(cd.source)} style={styles.bankEditBtn} hitSlop={6}>
+                        <Text style={styles.bankEditBtnText}>−</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </View>
               ),
             )}
@@ -507,6 +553,10 @@ const styles = StyleSheet.create({
   bankRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   bankNum: { fontSize: 12, color: c.textSub, width: 20, textAlign: 'right', marginTop: 2, fontVariant: ['tabular-nums'] },
   bankStatement: { fontSize: 13, color: c.text, lineHeight: 21 },
+  bankStatementHidden: { fontSize: 14, lineHeight: 21, color: c.faint, textDecorationLine: 'line-through' },
+  cappedNote: { marginBottom: 14, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: c.paperLine, backgroundColor: c.paper, borderRadius: 14 },
+  cappedNoteText: { fontSize: 13, lineHeight: 19, color: c.paperText },
+  hiddenTag: { fontSize: 10, color: c.faint },
   correctedRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
   correctedTag: { fontSize: 10, color: '#fb7185' },
   undoLink: { fontSize: 10, color: c.textSub, textDecorationLine: 'underline' },

@@ -22,9 +22,10 @@ export const FACTSHEET_AUTO_UPGRADE = true
 // この教材のファクトシートを自動更新すべきか（バンクが無い、または生成ルールが旧版）。
 // FACTSHEET_AUTO_UPGRADE が false のときは常に false（再生成しない）。
 // 先生の訂正(errata)がある教材は、自動再生成でユーザ修正を消さないよう常にスキップする。
-export function needsFactsheetUpgrade(factsheet?: { cards?: unknown[]; version?: number; errata?: unknown[] }): boolean {
+export function needsFactsheetUpgrade(factsheet?: { cards?: unknown[]; version?: number; errata?: unknown[]; hidden?: unknown[] }): boolean {
   if (!FACTSHEET_AUTO_UPGRADE) return false
   if (factsheet?.errata?.length) return false
+  if (factsheet?.hidden?.length) return false // 先生の取捨選択も再生成で消さない
   if (!factsheet?.cards?.length) return true
   return (factsheet.version ?? 0) < FACTSHEET_VERSION
 }
@@ -64,4 +65,32 @@ export function undoCardCorrection(
   const facts = nextCards.map((c) => c.statement)
   const nextErrata = (errata ?? []).filter((x) => x.source !== source)
   return { cards: nextCards, facts, errata: nextErrata }
+}
+
+
+// ─── カードの非表示（先生の取捨選択。web側 lib/factsheet.ts と同じ設計） ───
+// 物理削除ではなく hidden オーバーレイ（sourceがキー）。①インデックス不変＝単元境界・進度を壊さない
+// ②可逆＝いつでも戻せる ③factsheet内フィールドなので既存の教材同期にそのまま乗る。
+export function hideCard(factsheet: { cards?: QACard[]; hidden?: string[] }, source: string): string[] | null {
+  const cards = factsheet.cards ?? []
+  const hidden = factsheet.hidden ?? []
+  if (!cards.some((c) => c.source === source) || hidden.includes(source)) return null
+  if (visibleCards(cards, hidden).length <= 1) return null // 教材が空になる非表示は許さない
+  return [...hidden, source]
+}
+
+export function unhideCard(factsheet: { hidden?: string[] }, source: string): string[] | null {
+  const hidden = factsheet.hidden ?? []
+  if (!hidden.includes(source)) return null
+  return hidden.filter((s) => s !== source)
+}
+
+export function isCardHidden(factsheet: { hidden?: string[] } | undefined, source: string): boolean {
+  return !!factsheet?.hidden?.includes(source)
+}
+
+// 授業・研修・出題に使う「生きているカード」。表示順・インデックスは元配列を保つ
+export function visibleCards(cards: QACard[], hidden?: string[]): QACard[] {
+  if (!hidden?.length) return cards
+  return cards.filter((c) => !hidden.includes(c.source))
 }

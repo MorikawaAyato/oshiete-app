@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useApp } from '@/lib/AppContext'
 import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, saveCardProgress, unitsFor, getUnitStatuses, logWork, loadWorkLog, dateKeyAfterDays, examDateLabel } from '@/lib/storage'
+import { visibleCards } from '@/lib/factsheet'
 import type { WorkLog } from '@/lib/storage'
 import type { CardProgress, HistoryItem, QACard } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
@@ -108,8 +109,8 @@ export default function TrainingScreen() {
 
   const drillPool = (materialId: string): QACard[] =>
     materialId === 'all'
-      ? history.flatMap((h) => h.factsheet?.cards ?? [])
-      : history.find((h) => h.id === materialId)?.factsheet?.cards ?? []
+      ? history.flatMap((h) => visibleCards(h.factsheet?.cards ?? [], h.factsheet?.hidden))
+      : (() => { const h = history.find((x) => x.id === materialId); return visibleCards(h?.factsheet?.cards ?? [], h?.factsheet?.hidden) })()
 
   // 網羅カバレッジ：一度でも確認した（出題された・一覧でめくった）カードの数
   const drillCoverageOf = (materialId: string, progress: Record<string, CardProgress>) => {
@@ -212,7 +213,7 @@ export default function TrainingScreen() {
 
   const [showPrincipalAvatar, setShowPrincipalAvatar] = useState(false)
 
-  const allCards = history.flatMap((h) => h.factsheet?.cards ?? [])
+  const allCards = history.flatMap((h) => visibleCards(h.factsheet?.cards ?? [], h.factsheet?.hidden))
   const materialsWithCards = history.filter((h) => (h.factsheet?.cards?.length ?? 0) > 0)
   const teacherCall = teacherProfile.name ? `${teacherProfile.name}先生` : '先生'
   // 「まだ」のカード残数（全体・教材ごと）。研修に戻ってくる理由を可視化する
@@ -318,7 +319,7 @@ export default function TrainingScreen() {
                     <View style={styles.matListSection}>
                       <Text style={styles.matListLabel}>教材ごとに始める</Text>
                       {materialsWithCards.map((h, i) => {
-                        const pending = pendingCountOf(h.factsheet?.cards ?? [])
+                        const pending = pendingCountOf(visibleCards(h.factsheet?.cards ?? [], h.factsheet?.hidden))
                         return (
                           <View key={h.id} style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }, i > 0 && styles.matRowBorder]}>
                             <TouchableOpacity style={[styles.matRow, { flex: 1 }]}
@@ -447,7 +448,7 @@ export default function TrainingScreen() {
       <Modal visible={cardListMaterialId !== null} transparent animationType="slide" onRequestClose={() => setCardListMaterialId(null)}>
         {(() => {
           const listItem = history.find((h) => h.id === cardListMaterialId)
-          const listCards = listItem?.factsheet?.cards ?? []
+          const listCards = visibleCards(listItem?.factsheet?.cards ?? [], listItem?.factsheet?.hidden)
           if (!listItem || listCards.length === 0) return <View />
           // 状態は2軸：確認の軸（確認済み/未確認）と判定の印（まだ）。ピルは「まだ」「未確認」だけに
           // 付け、確認済みで印なしは無印＝正常状態にする（「まだ」も確認済みなので3分割ラベルは矛盾する）
