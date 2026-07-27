@@ -32,6 +32,8 @@ export type MailMessage = {
   read: boolean
   historyId?: string // あとから質問メールの対象教材（メールから教材をひらくCTA用）
   examInvite?: boolean // 校長先生からの昇進試験案内（メールから受験するCTA用）
+  // 大成功の思い出（写真＋答案）。テスト大成功時のみ添付。cardsは教材のカードから機械抜粋＝AI生成なし
+  keepsake?: { studentId: string; cards: { q: string; a: string }[] }
 }
 
 // カード同一性のキー（研修・カード進度・プリントで共通。statementベース）
@@ -405,6 +407,30 @@ function hashStr(s: string): number {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
   return h
+}
+
+// 大成功の思い出メール（写真＋答案つき）。長期継続の報酬なのでプールは10案と厚めにする
+// （定型の機械感対策。答案の3問はカードからランダム抜粋なので中身も毎回変わる。web側と同一プール）
+const KEEPSAKE_MAIL_POOL: { subject: string; siete: string; sowal: string }[] = [
+  { subject: '見てください、この答案！', siete: '先生！「{教材}」のテスト、大成功でした！うれしくて、答案といっしょに写真をとっちゃいました！ぜんぶ先生のおかげです😊', sowal: '先生...「{教材}」のテスト、大成功でした...。うれしくて、答案と写真、送ります...🐾' },
+  { subject: 'たからものが増えました！', siete: '「{教材}」のテストの答案、たからものにします！先生に教わったところ、ぜんぶ書けました！', sowal: '「{教材}」の答案...たからものに、します...。教わったところ、書けました🐾' },
+  { subject: '先生に一番に見せたくて！', siete: 'テストがかえってきました！「{教材}」、大成功です！先生に一番に見せたくて、いそいで写真をとりました！', sowal: 'テスト、かえってきました...。「{教材}」、大成功です...。一番に、見せたくて...🐾' },
+  { subject: 'あの授業のおかげです！', siete: '「{教材}」のテストに、授業でやったところがそのまま出ました！手がすらすら動いて、びっくりしました！', sowal: '「{教材}」のテスト...授業でやったところが、出ました...。手が、すらすら動きました🐾' },
+  { subject: 'こっそり自慢してもいいですか', siete: 'じつは…「{教材}」のテスト、クラスでもかなり良かったみたいです！先生の生徒でよかったです😊', sowal: 'あの...「{教材}」のテスト...けっこう、よかったみたいです...。えへへ...🐾' },
+  { subject: '答案、へやにかざりました！', siete: '「{教材}」の答案、へやのかべにかざりました！見るたびに先生の授業を思い出します！', sowal: '「{教材}」の答案...へやに、かざりました...。見るたび、思い出します...🐾' },
+  { subject: 'つぎもがんばれそうです！', siete: '「{教材}」のテスト、大成功でした！この答案を見てたら、つぎもがんばれる気がしてきました！', sowal: '「{教材}」...大成功でした...。この答案を見てると...つぎも、がんばれそうです🐾' },
+  { subject: '先生、ありがとうございました！', siete: '「{教材}」のテストの答案です！まちがえたらどうしようってドキドキしたけど、書けました！ありがとうございました！', sowal: '「{教材}」の答案です...。ドキドキしたけど...書けました...。ありがとうございました🐾' },
+  { subject: 'きろくしておきたい日です！', siete: 'きょうは「{教材}」のテストがかえってきた日！わすれたくないので、写真にとって先生に送ります！', sowal: 'きょうは...「{教材}」のテストが、かえってきた日です...。わすれたくないので...送ります🐾' },
+  { subject: '見てもらいたい人がいました', siete: '「{教材}」のテストでいい点がとれたとき、まっさきに先生の顔がうかびました！答案、見てください！', sowal: 'いい点が、とれました...。まっさきに...先生の顔が、うかびました...🐾' },
+]
+
+export function keepsakeMailFor(student: { id: string; name: string }, item: { id: string; title: string }, round: number, cards: { q: string; a: string }[]): MailMessage {
+  const title = item.title.replace(/^この(教材|文書|画像|写真)は[、，]?\s*/u, '').slice(0, 24)
+  const v = KEEPSAKE_MAIL_POOL[hashStr(`${item.id}:keepsake:${round}`) % KEEPSAKE_MAIL_POOL.length]
+  const content = (student.id === 'sowal' ? v.sowal : v.siete).replaceAll('{教材}', title)
+  const seed = hashStr(`${item.id}:${round}`)
+  const picked = [...cards].sort((a, b) => hashStr(a.q + seed) - hashStr(b.q + seed)).slice(0, 3).map((c) => ({ q: c.q, a: c.a }))
+  return { id: `keepsake-${item.id}-${round}-${Date.now()}`, type: 'student', from: student.name, studentId: student.id, subject: v.subject, content, timestamp: new Date().toISOString(), read: false, historyId: item.id, keepsake: { studentId: student.id, cards: picked } }
 }
 
 export function examMailFor(student: { id: string; name: string }, item: { id: string; title: string }, kind: ExamMailKind, dateLabel: string, round: number): MailMessage {

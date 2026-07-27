@@ -21,7 +21,7 @@ import {
   loadDrillPending, drillKey,
   unitLabel, defaultUnitIndex, loadUnitProgressMap, getUnitStatuses, unitsFromEntry, unitsFor, extendUnitProgressAfterRefine,
   loadWorkLog, workDateKey,
-  loadExamDays, saveExamDays, makeExamEntry, ensureExamDay, examMailFor, examDateLabel, todayDateKey, dateKeyAfterDays,
+  loadExamDays, saveExamDays, makeExamEntry, ensureExamDay, examMailFor, keepsakeMailFor, examDateLabel, todayDateKey, dateKeyAfterDays,
   loadExamSuccessCount, bumpExamSuccessCount,
   loadExamSuccessLog, appendExamSuccessLog,
 } from '@/lib/storage'
@@ -227,7 +227,11 @@ export default function HomeScreen() {
               s: entry.studentId ?? sender.id,
               t: item.title.replace(/^この(教材|文書|画像|写真)は[、，]?\s*/u, '').slice(0, 24),
             })
-            mails.push(examMailFor(sender, item, 'full', '', entry.round))
+            {
+              // 大成功＝思い出メール（写真＋答案つき）。カードが無い教材だけ従来の文面にフォールバック
+              const live = visibleCards(item.factsheet?.cards ?? [], item.factsheet?.hidden)
+              mails.push(live.length >= 1 ? keepsakeMailFor(sender, item, entry.round, live) : examMailFor(sender, item, 'full', '', entry.round))
+            }
           } else {
             const next = makeExamEntry(Math.max(1, units.length - doneCount), entry.round + 1, entry.studentId, hid)
             map[hid] = next
@@ -1291,6 +1295,31 @@ export default function HomeScreen() {
                       </View>
                       <Text style={styles.inboxSubject} numberOfLines={isExpanded ? undefined : 1}>{msg.subject ?? msg.content}</Text>
                       {isExpanded && msg.subject && <Text style={styles.inboxContent}>{msg.content}</Text>}
+                      {isExpanded && msg.keepsake && (() => {
+                        const st = STUDENTS.find((x) => x.id === msg.keepsake!.studentId)
+                        return (
+                          <View style={{ marginTop: 10, gap: 10 }}>
+                            {/* 思い出の写真（ポラロイド風）。生徒の同梱イラスト＝AI不要 */}
+                            <View style={styles.keepsakePhoto}>
+                              {st && <Image source={st.avatar} style={[styles.keepsakePhotoImg, { backgroundColor: st.tint }]} />}
+                              <Text style={styles.keepsakePhotoCaption}>テストの日 📸</Text>
+                            </View>
+                            {/* 答案（紙色＋生徒の手書き）。○は快挙の印 */}
+                            <View style={styles.keepsakePaper}>
+                              <Text style={styles.keepsakePaperTitle}>こたえのプリント</Text>
+                              {msg.keepsake!.cards.map((qa, qi) => (
+                                <View key={qi} style={styles.keepsakeRow}>
+                                  <Text style={styles.keepsakeMark}>◯</Text>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={styles.keepsakeQ}>{qa.q}</Text>
+                                    <Text style={styles.keepsakeA}>{qa.a}</Text>
+                                  </View>
+                                </View>
+                              ))}
+                            </View>
+                          </View>
+                        )
+                      })()}
                       {isExpanded && msg.historyId && history.some((h) => h.id === msg.historyId) && (
                         <TouchableOpacity
                           onPress={() => {
@@ -1667,6 +1696,15 @@ const styles = StyleSheet.create({
   // 初回ヒーロー（教材0件のときだけ。生徒の顔は生徒カード側が担う）
   heroCard: { alignItems: 'center', paddingTop: 4, marginBottom: 12 },
   heroTitle: { fontSize: 22, fontFamily: 'Yomogi_400Regular', fontWeight: 'bold', color: c.textStrong },
+  keepsakePhoto: { alignSelf: 'flex-start', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 6, padding: 8, paddingBottom: 14, transform: [{ rotate: '-2deg' }] },
+  keepsakePhotoImg: { width: 96, height: 96, borderRadius: 3 },
+  keepsakePhotoCaption: { marginTop: 6, textAlign: 'center', fontSize: 10, color: c.textSub, fontFamily: 'Yomogi_400Regular' },
+  keepsakePaper: { backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperBorder, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },
+  keepsakePaperTitle: { fontSize: 10, fontWeight: '700', color: c.paperText, marginBottom: 6 },
+  keepsakeRow: { flexDirection: 'row', gap: 8, paddingVertical: 3, alignItems: 'flex-start' },
+  keepsakeMark: { fontSize: 14, fontWeight: '700', color: c.redpen },
+  keepsakeQ: { fontSize: 11, color: c.textSub },
+  keepsakeA: { fontSize: 14, color: c.textStrong, fontFamily: 'Yomogi_400Regular' },
   heroOfflinePill: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'center', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 8 },
   heroOfflineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.borderStrong },
   heroOfflineText: { fontSize: 12, fontWeight: '700', color: c.textSub },
