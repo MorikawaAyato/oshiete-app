@@ -646,8 +646,11 @@ export default function HomeScreen() {
     if (units.length === 0) return null
     const statuses: Record<number, UnitStatus> = entry && entry.count === cards.length ? entry.status : {}
     const selected = Math.min(homeUnitIdx ?? defaultUnitIndex(units.length, statuses), units.length - 1)
-    // 単元が増えた（luna化で標準8〜11単元）ため、番号だけでは中身が分からない。選択中単元の見出しを添える
-    const sectionTitle = cards[units[Math.min(homeUnitIdx ?? defaultUnitIndex(units.length, statuses), units.length - 1)]?.start]?.sectionTitle ?? ''
+    // 単元が増えた（luna化で標準8〜11単元）ため、番号だけでは中身が分からない。選択中単元の見出しを添える。
+    // ただしセクションが1種類の教材では教材タイトルの言い換えにしかならないため出さない（2種類以上のみ）
+    const distinctSections = new Set(cards.map((cd) => cd.sectionTitle).filter(Boolean)).size
+    const rawSection = cards[units[Math.min(homeUnitIdx ?? defaultUnitIndex(units.length, statuses), units.length - 1)]?.start]?.sectionTitle ?? ''
+    const sectionTitle = distinctSections >= 2 ? rawSection : ''
     return { units, statuses, selected, doneCount: units.filter((_, i) => statuses[i] === 'done').length, partial: !!fs?.partial, sectionTitle }
   })()
 
