@@ -94,6 +94,7 @@ export default function TrainingScreen() {
         setHasDoneUnits(done)
       })
       void loadDrillPending().then(setDrillPendingKeys)
+      void loadCardProgress().then(setCardProgressMap) // カードの束の「次の1枚」決定用
       void loadCardProgress().then(setCardProgressMap)
       void loadWorkLog().then(setWorkLog)
     }, [])
@@ -292,6 +293,28 @@ export default function TrainingScreen() {
                   {lastDrillKey && (
                     <Text style={styles.drillRecordLine}>最終研修：{examDateLabel(lastDrillKey)} ・ この7日間 {drillCount7}回</Text>
                   )}
+                  {/* カードの束：この部屋の主役（紙）を実物として置く。一番上は実際に次へ出るカード
+                      （優先度=①まだ②未確認③確認済みの間隔順。startDrillと同じ規則の決定的な代表1枚）。
+                      束＝残量が数字でなく「もの」で伝わる（数字で煽らない原則との両立） */}
+                  {(() => {
+                    const pool = drillPool('all')
+                    const pendingC = pool.find((cd) => drillPendingKeys.has(drillKey(cd)))
+                    const unseenC = pool.find((cd) => !drillPendingKeys.has(drillKey(cd)) && !cardProgressMap[drillKey(cd)])
+                    const seenC = [...pool].sort((a, b) => (cardProgressMap[drillKey(a)]?.lastAt ?? 0) - (cardProgressMap[drillKey(b)]?.lastAt ?? 0))[0]
+                    const top = pendingC ?? unseenC ?? seenC
+                    if (!top) return null
+                    return (
+                      <TouchableOpacity style={styles.stackWrap} activeOpacity={0.85} onPress={() => { setDrillMaterialId('all'); void startDrill('all') }}>
+                        <View style={[styles.stackSheet, { top: 8, left: 10, right: -6, transform: [{ rotate: '1.6deg' }] }]} />
+                        <View style={[styles.stackSheet, { top: 4, left: -5, right: 6, transform: [{ rotate: '-1.2deg' }] }]} />
+                        <View style={styles.stackTopCard}>
+                          <View style={styles.paperFold} pointerEvents="none" />
+                          <Text style={styles.stackLabel}>つぎの1枚</Text>
+                          <Text numberOfLines={3} style={styles.stackQ}>{top.q}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    )
+                  })()}
                   <TouchableOpacity
                     style={[styles.primaryBtn, { flexDirection: 'row', justifyContent: 'center', gap: 6 }]}
                     onPress={() => { setDrillMaterialId('all'); void startDrill('all') }}
@@ -584,6 +607,11 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 12, color: c.textSub, lineHeight: 18 },
 
   // 研修の記録行（研修由来のデータだけ）
+  stackWrap: { marginTop: 4, marginBottom: 12, minHeight: 96 },
+  stackSheet: { position: 'absolute', bottom: -4, backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperLine, borderRadius: radius.xs, height: 88 },
+  stackTopCard: { backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperBorder, borderRadius: radius.xs, paddingVertical: 14, paddingHorizontal: 16, minHeight: 96, justifyContent: 'center' },
+  stackLabel: { fontSize: 10, fontWeight: '700', color: c.paperText, marginBottom: 4 },
+  stackQ: { fontSize: 14, lineHeight: 21, color: c.textStrong },
   drillRecordLine: { fontSize: 11, color: c.textSub, marginBottom: 10 },
 
   drillLimitNote: { fontSize: 10, color: c.textSub, textAlign: 'center', marginTop: 6 },
@@ -611,7 +639,7 @@ const styles = StyleSheet.create({
   listCovFill: { height: '100%', borderRadius: radius.full, backgroundColor: '#2dd4bf' },
   listFooter: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: 10, paddingBottom: 18 },
   // 紙のカード（研修フラッシュカードと同族の紙色）
-  listCard: { width: '48%', minHeight: 88, borderRadius: radius.xs, borderWidth: 1, borderColor: c.paperLine, backgroundColor: c.paper, padding: 10, paddingTop: 14, alignItems: 'center', justifyContent: 'center', gap: 6, overflow: 'hidden' }, // 紙は角
+  listCard: { width: '48%', minHeight: 88, borderRadius: radius.xs, borderWidth: 1, borderColor: c.paperLine, backgroundColor: c.paper, padding: 10, paddingTop: 14, alignItems: 'center', justifyContent: 'center', gap: 6 }, // 紙は角（折り目は三角形borderトリック＝overflow不要）
   listCardFlip: { backgroundColor: 'white', borderColor: c.pinkMuted },
   listCardQ: { fontSize: 11, color: c.textMid, lineHeight: 16, textAlign: 'center' },
   listCardA: { fontSize: 11, fontWeight: '700', color: c.textStrong, lineHeight: 16, textAlign: 'center' },
@@ -635,9 +663,10 @@ const styles = StyleSheet.create({
   secondaryBtnText: { fontSize: 13, fontWeight: '700', color: c.textMid },
 
   drillProgress: { fontSize: 11, fontWeight: '700', color: c.faint },
-  // 紙は角＋右上の折り目（めくれる紙の予告）。overflow hiddenで折り目の帯を角に収める
-  drillCard: { backgroundColor: c.paper, borderRadius: radius.xs, borderWidth: 1, borderColor: c.paperBorder, padding: 20, minHeight: 160, justifyContent: 'center', overflow: 'hidden' },
-  paperFold: { position: 'absolute', top: -9, right: -9, width: 18, height: 18, backgroundColor: c.paperLine, transform: [{ rotate: '45deg' }] },
+  // 紙は角＋右上の折り目（めくれる紙の予告）。三角形はborderトリックで描く：
+  // 回転帯+overflow hidden方式は、カード上端からはみ出す「未確認」ピル(top:-7)まで切ってしまった（実地バグ）
+  drillCard: { backgroundColor: c.paper, borderRadius: radius.xs, borderWidth: 1, borderColor: c.paperBorder, padding: 20, minHeight: 160, justifyContent: 'center' },
+  paperFold: { position: 'absolute', top: 0, right: 0, width: 0, height: 0, borderTopWidth: 14, borderLeftWidth: 14, borderTopColor: c.paperLine, borderLeftColor: 'transparent' },
   drillLabelQ: { fontSize: 10, fontWeight: '700', color: c.paperText, letterSpacing: 2, marginBottom: 6 },
   drillLabelA: { fontSize: 10, fontWeight: '700', color: c.successText, letterSpacing: 2, marginTop: 14, marginBottom: 6 },
   drillQuestion: { fontSize: 16, fontWeight: '700', color: c.text, lineHeight: 24 },
