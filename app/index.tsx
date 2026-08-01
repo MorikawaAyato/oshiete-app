@@ -45,11 +45,7 @@ function PulseDot({ color, size = 6 }: { color: string; size?: number }) {
   return <Animated.View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity: v }} />
 }
 
-// wide=横長（本の見開きを1枚で撮ったケース）。読み取りAPIは画像の短辺を768pxに縮めてから
-// 読むため、見開きは1ページあたりの実効解像度が半分になり、小さい文字を読み損なう。
-// 実地事故：辞書の見開き写真で病名が別語に化けた（メラーバロー病→スコーブィ病）ため、
-// 取り込み前に撮り方を案内する
-type ImageData = { data: string; mimeType: string; uri: string; wide?: boolean }
+type ImageData = { data: string; mimeType: string; uri: string }
 
 const MAX_IMAGES = 3
 
@@ -846,16 +842,7 @@ export default function HomeScreen() {
                 </ScrollView>
                 <Text style={styles.thumbCounter}>{pendingImages.length}/{MAX_IMAGES}</Text>
               </View>
-              {/* 見開き（横長）の写真は1ページあたりの実効解像度が半分になり、小さい文字を
-                  読み損なう（実地で病名が別語に化けた）。禁止はせず、撮り直しの機会だけ渡す。
-                  紙のアンバー＝学びの紙の機能色で、エラーでなく助言として見せる */}
-              {pendingImages.some((im) => im.wide) && !analyzing && (
-                <View style={styles.spreadHint}>
-                  <Text style={styles.spreadHintText}>
-                    見開きのまま撮った写真があります。文字が小さいと読み取りを間違えることがあるので、1ページずつ近づけて撮り直すと精度が上がります。
-                  </Text>
-                </View>
-              )}
+              
               <BouncyPressable
                 style={[styles.analyzeBtn, analyzing && styles.analyzeBtnLoading]}
                 onPress={analyzeFromPending}
@@ -1733,12 +1720,6 @@ const styles = StyleSheet.create({
   thumbRow: { flex: 1 },
   thumb: { width: 72, height: 72, borderRadius: 12, marginRight: 8 },
   thumbCounter: { paddingLeft: 10, fontSize: 15, fontWeight: '700', color: c.textSub },
-  // 見開き写真の助言（エラーの赤ではなく「学びの紙」のアンバー面）
-  spreadHint: {
-    marginBottom: 12, paddingVertical: 10, paddingHorizontal: 14,
-    borderWidth: 1, borderColor: c.paperLine, backgroundColor: c.paper, borderRadius: 14,
-  },
-  spreadHintText: { fontSize: 13, lineHeight: 19, color: c.paperText },
   analyzeBtn: { ...btn.primary, borderRadius: 14, paddingVertical: 16 },
   analyzeBtnLoading: { backgroundColor: c.pinkMuted },
   analyzeBtnText: { ...btn.primaryText, fontSize: 16 },
