@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useApp } from '@/lib/AppContext'
-import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, saveCardProgress, unitsFor, getUnitStatuses, logWork, loadWorkLog, dateKeyAfterDays, examDateLabel } from '@/lib/storage'
+import { loadHistory, loadDrillPending, saveDrillPending, loadCardProgress, saveCardProgress, unitsFor, getUnitStatuses, logWork, loadWorkLog, dateKeyAfterDays, examDateLabel, hashStr } from '@/lib/storage'
 import { visibleCards } from '@/lib/factsheet'
 import type { WorkLog } from '@/lib/storage'
 import type { CardProgress, HistoryItem, QACard } from '@/lib/types'
@@ -107,6 +107,8 @@ export default function TrainingScreen() {
   const [drillRevealed, setDrillRevealed] = useState(false)
   const [drillOkCount, setDrillOkCount] = useState(0)
   const [drillDone, setDrillDone] = useState(false)
+  // 出題順のシード。プレビュー（つぎの1枚）と実際の出題を同じ並びにする（乱数だと束の表示が嘘になる）
+  const [drillSeed, setDrillSeed] = useState(() => Date.now() % 100000)
 
   const drillPool = (materialId: string): QACard[] =>
     materialId === 'all'
@@ -127,8 +129,9 @@ export default function TrainingScreen() {
     const [pending, progress] = await Promise.all([loadDrillPending(), loadCardProgress()])
     const pool = drillPool(materialId)
     if (pool.length === 0) return
-    const pendingCards = shuffleCards(pool.filter((cd) => pending.has(drillKey(cd))))
-    const unseenCards = shuffleCards(pool.filter((cd) => !pending.has(drillKey(cd)) && !progress[drillKey(cd)]))
+    const seeded = (arr: QACard[]) => [...arr].sort((a, b) => hashStr(drillKey(a) + ':' + drillSeed) - hashStr(drillKey(b) + ':' + drillSeed))
+    const pendingCards = seeded(pool.filter((cd) => pending.has(drillKey(cd))))
+    const unseenCards = seeded(pool.filter((cd) => !pending.has(drillKey(cd)) && !progress[drillKey(cd)]))
     const seenCards = pool
       .filter((cd) => !pending.has(drillKey(cd)) && progress[drillKey(cd)])
       .sort((a, b) => (progress[drillKey(a)]?.lastAt ?? 0) - (progress[drillKey(b)]?.lastAt ?? 0))
@@ -172,6 +175,7 @@ export default function TrainingScreen() {
 
   const exitDrill = () => {
     setDrillCards([])
+    setDrillSeed((n) => n + 1)
     setDrillDone(false)
     setDrillIdx(0)
     setDrillRevealed(false)
@@ -302,15 +306,18 @@ export default function TrainingScreen() {
                       束＝残量が数字でなく「もの」で伝わる（数字で煽らない原則との両立） */}
                   {(() => {
                     const pool = drillPool('all')
-                    const pendingC = pool.find((cd) => drillPendingKeys.has(drillKey(cd)))
-                    const unseenC = pool.find((cd) => !drillPendingKeys.has(drillKey(cd)) && !cardProgressMap[drillKey(cd)])
+                    // 本番（startDrill）と同一のシード付き並びの先頭＝「つぎの1枚」が必ず本当になる
+                    const seeded = (arr: QACard[]) => [...arr].sort((a, b) => hashStr(drillKey(a) + ':' + drillSeed) - hashStr(drillKey(b) + ':' + drillSeed))
+                    const pendingC = seeded(pool.filter((cd) => drillPendingKeys.has(drillKey(cd))))[0]
+                    const unseenC = seeded(pool.filter((cd) => !drillPendingKeys.has(drillKey(cd)) && !cardProgressMap[drillKey(cd)]))[0]
                     const seenC = [...pool].sort((a, b) => (cardProgressMap[drillKey(a)]?.lastAt ?? 0) - (cardProgressMap[drillKey(b)]?.lastAt ?? 0))[0]
                     const top = pendingC ?? unseenC ?? seenC
                     if (!top) return null
                     return (
                       <TouchableOpacity style={styles.stackWrap} activeOpacity={0.85} onPress={() => { setDrillMaterialId('all'); void startDrill('all') }}>
-                        <View style={[styles.stackSheet, { top: 10, bottom: -9, left: 6, right: 6, transform: [{ rotate: '1.4deg' }] }]} />
-                        <View style={[styles.stackSheet, { top: 6, bottom: -5, left: 3, right: 3, transform: [{ rotate: '-1.1deg' }] }]} />
+                        {/* 回転させると角が突き出て散らかる（実地指摘）。回転なしの段差だけで「積んである」を示す */}
+                        <View style={[styles.stackSheet, { top: 16, bottom: -8, left: 12, right: 12 }]} />
+                        <View style={[styles.stackSheet, { top: 8, bottom: -4, left: 6, right: 6 }]} />
                         <View style={styles.stackTopCard}>
                           <View style={styles.paperFold} pointerEvents="none" />
                           <Text style={styles.stackLabel}>つぎの1枚</Text>

@@ -403,7 +403,7 @@ const EXAM_MAIL_POOL: Record<ExamMailKind, { subject: string; siete: string; sow
   ],
 }
 
-function hashStr(s: string): number {
+export function hashStr(s: string): number {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
   return h
