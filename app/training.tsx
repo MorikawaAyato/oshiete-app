@@ -175,6 +175,10 @@ export default function TrainingScreen() {
     setDrillDone(false)
     setDrillIdx(0)
     setDrillRevealed(false)
+    // 入口の「つぎの1枚」（カードの束）は drillPendingKeys/cardProgressMap から決めるため、
+    // 研修で動いた記録を読み直さないと前回のカードが残り続ける（実地バグ）
+    void loadDrillPending().then(setDrillPendingKeys)
+    void loadCardProgress().then(setCardProgressMap)
   }
 
   // カード一覧（研修室の第2モード）：開く・めくる・「まだ」の付け外し
@@ -305,8 +309,8 @@ export default function TrainingScreen() {
                     if (!top) return null
                     return (
                       <TouchableOpacity style={styles.stackWrap} activeOpacity={0.85} onPress={() => { setDrillMaterialId('all'); void startDrill('all') }}>
-                        <View style={[styles.stackSheet, { top: 8, left: 10, right: -6, transform: [{ rotate: '1.6deg' }] }]} />
-                        <View style={[styles.stackSheet, { top: 4, left: -5, right: 6, transform: [{ rotate: '-1.2deg' }] }]} />
+                        <View style={[styles.stackSheet, { top: 10, bottom: -9, left: 6, right: 6, transform: [{ rotate: '1.4deg' }] }]} />
+                        <View style={[styles.stackSheet, { top: 6, bottom: -5, left: 3, right: 3, transform: [{ rotate: '-1.1deg' }] }]} />
                         <View style={styles.stackTopCard}>
                           <View style={styles.paperFold} pointerEvents="none" />
                           <Text style={styles.stackLabel}>つぎの1枚</Text>
@@ -607,8 +611,9 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 12, color: c.textSub, lineHeight: 18 },
 
   // 研修の記録行（研修由来のデータだけ）
-  stackWrap: { marginTop: 4, marginBottom: 12, minHeight: 96 },
-  stackSheet: { position: 'absolute', bottom: -4, backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperLine, borderRadius: radius.xs, height: 88 },
+  stackWrap: { marginTop: 4, marginBottom: 14, minHeight: 96 },
+  // 後ろの紙は top/bottom 指定で本体と同じ高さに追従させ、左右は内側に寄せる（本体より大きく見せない）
+  stackSheet: { position: 'absolute', backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperLine, borderRadius: radius.xs },
   stackTopCard: { backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperBorder, borderRadius: radius.xs, paddingVertical: 14, paddingHorizontal: 16, minHeight: 96, justifyContent: 'center' },
   stackLabel: { fontSize: 10, fontWeight: '700', color: c.paperText, marginBottom: 4 },
   stackQ: { fontSize: 14, lineHeight: 21, color: c.textStrong },
