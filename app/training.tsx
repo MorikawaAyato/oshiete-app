@@ -292,7 +292,6 @@ export default function TrainingScreen() {
                 </View>
               </View>
               {/* 説明は2行まで（案内板化するとCTAが沈む） */}
-              <Text style={styles.sectionDesc}>カードをめくって自分の言葉で答え、「覚えた／まだ」を付けます。</Text>
               {allCards.length === 0 ? (
                 <Text style={styles.emptyText}>教材を取り込むと、その内容からカードが用意されます</Text>
               ) : (
@@ -332,12 +331,11 @@ export default function TrainingScreen() {
                   >
                     <Feather name="layers" size={15} color="#fff" />
                     <Text style={styles.primaryBtnText}>
-                      {materialsWithCards.length >= 2 ? '全教材ミックスで始める' : '研修を始める'}
+                      {materialsWithCards.length >= 2 ? '全教材ミックスで始める' : '研修を始める'}（{Math.min(allCards.length, DRILL_SESSION_SIZE)}問）
                     </Text>
                   </TouchableOpacity>
                   {/* 問数と出題順はボタンの外に。出題順の明示＝「普通に始めるのが常に最適」を信じてもらうための表示。
                       色ドットは研修中の進行バーと同じ視覚言語 */}
-                  <Text style={styles.drillLimitNote}>1回の研修は最大{DRILL_SESSION_SIZE}問</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 }}>
                     <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#f472b6' }]} /><Text style={styles.barLegendText}>まだ</Text></View>
                     <Text style={styles.barLegendText}>→</Text>
