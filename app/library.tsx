@@ -234,7 +234,7 @@ export default function LibraryScreen() {
             </View>
           )}
           <View style={[styles.cardInfo, isActive && styles.cardInfoActive]}>
-            <Text style={[styles.cardTitle, isActive && styles.cardTitleActive]} numberOfLines={2}>
+            <Text style={styles.cardTitle} numberOfLines={2}>
               {title}
             </Text>
             <View style={styles.cardMetaRow}>
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
   cardInfo: { padding: 6, backgroundColor: 'white' },
   cardInfoActive: { backgroundColor: c.pinkTint },
   cardTitle: { fontSize: 10, fontWeight: '600', color: c.textStrong, lineHeight: 14, minHeight: 28 },
-  cardTitleActive: { color: c.primary },
+  // cardTitleActive廃止: 選択=白地＋ピンク枠線＋ラベルの原則。タイトルまでピンクにするとピンクの規律（CTA一撃）が緩む
   cardDate: { fontSize: 9, color: c.textSub, marginTop: 2 },
   cardDateFaint: { fontSize: 9, color: c.textSub, marginTop: 2 },
   cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },

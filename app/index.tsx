@@ -737,13 +737,13 @@ export default function HomeScreen() {
         {/* 今日の授業 */}
         <View style={styles.todaySection}>
           {/* ゾーン見出しは常時表示（アップロード前でもしごとゾーンの物語を保つ）。
-              「教材を外す」は教材選択後のみ（押すと未選択状態＝作成・選び直しUIに戻る。
+              「選択をやめる」は教材選択後のみ（旧称「教材を外す」。カード非表示の「外す」と用語が衝突したため改名）（押すと未選択状態＝作成・選び直しUIに戻る。
               テスターが「どう消すの」で迷ったため、名前は結果側＝外すに寄せて視認できるピルにする） */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>今日の仕事</Text>
             {hasContent && (
               <TouchableOpacity onPress={clearSelection} style={styles.sectionClearPill}>
-                <Text style={styles.sectionClear}>教材を外す ×</Text>
+                <Text style={styles.sectionClear}>選択をやめる ×</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1108,7 +1108,7 @@ export default function HomeScreen() {
                         </View>
                       )}
                       <View style={styles.recentInfo}>
-                        <Text numberOfLines={1} style={[styles.recentTitle, isActive && { color: c.primary }]}>
+                        <Text numberOfLines={1} style={styles.recentTitle}>
                           {itemTitle}
                         </Text>
                         <Text style={styles.recentDate}>
@@ -1712,7 +1712,7 @@ const styles = StyleSheet.create({
   bandAvatarSel: { borderColor: c.primary },
   bandAvatar: { width: 52, height: 52, borderRadius: radius.xxl, borderWidth: 1, borderColor: c.border },
   bandName: { fontSize: 12, fontFamily: font.round, color: c.textStrong },
-  plusGlyph: { textAlign: 'center', fontSize: 16, fontWeight: '700', color: c.faint, marginVertical: -2 },
+  plusGlyph: { textAlign: 'center', fontSize: 13, fontWeight: '400', color: c.borderStrong, marginVertical: -2 }, // 装飾（生徒＋教材の方程式）。押せそうに見えない太さ・色まで落とす
 
   // 状態2：ペンディング（createCardの中に入るため器の装飾は持たない）
   pendingCard: { gap: 12 },
