@@ -1003,10 +1003,10 @@ export default function HomeScreen() {
                       const entry = currentHistoryId ? examDays[currentHistoryId] : undefined
                       const showExam = entry && !entry.doneAt
                       return (
+                        <>
                         <View style={styles.unitDetailRow}>
                           <Text style={styles.unitDetail} numberOfLines={1}>
                             ▸ 授業{unitLabel(unitInfo.selected)}（{unitInfo.units[unitInfo.selected].size}問）・{unitInfo.statuses[unitInfo.selected] === 'done' ? '完了' : unitInfo.statuses[unitInfo.selected] === 'tried' ? '未完了' : '未開始'}
-                            {unitInfo.sectionTitle ? <Text style={styles.unitDetailSection}>　{unitInfo.sectionTitle}</Text> : null}
                           </Text>
                           {showExam && (
                             <View style={styles.unitExamRow}>
@@ -1015,6 +1015,12 @@ export default function HomeScreen() {
                             </View>
                           )}
                         </View>
+                        {/* 単元の内容見出しは専用行。ステータス行に併記するとテスト日と幅を奪い合い
+                            ほぼ見切れる（実地指摘）ため、全幅で1行 */}
+                        {unitInfo.sectionTitle ? (
+                          <Text style={styles.unitSectionLine} numberOfLines={1}>{unitInfo.sectionTitle}</Text>
+                        ) : null}
+                        </>
                       )
                     })()}
                   </View>
@@ -1798,7 +1804,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: c.border, backgroundColor: 'white',
     alignItems: 'center', justifyContent: 'center',
   },
-  unitDetailSection: { fontWeight: '400', color: c.textSub },
+  unitSectionLine: { fontSize: 11, color: c.textSub, marginTop: 2 },
   unitNodeGhost: {
     width: 32, height: 32, borderRadius: 16,
     borderWidth: 1, borderColor: c.borderStrong, borderStyle: 'dashed', backgroundColor: c.bgSub,
