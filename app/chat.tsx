@@ -574,7 +574,7 @@ export default function ChatScreen() {
             const mark = it.teacherMark
             return (
               <Text key={i} style={styles.notebookCardLine} numberOfLines={1}>
-                <Text style={{ fontWeight: '700', color: mark === undefined ? c.paperLine : mark ? '#059669' : c.redpen }}>
+                <Text style={{ fontWeight: '700', color: mark === undefined ? c.paperLine : mark ? c.successText : c.redpen }}>
                   {mark === undefined ? '・' : mark ? '○' : '✕'}
                 </Text>
                 {' '}{it.question}
@@ -793,7 +793,7 @@ export default function ChatScreen() {
                             style={[styles.pageDot,
                               j === page ? styles.pageDotActive : m === undefined ? null : m ? styles.pageDotOk : styles.pageDotNg]}>
                             <Text style={[styles.pageDotText,
-                              j === page ? { color: '#fff' } : m === undefined ? null : m ? { color: '#059669' } : { color: c.redpen }]}>{j + 1}</Text>
+                              j === page ? { color: '#fff' } : m === undefined ? null : m ? { color: c.successText } : { color: c.redpen }]}>{j + 1}</Text>
                           </TouchableOpacity>
                         )
                       })}
@@ -826,7 +826,7 @@ export default function ChatScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 2 }}>
                         <Text style={[styles.handAnswer, { flex: 1 }, corrected && styles.handAnswerCorrected]}>{it.studentAnswer}</Text>
                         {mark !== undefined && (
-                          <StampText active style={[styles.pageMark, { color: mark ? '#059669' : c.redpen }]}>{mark ? '○' : '✕'}</StampText>
+                          <StampText active style={[styles.pageMark, { color: mark ? c.successText : c.redpen }]}>{mark ? '○' : '✕'}</StampText>
                         )}
                       </View>
                       {/* 丸付けボタン（つけたら自動で次ページへ） */}
@@ -929,7 +929,7 @@ const styles = StyleSheet.create({
     width: 16, height: 16, borderRadius: radius.sm,
     backgroundColor: '#34d399', borderWidth: 2, borderColor: c.ink,
   },
-  enteringMsg: { fontSize: 16, fontWeight: '600', color: '#cbd5e1', textAlign: 'center' },
+  enteringMsg: { fontSize: 16, fontWeight: '600', color: c.borderStrong, textAlign: 'center' },
   dotsRow: { flexDirection: 'row', gap: 8 },
   dot: { width: 10, height: 10, borderRadius: radius.sm },
 
@@ -951,7 +951,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: c.border,
   },
   quoteCard: {
-    backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: radius.md,
+    backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperLine, borderRadius: radius.md,
     paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8,
   },
   quoteCardQ: { fontSize: 11, color: c.textSub, lineHeight: 15 },
@@ -963,15 +963,15 @@ const styles = StyleSheet.create({
   },
   headerMaterialText: { fontSize: 12, fontWeight: '700', color: c.link },
   noteStrip: {
-    flex: 1, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: radius.md,
+    flex: 1, backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperLine, borderRadius: radius.md,
     paddingVertical: 8, paddingHorizontal: 10,
   },
   noteStripMain: { flex: 1, fontSize: 12, fontWeight: '700', color: c.textStrong },
   noteStripQuestion: { fontSize: 11.5, color: c.textSub, lineHeight: 16 },
   noteStripAnswer: { fontFamily: font.hand, fontSize: 13, color: c.textMid, lineHeight: 19, marginTop: 2, paddingLeft: 12 },
   noteStripChevron: { fontSize: 13, color: c.faint, fontWeight: '700' },
-  printDockChip: { backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: '#fde68a', borderRadius: radius.full, paddingHorizontal: 6, paddingVertical: 1 },
-  printDockChipText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
+  printDockChip: { backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: c.paperLine, borderRadius: radius.full, paddingHorizontal: 6, paddingVertical: 1 },
+  printDockChipText: { fontSize: 10, fontWeight: '700', color: c.paperText },
   previewDock: {
     width: 60, alignItems: 'center', justifyContent: 'center', gap: 3,
     backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: radius.md,
@@ -999,8 +999,9 @@ const styles = StyleSheet.create({
     width: 210, backgroundColor: 'white', borderRadius: radius.lg,
     borderWidth: 2, borderColor: c.border, padding: 10,
   },
+  // 紙は角（4層の角規則）。ノート提出カードは紙
   notebookCardPaper: {
-    backgroundColor: c.paper, borderRadius: radius.md,
+    backgroundColor: c.paper, borderRadius: radius.xs,
     borderWidth: 1, borderColor: c.paperBorder,
     paddingHorizontal: 10, paddingVertical: 8, overflow: 'hidden',
   },
@@ -1048,7 +1049,7 @@ const styles = StyleSheet.create({
   notebookModalClose: { fontSize: 16, color: c.faint, paddingHorizontal: 4 },
   notebookScroll: { paddingHorizontal: 18 },
   notebookPaper: {
-    backgroundColor: c.paper, borderRadius: radius.lg,
+    backgroundColor: c.paper, borderRadius: radius.xs, // 紙は角
     borderWidth: 1, borderColor: c.paperLine,
     paddingHorizontal: 14, paddingVertical: 14,
   },
@@ -1068,11 +1069,11 @@ const styles = StyleSheet.create({
   pageDotNg: { backgroundColor: '#ffe4e6' },
   pageDotText: { fontSize: 11, fontWeight: '700', color: c.faint },
   handAnswer: { fontFamily: font.hand, fontSize: 17, lineHeight: 26, color: c.textStrong },
-  handAnswerCorrected: { color: c.faint, textDecorationLine: 'line-through', textDecorationColor: '#fb7185' },
+  handAnswerCorrected: { color: c.faint, textDecorationLine: 'line-through', textDecorationColor: c.redpen },
   pageMark: { fontSize: 30, fontWeight: '700', lineHeight: 34 },
   bigMarkBtn: { width: 56, height: 56, borderRadius: radius.xxl, borderWidth: 2, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   bigMarkBtnText: { fontSize: 24, fontWeight: '700', color: c.borderStrong },
-  memoBlock: { marginTop: 10, borderTopWidth: 1, borderTopColor: '#fcd34d', borderStyle: 'dashed', paddingTop: 8 },
+  memoBlock: { marginTop: 10, borderTopWidth: 1, borderTopColor: c.paperRule, borderStyle: 'dashed', paddingTop: 8 },
   memoLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, color: c.faint, marginBottom: 2 },
   memoText: { fontFamily: font.hand, fontSize: 14, lineHeight: 22, color: c.handwrite },
   notebookLineText: { fontSize: 13, color: c.text, lineHeight: 20, fontWeight: '600', marginTop: 2 },
@@ -1088,12 +1089,12 @@ const styles = StyleSheet.create({
   notebookMarkResult: { fontSize: 18, fontWeight: '700', paddingTop: 1 },
   notebookGradeHint: { fontSize: 12, color: c.textSub, lineHeight: 18, paddingTop: 12, paddingBottom: 8 },
   modelAnswerWord: { fontWeight: '700', color: c.redpen },
-  gradeMarkO: { fontWeight: '700', color: '#10b981' },
-  gradeMarkX: { fontWeight: '700', color: '#f43f5e' },
+  gradeMarkO: { fontWeight: '700', color: c.success },
+  gradeMarkX: { fontWeight: '700', color: c.redpen },
   markRow: { flexDirection: 'row', gap: 6 },
   markBtn: { width: 34, height: 34, borderRadius: radius.lg, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-  markBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
-  markBtnWrong: { backgroundColor: '#f43f5e', borderColor: '#f43f5e' },
+  markBtnCorrect: { backgroundColor: c.success, borderColor: c.success },
+  markBtnWrong: { backgroundColor: c.redpen, borderColor: c.redpen },
   markBtnText: { fontSize: 16, fontWeight: '700', color: c.borderStrong },
   markBtnTextSel: { color: '#fff' },
   notebookModalFooter: { paddingHorizontal: 18, paddingTop: 12 },
@@ -1119,8 +1120,8 @@ const styles = StyleSheet.create({
   },
   hintToggleText: { fontSize: 12, fontWeight: '600', color: c.paperText },
   hintNote: { fontSize: 11, color: c.textSub },
-  hintItem: {
-    borderWidth: 1, borderColor: c.paperLine, borderRadius: radius.md,
+  hintItem: { // 虎の巻＝紙は角
+    borderWidth: 1, borderColor: c.paperLine, borderRadius: radius.xs,
     backgroundColor: c.paper, paddingHorizontal: 14, paddingVertical: 10,
   },
   hintItemText: { fontSize: 13, color: c.text, lineHeight: 19 },
@@ -1133,7 +1134,7 @@ const styles = StyleSheet.create({
     flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: radius.md,
     paddingVertical: 8, alignItems: 'center', backgroundColor: '#fff',
   },
-  decisionBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
+  decisionBtnCorrect: { backgroundColor: c.success, borderColor: c.success },
   decisionBtnText: { fontSize: 12, fontWeight: '700', color: c.textSub },
   decisionBtnTextSel: { color: '#fff' },
 

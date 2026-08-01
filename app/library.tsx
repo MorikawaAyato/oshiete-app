@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
   progressBadge: { marginLeft: 'auto', backgroundColor: c.bgSub, borderRadius: radius.full, paddingHorizontal: 5, paddingVertical: 1 },
   progressBadgeDone: { backgroundColor: '#d1fae5' },
   progressBadgeText: { fontSize: 9, fontWeight: '700', color: c.textSub },
-  progressBadgeTextDone: { color: '#059669' },
+  progressBadgeTextDone: { color: c.successText },
   emptySlot: {
     width: CARD_W, aspectRatio: 1, margin: 3, marginLeft: 9,
     borderRadius: radius.md, borderWidth: 2, borderStyle: 'dashed', borderColor: c.border,

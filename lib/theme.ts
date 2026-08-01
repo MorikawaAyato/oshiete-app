@@ -50,6 +50,9 @@ export const c = {
   blazer: '#34627f',
   blazerText: '#c2d3df', // 帯上の弱い文字・ラベル
 
+  // アンバー警告・研修の琥珀（バックログ「アンバー警告面の公式化」。#f59e0bの直書きをここに統一）
+  amber: '#f59e0b',
+
   // セマンティック
   success: '#10b981',
   successText: '#059669',

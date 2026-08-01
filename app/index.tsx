@@ -977,8 +977,8 @@ export default function HomeScreen() {
                             activeOpacity={0.8}
                           >
                             <Text style={[styles.unitNodeText,
-                              st === 'done' && { color: '#059669' },
-                              st === 'tried' && { color: '#b45309' },
+                              st === 'done' && { color: c.successText },
+                              st === 'tried' && { color: c.paperText },
                               sel && { color: 'white' }]}>{i + 1}</Text>
                           </TouchableOpacity>
                         )
@@ -1021,7 +1021,7 @@ export default function HomeScreen() {
                   const factsheetFailed = !unitInfo && !!currentHistoryId && factsheetErrorIds.has(currentHistoryId)
                   return (
                 <BouncyPressable
-                  style={[styles.startBtn, (!selectedStudentId || (!unitInfo && !factsheetFailed)) && styles.startBtnDisabled, factsheetFailed && { backgroundColor: '#f59e0b' }]}
+                  style={[styles.startBtn, (!selectedStudentId || (!unitInfo && !factsheetFailed)) && styles.startBtnDisabled, factsheetFailed && { backgroundColor: c.amber }]}
                   disabled={!unitInfo && !factsheetFailed}
                   onPress={() => {
                     if (factsheetFailed) { retryFactsheet(); return }
@@ -1500,18 +1500,18 @@ export default function HomeScreen() {
                           style={[styles.journalCell, selected ? styles.journalCellSel : isToday && styles.journalCellToday]}>
                           <Text style={[styles.journalDay, hasAny && styles.journalDayActive, selected && { color: 'white' }]}>{day}</Text>
                           <View style={styles.journalDots}>
-                            {e?.lesson ? <View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /> : null}
-                            {e?.drill ? <View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /> : null}
-                            {hasExam ? <View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }, examRisk.has(key) && { borderWidth: 2, borderColor: '#bae6fd' }]} /> : null}
+                            {e?.lesson ? <View style={[styles.journalDot, { backgroundColor: c.primary }]} /> : null}
+                            {e?.drill ? <View style={[styles.journalDot, { backgroundColor: c.amber }]} /> : null}
+                            {hasExam ? <View style={[styles.journalDot, { backgroundColor: c.sky }, examRisk.has(key) && { borderWidth: 2, borderColor: '#bae6fd' }]} /> : null}
                           </View>
                         </TouchableOpacity>
                       )
                     })}
                   </View>
                   <View style={styles.journalLegend}>
-                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#ec4899' }]} /><Text style={styles.journalLegendText}>授業</Text></View>
-                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#f59e0b' }]} /><Text style={styles.journalLegendText}>研修</Text></View>
-                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: '#0ea5e9' }]} /><Text style={styles.journalLegendText}>生徒のテスト</Text></View>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: c.primary }]} /><Text style={styles.journalLegendText}>授業</Text></View>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: c.amber }]} /><Text style={styles.journalLegendText}>研修</Text></View>
+                    <View style={styles.journalLegendItem}><View style={[styles.journalDot, { backgroundColor: c.sky }]} /><Text style={styles.journalLegendText}>生徒のテスト</Text></View>
                   </View>
                   {/* その日の詳細：予定されているテスト（誰の何の授業）・実施した授業/研修（誰に何を） */}
                   {journalDay && (() => {
@@ -1526,8 +1526,8 @@ export default function HomeScreen() {
                         {/* カレンダーは出来事の印だけ軽く（何を・誰とは先生証の記録簿が正式に持つ） */}
                         {daySuccesses.map((r) => (
                           <View key={`sc${r.id}`} style={styles.journalDetailRow}>
-                            <View style={[styles.journalDot, { backgroundColor: '#fcd34d', marginTop: 5 }]} />
-                            <Text style={styles.journalDetailText}>生徒の快挙 <Text style={{ fontWeight: '700', color: '#b45309' }}>達成</Text></Text>
+                            <View style={[styles.journalDot, { backgroundColor: c.paperRule, marginTop: 5 }]} />
+                            <Text style={styles.journalDetailText}>生徒の快挙 <Text style={{ fontWeight: '700', color: c.paperText }}>達成</Text></Text>
                           </View>
                         ))}
                         {exams.map(([hid, en]) => {
@@ -1536,12 +1536,12 @@ export default function HomeScreen() {
                           const near = p && p.done < p.total && en.date <= riskLimit
                           return (
                             <View key={`ex${hid}`} style={styles.journalDetailRow}>
-                              <View style={[styles.journalDot, { backgroundColor: '#0ea5e9', marginTop: 5 }]} />
+                              <View style={[styles.journalDot, { backgroundColor: c.sky, marginTop: 5 }]} />
                               <Text style={styles.journalDetailText}>
                                 {st ? `${st.name}の` : ''}「{matTitle(hid)}」のテスト{en.round > 1 ? '（追試）' : ''}
                                 {/* 準備状況：締切だけでなく安心/残作業も見せる */}
                                 {p && (p.done === p.total
-                                  ? <Text style={{ color: '#059669' }}> ・授業 ぜんぶ完了</Text>
+                                  ? <Text style={{ color: c.successText }}> ・授業 ぜんぶ完了</Text>
                                   : <Text style={near ? { color: c.primaryStrong, fontWeight: '700' } : undefined}> ・授業 {p.done}/{p.total} 完了</Text>)}
                               </Text>
                             </View>
@@ -1551,7 +1551,7 @@ export default function HomeScreen() {
                           const st = STUDENTS.find((s) => s.id === en.s)
                           return (
                             <View key={`en${k}`} style={styles.journalDetailRow}>
-                              <View style={[styles.journalDot, { backgroundColor: en.k === 'lesson' ? '#ec4899' : '#f59e0b', marginTop: 5 }]} />
+                              <View style={[styles.journalDot, { backgroundColor: en.k === 'lesson' ? c.primary : c.amber, marginTop: 5 }]} />
                               <Text style={styles.journalDetailText}>{en.k === 'lesson' ? `${st ? st.name + 'に' : ''}「${matTitle(en.h)}」の授業${en.u !== undefined ? unitLabel(en.u) : ''}` : `「${en.h ? matTitle(en.h) : '全部ミックス'}」の研修`}</Text>
                             </View>
                           )
@@ -1690,10 +1690,10 @@ const styles = StyleSheet.create({
   // 初回ヒーロー（教材0件のときだけ。生徒の顔は生徒カード側が担う）
   heroCard: { alignItems: 'center', paddingTop: 4, marginBottom: 12 },
   heroTitle: { fontSize: 22, fontFamily: 'Yomogi_400Regular', fontWeight: 'bold', color: c.textStrong },
-  keepsakePhoto: { alignSelf: 'flex-start', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: radius.sm, padding: 8, paddingBottom: 14, transform: [{ rotate: '-2deg' }] },
+  keepsakePhoto: { alignSelf: 'flex-start', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: radius.xs, padding: 8, paddingBottom: 14, transform: [{ rotate: '-2deg' }] }, // 写真プリントも紙は角
   keepsakePhotoImg: { width: 96, height: 96, borderRadius: radius.xs },
   keepsakePhotoCaption: { marginTop: 6, textAlign: 'center', fontSize: 10, color: c.textSub, fontFamily: 'Yomogi_400Regular' },
-  keepsakePaper: { backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperBorder, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10 },
+  keepsakePaper: { backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperBorder, borderRadius: radius.xs, borderTopWidth: 2, borderTopColor: c.paperRule, paddingHorizontal: 14, paddingVertical: 10 }, // 紙は角＋上辺罫（試験プリントの意匠）
   keepsakePaperTitle: { fontSize: 10, fontWeight: '700', color: c.paperText, marginBottom: 6 },
   keepsakeRow: { flexDirection: 'row', gap: 8, paddingVertical: 3, alignItems: 'flex-start' },
   keepsakeMark: { fontSize: 14, fontWeight: '700', color: c.redpen },
@@ -1792,7 +1792,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: c.borderStrong, borderStyle: 'dashed', backgroundColor: c.bgSub,
   },
   unitNodeDone: { borderColor: '#a7f3d0', backgroundColor: '#ecfdf5' },
-  unitNodeTried: { borderColor: '#fde68a', backgroundColor: '#fffbeb' },
+  unitNodeTried: { borderColor: c.paperLine, backgroundColor: c.paper },
   unitNodeSel: { borderWidth: 2, borderColor: c.primaryStrong, backgroundColor: c.primaryStrong },
   unitNodeText: { fontSize: 12, fontWeight: '700', color: c.textSub },
   unitDetailRow: { marginTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
@@ -1949,7 +1949,7 @@ const styles = StyleSheet.create({
   // 昇進試験
   titleChipLocked: { backgroundColor: c.bg },
   titleChipTextLocked: { color: c.borderStrong },
-  examBtn: { backgroundColor: '#f59e0b', borderRadius: radius.md, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
+  examBtn: { backgroundColor: c.amber, borderRadius: radius.md, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
   examBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   examHint: { fontSize: 10, color: c.textSub, marginTop: 10 },
   examSpeech: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: c.bgSub, borderRadius: radius.lg, padding: 12, marginBottom: 14 },
@@ -1969,16 +1969,16 @@ const styles = StyleSheet.create({
   examResultQ: { fontSize: 12, fontWeight: '700', color: c.text, marginBottom: 4, lineHeight: 18 },
   examResultA: { fontSize: 12, color: c.textSub, lineHeight: 18 },
   examResultModel: { fontSize: 12, color: c.dangerText, marginTop: 3, lineHeight: 18 },
-  examResultComment: { fontSize: 12, color: '#b45309', marginTop: 3, lineHeight: 18 },
+  examResultComment: { fontSize: 12, color: c.paperText, marginTop: 3, lineHeight: 18 },
   examCloseBtn: { backgroundColor: c.text, borderRadius: radius.md, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 12 },
   examCloseBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   // 宿題
-  hwBadge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 12, marginHorizontal: 16, marginTop: 12 },
-  hwBadgeIconWrap: { width: 44, height: 44, borderRadius: radius.xl, backgroundColor: 'white', borderWidth: 1, borderColor: '#fde68a', alignItems: 'center', justifyContent: 'center' },
+  hwBadge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperLine, borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 12, marginHorizontal: 16, marginTop: 12 },
+  hwBadgeIconWrap: { width: 44, height: 44, borderRadius: radius.xl, backgroundColor: 'white', borderWidth: 1, borderColor: c.paperLine, alignItems: 'center', justifyContent: 'center' },
   hwBadgeIcon: { width: 26, height: 26 },
   hwBadgeTitle: { fontSize: 12, fontWeight: '700', color: '#92400e' },
-  hwBadgeSub: { fontSize: 11, color: '#b45309', marginTop: 1 },
+  hwBadgeSub: { fontSize: 11, color: c.paperText, marginTop: 1 },
   hwBadgeChevron: { fontSize: 20, color: '#d97706', fontWeight: '400' },
   hwBadgeMuted: { backgroundColor: c.bgSub, borderColor: c.border },
   hwBadgeIconMuted: { backgroundColor: 'white', borderColor: c.border },
@@ -1986,10 +1986,10 @@ const styles = StyleSheet.create({
   hwBadgeSubMuted: { fontSize: 11, color: c.textSub, marginTop: 1 },
   hwHint: { fontSize: 12, color: c.textSub, marginBottom: 10, lineHeight: 18 },
   hwCandidate: { borderWidth: 1, borderColor: c.border, borderRadius: radius.md, padding: 12, marginBottom: 8, backgroundColor: '#fff' },
-  hwCandidateSel: { borderColor: '#fbbf24', backgroundColor: '#fffbeb' },
+  hwCandidateSel: { borderColor: '#fbbf24', backgroundColor: c.paper },
   hwCandidateText: { fontSize: 13, color: c.textMid, lineHeight: 19 },
   hwCandidateTextSel: { color: '#92400e', fontWeight: '600' },
-  hwAssignBtn: { backgroundColor: '#f59e0b', borderRadius: radius.md, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 12 },
+  hwAssignBtn: { backgroundColor: c.amber, borderRadius: radius.md, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 12 },
   hwAssignBtnDisabled: { backgroundColor: c.bgSub },
   hwAssignBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   hwAnswerCard: { borderWidth: 1, borderColor: c.border, borderRadius: radius.md, padding: 12, marginBottom: 10 },
@@ -1999,11 +1999,11 @@ const styles = StyleSheet.create({
   hwModelText: { fontSize: 11, color: c.redpen, lineHeight: 17, marginTop: 3 },
   hwModelMark: { fontWeight: '700' },
   hwModelWord: { fontWeight: '700', color: c.redpen },
-  hwMarkO: { fontWeight: '700', color: '#10b981' },
-  hwMarkX: { fontWeight: '700', color: '#f43f5e' },
+  hwMarkO: { fontWeight: '700', color: c.success },
+  hwMarkX: { fontWeight: '700', color: c.redpen },
   hwMarkBtn: { width: 34, height: 34, borderRadius: radius.lg, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-  hwMarkBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
-  hwMarkBtnWrong: { backgroundColor: '#f43f5e', borderColor: '#f43f5e' },
+  hwMarkBtnCorrect: { backgroundColor: c.success, borderColor: c.success },
+  hwMarkBtnWrong: { backgroundColor: c.redpen, borderColor: c.redpen },
   hwMarkBtnText: { fontSize: 16, fontWeight: '700', color: c.borderStrong },
   hwMarkBtnTextSel: { color: '#fff' },
   hwResultText: { fontSize: 11, color: c.textSub, lineHeight: 17 },
@@ -2042,7 +2042,7 @@ const styles = StyleSheet.create({
   },
   tcCard: {
     flex: 1,
-    borderRadius: radius.xl, backgroundColor: c.skyStrong,
+    borderRadius: radius.xs, backgroundColor: c.skyStrong, // 先生証＝儀式の紺面は角（額縁・辞令の格式）
     overflow: 'hidden', padding: 20, justifyContent: 'space-between',
     shadowColor: '#000', shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.5, shadowRadius: 28, elevation: 18,
@@ -2079,7 +2079,7 @@ const styles = StyleSheet.create({
   examLogEmpty: { fontSize: 12, color: c.textSub, textAlign: 'center', lineHeight: 20, paddingVertical: 40 },
   examLogRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
   examLogRowBorder: { borderTopWidth: 1, borderTopColor: c.bgSub },
-  examLogDot: { width: 8, height: 8, borderRadius: radius.xs, backgroundColor: '#fcd34d' },
+  examLogDot: { width: 8, height: 8, borderRadius: radius.xs, backgroundColor: c.paperRule },
   examLogDate: { width: 78, fontSize: 11, fontWeight: '700', color: c.textSub, fontVariant: ['tabular-nums'] },
   examLogAvatar: { width: 26, height: 26, borderRadius: radius.md, borderWidth: 1, borderColor: c.border },
   examLogText: { flex: 1, fontSize: 13, fontWeight: '600', color: c.textMid },

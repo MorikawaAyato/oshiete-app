@@ -554,11 +554,11 @@ const styles = StyleSheet.create({
   bankNum: { fontSize: 12, color: c.textSub, width: 20, textAlign: 'right', marginTop: 2, fontVariant: ['tabular-nums'] },
   bankStatement: { fontSize: 13, color: c.text, lineHeight: 21 },
   bankStatementHidden: { fontSize: 14, lineHeight: 21, color: c.faint, textDecorationLine: 'line-through' },
-  cappedNote: { marginBottom: 14, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: c.paperLine, backgroundColor: c.paper, borderRadius: radius.lg },
+  cappedNote: { marginBottom: 14, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: c.paperLine, backgroundColor: c.paper, borderRadius: radius.xs }, // 紙は角
   cappedNoteText: { fontSize: 13, lineHeight: 19, color: c.paperText },
   hiddenTag: { fontSize: 10, color: c.faint },
   correctedRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
-  correctedTag: { fontSize: 10, color: '#fb7185' },
+  correctedTag: { fontSize: 10, color: c.redpen },
   undoLink: { fontSize: 10, color: c.textSub, textDecorationLine: 'underline' },
   bankQ: { fontSize: 13, color: c.text, lineHeight: 20, fontWeight: '600' },
   bankEditBtn: { paddingHorizontal: 4, marginTop: 1 },

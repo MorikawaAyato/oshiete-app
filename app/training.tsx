@@ -307,7 +307,7 @@ export default function TrainingScreen() {
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 }}>
                     <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#f472b6' }]} /><Text style={styles.barLegendText}>まだ</Text></View>
                     <Text style={styles.barLegendText}>→</Text>
-                    <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#cbd5e1' }]} /><Text style={styles.barLegendText}>未確認</Text></View>
+                    <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: c.borderStrong }]} /><Text style={styles.barLegendText}>未確認</Text></View>
                     <Text style={styles.barLegendText}>→</Text>
                     <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#2dd4bf' }]} /><Text style={styles.barLegendText}>確認済み</Text></View>
                     <Text style={styles.barLegendText}>の順に出ます</Text>
@@ -391,7 +391,7 @@ export default function TrainingScreen() {
               <View style={{ flexDirection: 'row', gap: 4, marginTop: 8 }}>
                 {drillCards.map((_, i) => (
                   <View key={i} style={[
-                    { flex: 1, height: 6, borderRadius: radius.xs, backgroundColor: drillCategories[i] === 'mada' ? '#f472b6' : drillCategories[i] === 'seen' ? '#2dd4bf' : '#cbd5e1' },
+                    { flex: 1, height: 6, borderRadius: radius.xs, backgroundColor: drillCategories[i] === 'mada' ? '#f472b6' : drillCategories[i] === 'seen' ? '#2dd4bf' : c.borderStrong },
                     i === drillIdx && { borderWidth: 1.5, borderColor: '#475569', height: 8, borderRadius: radius.xs },
                     i < drillIdx && { opacity: 0.35 },
                   ]} />
@@ -399,11 +399,12 @@ export default function TrainingScreen() {
               </View>
               <View style={{ flexDirection: 'row', gap: 12, marginTop: 6 }}>
                 {drillCategories.includes('mada') && <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#f472b6' }]} /><Text style={styles.barLegendText}>まだ</Text></View>}
-                {drillCategories.includes('unseen') && <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#cbd5e1' }]} /><Text style={styles.barLegendText}>未確認</Text></View>}
+                {drillCategories.includes('unseen') && <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: c.borderStrong }]} /><Text style={styles.barLegendText}>未確認</Text></View>}
                 {drillCategories.includes('seen') && <View style={styles.barLegendItem}><View style={[styles.barLegendDot, { backgroundColor: '#2dd4bf' }]} /><Text style={styles.barLegendText}>確認済み</Text></View>}
               </View>
             </View>
             <View style={styles.drillCard}>
+              <View style={styles.paperFold} pointerEvents="none" />
               <Text style={styles.drillLabelQ}>Q</Text>
               <Text style={styles.drillQuestion}>{drillCards[drillIdx]?.q}</Text>
               {drillRevealed && (
@@ -419,11 +420,11 @@ export default function TrainingScreen() {
               </TouchableOpacity>
             ) : (
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity style={[styles.markBtn, styles.markBtnRow, { backgroundColor: '#10b981' }]} onPress={() => void markDrill(true)}>
+                <TouchableOpacity style={[styles.markBtn, styles.markBtnRow, { backgroundColor: c.success }]} onPress={() => void markDrill(true)}>
                   <Feather name="check" size={16} color="#fff" />
                   <Text style={styles.primaryBtnText}>覚えた</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.markBtn, styles.markBtnRow, { backgroundColor: '#fb7185' }]} onPress={() => void markDrill(false)}>
+                <TouchableOpacity style={[styles.markBtn, styles.markBtnRow, { backgroundColor: c.redpen }]} onPress={() => void markDrill(false)}>
                   <Feather name="rotate-ccw" size={16} color="#fff" />
                   <Text style={styles.primaryBtnText}>まだ</Text>
                 </TouchableOpacity>
@@ -488,6 +489,7 @@ export default function TrainingScreen() {
                           return (
                             <TouchableOpacity key={key} activeOpacity={0.8} onPress={() => void flipListCard(cd)}
                               style={[styles.listCard, flipped && styles.listCardFlip, st === 'none' && !flipped && { opacity: 0.55 }]}>
+                              <View style={styles.paperFold} pointerEvents="none" />
                               {st !== 'seen' && (
                                 <View style={[styles.listPill, st === 'mada' ? styles.listPillMada : styles.listPillNone]}>
                                   <Text style={[styles.listPillText, st === 'mada' ? { color: '#be185d' } : { color: c.textSub }]}>
@@ -545,15 +547,15 @@ const styles = StyleSheet.create({
 
   card: { backgroundColor: 'white', borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, padding: 16 },
   heroRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  principalAvatarSmall: { width: 40, height: 40, borderRadius: radius.xl, borderWidth: 1, borderColor: '#fde68a' },
+  principalAvatarSmall: { width: 40, height: 40, borderRadius: radius.xl, borderWidth: 1, borderColor: c.paperLine },
   // 1on1のチャット風バー（カードの器に入れず、部屋に浮かぶメッセージとして表示）
   // 校長ヒーロー＝紺の「通信パネル」（通信室・先生証と同族の儀式面。接続中の1on1通信なのでダークが許される。
   // 黒モニターほど硬くせず、紺＋金縁＋発光する緑で「いかした」側に寄せる）
   principalHero: {
-    backgroundColor: c.ink, borderRadius: radius.lg, borderWidth: 1, borderColor: '#1b2b42',
+    backgroundColor: c.ink, borderRadius: radius.xs, borderWidth: 1, borderColor: c.textStrong, // 儀式の紺面は角（額縁の格式）。内側の吹き出し・金縁は丸のまま
     paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 10,
   },
-  principalHeroAvatar: { width: 40, height: 40, borderRadius: radius.xl, borderWidth: 1, borderColor: '#fcd34d' },
+  principalHeroAvatar: { width: 40, height: 40, borderRadius: radius.xl, borderWidth: 1, borderColor: c.paperRule },
   principalHeroName: { fontSize: 12, fontWeight: '900', color: '#f1f5f9' },
   // 研修カードのヒーロー見出し（アイコン＋タイトル）
   sectionHeroRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
@@ -569,7 +571,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full, paddingHorizontal: 6, paddingVertical: 1,
   },
   connectedText: { fontSize: 8, fontWeight: '700', color: '#6ee7b7' },
-  principalLine: { fontSize: 13, color: '#cbd5e1', lineHeight: 20 },
+  principalLine: { fontSize: 13, color: c.borderStrong, lineHeight: 20 },
   principalComment: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19, backgroundColor: c.bgSub, borderRadius: radius.md, padding: 10 },
 
   sectionTitle: { fontSize: 14, fontWeight: '900', color: c.text, marginBottom: 4 },
@@ -609,7 +611,7 @@ const styles = StyleSheet.create({
   listCovFill: { height: '100%', borderRadius: radius.full, backgroundColor: '#2dd4bf' },
   listFooter: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: 10, paddingBottom: 18 },
   // 紙のカード（研修フラッシュカードと同族の紙色）
-  listCard: { width: '48%', minHeight: 88, borderRadius: radius.md, borderWidth: 1, borderColor: '#fde68a', backgroundColor: '#fffbeb', padding: 10, paddingTop: 14, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  listCard: { width: '48%', minHeight: 88, borderRadius: radius.xs, borderWidth: 1, borderColor: c.paperLine, backgroundColor: c.paper, padding: 10, paddingTop: 14, alignItems: 'center', justifyContent: 'center', gap: 6, overflow: 'hidden' }, // 紙は角
   listCardFlip: { backgroundColor: 'white', borderColor: c.pinkMuted },
   listCardQ: { fontSize: 11, color: c.textMid, lineHeight: 16, textAlign: 'center' },
   listCardA: { fontSize: 11, fontWeight: '700', color: c.textStrong, lineHeight: 16, textAlign: 'center' },
@@ -633,9 +635,11 @@ const styles = StyleSheet.create({
   secondaryBtnText: { fontSize: 13, fontWeight: '700', color: c.textMid },
 
   drillProgress: { fontSize: 11, fontWeight: '700', color: c.faint },
-  drillCard: { backgroundColor: c.paper, borderRadius: radius.lg, borderWidth: 1, borderColor: c.paperBorder, padding: 20, minHeight: 160, justifyContent: 'center' },
-  drillLabelQ: { fontSize: 10, fontWeight: '700', color: '#b45309', letterSpacing: 2, marginBottom: 6 },
-  drillLabelA: { fontSize: 10, fontWeight: '700', color: '#059669', letterSpacing: 2, marginTop: 14, marginBottom: 6 },
+  // 紙は角＋右上の折り目（めくれる紙の予告）。overflow hiddenで折り目の帯を角に収める
+  drillCard: { backgroundColor: c.paper, borderRadius: radius.xs, borderWidth: 1, borderColor: c.paperBorder, padding: 20, minHeight: 160, justifyContent: 'center', overflow: 'hidden' },
+  paperFold: { position: 'absolute', top: -9, right: -9, width: 18, height: 18, backgroundColor: c.paperLine, transform: [{ rotate: '45deg' }] },
+  drillLabelQ: { fontSize: 10, fontWeight: '700', color: c.paperText, letterSpacing: 2, marginBottom: 6 },
+  drillLabelA: { fontSize: 10, fontWeight: '700', color: c.successText, letterSpacing: 2, marginTop: 14, marginBottom: 6 },
   drillQuestion: { fontSize: 16, fontWeight: '700', color: c.text, lineHeight: 24 },
   drillAnswer: { fontSize: 14, color: c.textMid, lineHeight: 21 },
   revealBtn: { backgroundColor: c.text, borderRadius: radius.md, paddingVertical: 14, alignItems: 'center' },
@@ -650,7 +654,7 @@ const styles = StyleSheet.create({
   barLegendText: { fontSize: 9, fontWeight: '700', color: c.textSub },
 
   zoomOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
-  zoomCircle: { width: 220, height: 220, borderRadius: radius.full, overflow: 'hidden', borderWidth: 4, borderColor: '#fcd34d', backgroundColor: '#fff' },
+  zoomCircle: { width: 220, height: 220, borderRadius: radius.full, overflow: 'hidden', borderWidth: 4, borderColor: c.paperRule, backgroundColor: '#fff' },
   // 新しい校長画像は正方形なので、旧構図用の縦長クロップ（歪む）をやめて全体をcover表示にする
   zoomImage: { width: '100%', height: '100%' },
 
