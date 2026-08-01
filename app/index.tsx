@@ -2042,7 +2042,7 @@ const styles = StyleSheet.create({
   },
   tcCard: {
     flex: 1,
-    borderRadius: radius.xs, backgroundColor: c.skyStrong, // 先生証＝儀式の紺面は角（額縁・辞令の格式）
+    borderRadius: radius.xl, backgroundColor: c.skyStrong, // 先生証はIDカード＝物理カードの丸角が自然（ユーザー判断で角化を撤回。儀式面の角は校長パネルのみ）
     overflow: 'hidden', padding: 20, justifyContent: 'space-between',
     shadowColor: '#000', shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.5, shadowRadius: 28, elevation: 18,
