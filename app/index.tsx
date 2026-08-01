@@ -294,7 +294,7 @@ export default function HomeScreen() {
       data: a.base64!,
       mimeType: a.mimeType ?? 'image/jpeg',
       uri: a.uri,
-      wide: !!a.width && !!a.height && a.width / a.height > 1.15,
+      wide: !!a.width && !!a.height && a.width / a.height > 1.4, // 1.15だと横向き写真(4:3=1.33)が全部誤検出。縦長ページ×2≒1.4以上のみ
     }))
 
     if (mode === 'replace') {
