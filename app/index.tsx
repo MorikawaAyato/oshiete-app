@@ -1412,7 +1412,7 @@ export default function HomeScreen() {
                             style={[styles.avatarCell, teacherProfile.avatarId === id && styles.avatarCellSel]}
                             onPress={() => setTeacherProfile({ ...teacherProfile, avatarId: id })}
                           >
-                            <Image source={getTeacherAvatarImage(id)} style={styles.avatarCellImage} />
+                            <Image source={getTeacherAvatarImage(id)} style={[styles.avatarCellImage, { transform: [{ translateY: avatarNudgeY(id, 38) }] }]} />{/* 選択後と同じ耳切れ補正（グリッドだけ未適用だった） */}
                             <Text style={styles.avatarCellLabel}>{label}</Text>
                           </TouchableOpacity>
                         ))}
