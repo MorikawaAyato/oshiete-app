@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 12, color: c.textSub, lineHeight: 18 },
 
   // 研修の記録行（研修由来のデータだけ）
-  stackWrap: { marginTop: 4, marginBottom: 22, minHeight: 96 }, // 余白は後ろの紙のはみ出し8pxを織り込む（本体基準だと見た目6pxになる）
+  stackWrap: { marginTop: 4, marginBottom: 18, minHeight: 96 }, // はみ出し8px込みで見た目10px（束とCTAは一体の操作単位＝説明文との境界より狭く）
   // 後ろの紙は top/bottom 指定で本体と同じ高さに追従させ、左右は内側に寄せる（本体より大きく見せない）
   stackSheet: { position: 'absolute', backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperLine, borderRadius: radius.xs },
   stackTopCard: { backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperBorder, borderRadius: radius.xs, paddingVertical: 14, paddingHorizontal: 16, minHeight: 96, justifyContent: 'center' },
