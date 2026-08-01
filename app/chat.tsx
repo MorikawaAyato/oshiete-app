@@ -17,7 +17,7 @@ import {
 } from '@/lib/storage'
 import { isCardHidden } from '@/lib/factsheet'
 import type { PrintItem, Recap } from '@/lib/types'
-import { btn, c, font } from '@/lib/theme'
+import { btn, c, font, radius } from '@/lib/theme'
 import { Feather } from '@expo/vector-icons'
 import BouncyPressable from '@/components/BouncyPressable'
 import PawGlyph from '@/components/PawGlyph'
@@ -70,7 +70,7 @@ function TypingPaws() {
   }, [])
 
   return (
-    <View style={{ backgroundColor: 'white', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+    <View style={{ backgroundColor: 'white', borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', gap: 4, alignItems: 'center' }}>
       {[paw0, paw1, paw2].map((paw, i) => (
         <Animated.View
           key={i}
@@ -923,15 +923,15 @@ const styles = StyleSheet.create({
     backgroundColor: c.ink,
   },
   enteringAvatarWrap: { position: 'relative' },
-  enteringAvatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' },
+  enteringAvatar: { width: 96, height: 96, borderRadius: radius.full, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' },
   enteringOnline: {
     position: 'absolute', bottom: 4, right: 4,
-    width: 16, height: 16, borderRadius: 8,
+    width: 16, height: 16, borderRadius: radius.sm,
     backgroundColor: '#34d399', borderWidth: 2, borderColor: c.ink,
   },
   enteringMsg: { fontSize: 16, fontWeight: '600', color: '#cbd5e1', textAlign: 'center' },
   dotsRow: { flexDirection: 'row', gap: 8 },
-  dot: { width: 10, height: 10, borderRadius: 5 },
+  dot: { width: 10, height: 10, borderRadius: radius.sm },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -941,7 +941,7 @@ const styles = StyleSheet.create({
   backBtn: { paddingVertical: 4 },
   backText: { fontSize: 13, color: c.link },
   headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerAvatar: { width: 32, height: 32, borderRadius: 16 },
+  headerAvatar: { width: 32, height: 32, borderRadius: radius.lg },
   headerName: { fontSize: 14, fontFamily: font.round, color: c.textStrong },
   stageText: { fontSize: 11, fontWeight: '600', color: c.textSub, marginTop: 1 },
 
@@ -951,30 +951,30 @@ const styles = StyleSheet.create({
     backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: c.border,
   },
   quoteCard: {
-    backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 10,
+    backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: radius.md,
     paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8,
   },
   quoteCardQ: { fontSize: 11, color: c.textSub, lineHeight: 15 },
   quoteCardA: { fontFamily: font.hand, fontSize: 12, color: c.textMid, lineHeight: 18, marginTop: 1 },
   headerMaterialBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: 8,
+    backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: radius.sm,
     paddingHorizontal: 8, paddingVertical: 5,
   },
   headerMaterialText: { fontSize: 12, fontWeight: '700', color: c.link },
   noteStrip: {
-    flex: 1, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 12,
+    flex: 1, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: radius.md,
     paddingVertical: 8, paddingHorizontal: 10,
   },
   noteStripMain: { flex: 1, fontSize: 12, fontWeight: '700', color: c.textStrong },
   noteStripQuestion: { fontSize: 11.5, color: c.textSub, lineHeight: 16 },
   noteStripAnswer: { fontFamily: font.hand, fontSize: 13, color: c.textMid, lineHeight: 19, marginTop: 2, paddingLeft: 12 },
   noteStripChevron: { fontSize: 13, color: c.faint, fontWeight: '700' },
-  printDockChip: { backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: '#fde68a', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
+  printDockChip: { backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: '#fde68a', borderRadius: radius.full, paddingHorizontal: 6, paddingVertical: 1 },
   printDockChipText: { fontSize: 10, fontWeight: '700', color: '#b45309' },
   previewDock: {
     width: 60, alignItems: 'center', justifyContent: 'center', gap: 3,
-    backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: 12,
+    backgroundColor: c.skyTint, borderWidth: 1, borderColor: c.skyBorder, borderRadius: radius.md,
     paddingVertical: 7, paddingHorizontal: 6,
   },
   previewBarText: { fontSize: 13, fontWeight: '700', color: c.link },
@@ -985,22 +985,22 @@ const styles = StyleSheet.create({
   bubble: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   bubbleUser: { justifyContent: 'flex-end' },
   bubbleMana: { justifyContent: 'flex-start' },
-  bubbleAvatar: { width: 32, height: 32, borderRadius: 16, marginBottom: 2 },
-  bubbleText: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
+  bubbleAvatar: { width: 32, height: 32, borderRadius: radius.lg, marginBottom: 2 },
+  bubbleText: { borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 10 },
   bubbleTextUser: { backgroundColor: c.primaryStrong },
   bubbleTextMana: { backgroundColor: 'white' },
   msgText: { fontSize: 14, color: c.textStrong, lineHeight: 21 },
   msgTextUser: { color: 'white' },
 
-  retryBtn: { ...btn.secondary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 9 },
+  retryBtn: { ...btn.secondary, borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 9 },
   retryBtnText: { ...btn.secondaryText, fontSize: 13 },
 
   notebookCard: {
-    width: 210, backgroundColor: 'white', borderRadius: 16,
+    width: 210, backgroundColor: 'white', borderRadius: radius.lg,
     borderWidth: 2, borderColor: c.border, padding: 10,
   },
   notebookCardPaper: {
-    backgroundColor: c.paper, borderRadius: 10,
+    backgroundColor: c.paper, borderRadius: radius.md,
     borderWidth: 1, borderColor: c.paperBorder,
     paddingHorizontal: 10, paddingVertical: 8, overflow: 'hidden',
   },
@@ -1015,20 +1015,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'white', borderTopWidth: 1, borderTopColor: c.border,
     paddingHorizontal: 16, paddingVertical: 12,
   },
-  actionBtn: { borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
+  actionBtn: { borderRadius: radius.md, paddingVertical: 13, alignItems: 'center' },
   actionBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
   actionWaiting: { fontSize: 12, color: c.textSub, textAlign: 'center', paddingVertical: 6 },
-  rallyContext: { borderWidth: 1, borderColor: c.border, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.7)', paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8 },
+  rallyContext: { borderWidth: 1, borderColor: c.border, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.7)', paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8 },
   rallyContextText: { fontSize: 11.5, color: c.textSub, lineHeight: 17 },
   rallyContextAnswer: { fontFamily: font.hand, fontSize: 13, color: c.textMid, lineHeight: 20, marginTop: 1 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   input: {
-    flex: 1, backgroundColor: c.bg, borderRadius: 12,
+    flex: 1, backgroundColor: c.bg, borderRadius: radius.md,
     borderWidth: 1, borderColor: c.border,
     paddingHorizontal: 14, paddingVertical: 10,
     fontSize: 14, color: c.textStrong, maxHeight: 100,
   },
-  sendBtn: { backgroundColor: c.primaryStrong, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
+  sendBtn: { backgroundColor: c.primaryStrong, paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.md },
   sendBtnDisabled: { opacity: 0.4 },
   sendBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
 
@@ -1037,7 +1037,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', padding: 20,
   },
   notebookModal: {
-    backgroundColor: 'white', borderRadius: 20, maxHeight: '85%',
+    backgroundColor: 'white', borderRadius: radius.xl, maxHeight: '85%',
     paddingBottom: 16,
   },
   notebookModalHeader: {
@@ -1048,7 +1048,7 @@ const styles = StyleSheet.create({
   notebookModalClose: { fontSize: 16, color: c.faint, paddingHorizontal: 4 },
   notebookScroll: { paddingHorizontal: 18 },
   notebookPaper: {
-    backgroundColor: c.paper, borderRadius: 14,
+    backgroundColor: c.paper, borderRadius: radius.lg,
     borderWidth: 1, borderColor: c.paperLine,
     paddingHorizontal: 14, paddingVertical: 14,
   },
@@ -1062,7 +1062,7 @@ const styles = StyleSheet.create({
   pageNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 6 },
   pageNavArrow: { fontSize: 13, fontWeight: '700', color: c.textSub, paddingHorizontal: 6, paddingVertical: 2 },
   pageNavArrowDisabled: { color: c.border },
-  pageDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: c.bgSub, alignItems: 'center', justifyContent: 'center' },
+  pageDot: { width: 24, height: 24, borderRadius: radius.md, backgroundColor: c.bgSub, alignItems: 'center', justifyContent: 'center' },
   pageDotActive: { backgroundColor: c.textMid },
   pageDotOk: { backgroundColor: '#d1fae5' },
   pageDotNg: { backgroundColor: '#ffe4e6' },
@@ -1070,7 +1070,7 @@ const styles = StyleSheet.create({
   handAnswer: { fontFamily: font.hand, fontSize: 17, lineHeight: 26, color: c.textStrong },
   handAnswerCorrected: { color: c.faint, textDecorationLine: 'line-through', textDecorationColor: '#fb7185' },
   pageMark: { fontSize: 30, fontWeight: '700', lineHeight: 34 },
-  bigMarkBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  bigMarkBtn: { width: 56, height: 56, borderRadius: radius.xxl, borderWidth: 2, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   bigMarkBtnText: { fontSize: 24, fontWeight: '700', color: c.borderStrong },
   memoBlock: { marginTop: 10, borderTopWidth: 1, borderTopColor: '#fcd34d', borderStyle: 'dashed', paddingTop: 8 },
   memoLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, color: c.faint, marginBottom: 2 },
@@ -1091,36 +1091,36 @@ const styles = StyleSheet.create({
   gradeMarkO: { fontWeight: '700', color: '#10b981' },
   gradeMarkX: { fontWeight: '700', color: '#f43f5e' },
   markRow: { flexDirection: 'row', gap: 6 },
-  markBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  markBtn: { width: 34, height: 34, borderRadius: radius.lg, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   markBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
   markBtnWrong: { backgroundColor: '#f43f5e', borderColor: '#f43f5e' },
   markBtnText: { fontSize: 16, fontWeight: '700', color: c.borderStrong },
   markBtnTextSel: { color: '#fff' },
   notebookModalFooter: { paddingHorizontal: 18, paddingTop: 12 },
   returnBtn: {
-    backgroundColor: c.primaryStrong, borderRadius: 12,
+    backgroundColor: c.primaryStrong, borderRadius: radius.md,
     paddingVertical: 13, alignItems: 'center',
   },
   returnBtnDisabled: { backgroundColor: c.bgSub },
   gradeBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
   gradeBtnTextDisabled: { color: c.faint },
-  closeNotebookBtn: { ...btn.secondary, borderRadius: 12 },
+  closeNotebookBtn: { ...btn.secondary, borderRadius: radius.md },
   closeNotebookBtnText: { ...btn.secondaryText },
 
   redpenItem: {
-    borderWidth: 1, borderColor: c.border, borderRadius: 12,
+    borderWidth: 1, borderColor: c.border, borderRadius: radius.md,
     paddingHorizontal: 12, paddingVertical: 10,
   },
   redpenStudentAnswer: { fontSize: 12.5, color: c.text, lineHeight: 19, fontWeight: '600' },
   redpenInput: {
-    marginTop: 6, borderWidth: 1, borderColor: '#fecdd3', borderRadius: 10,
+    marginTop: 6, borderWidth: 1, borderColor: '#fecdd3', borderRadius: radius.md,
     backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 8,
     fontSize: 13, color: c.textStrong, minHeight: 44,
   },
   hintToggleText: { fontSize: 12, fontWeight: '600', color: c.paperText },
   hintNote: { fontSize: 11, color: c.textSub },
   hintItem: {
-    borderWidth: 1, borderColor: c.paperLine, borderRadius: 12,
+    borderWidth: 1, borderColor: c.paperLine, borderRadius: radius.md,
     backgroundColor: c.paper, paddingHorizontal: 14, paddingVertical: 10,
   },
   hintItemText: { fontSize: 13, color: c.text, lineHeight: 19 },
@@ -1130,7 +1130,7 @@ const styles = StyleSheet.create({
 
   decisionRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   decisionBtn: {
-    flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: 10,
+    flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: radius.md,
     paddingVertical: 8, alignItems: 'center', backgroundColor: '#fff',
   },
   decisionBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
@@ -1139,8 +1139,8 @@ const styles = StyleSheet.create({
 
   endedActions: { marginTop: 16, gap: 10 },
   endedLabel: { fontSize: 13, color: c.textSub, textAlign: 'center', fontWeight: '600' },
-  reviewBtn: { backgroundColor: c.primaryStrong, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  reviewBtn: { backgroundColor: c.primaryStrong, borderRadius: radius.md, paddingVertical: 14, alignItems: 'center' },
   reviewBtnText: { color: 'white', fontFamily: font.round, fontSize: 14 },
-  finishBtn: { ...btn.secondary, borderRadius: 12, paddingVertical: 14 },
+  finishBtn: { ...btn.secondary, borderRadius: radius.md, paddingVertical: 14 },
   finishBtnText: { ...btn.secondaryText },
 })

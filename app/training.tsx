@@ -11,7 +11,7 @@ import { visibleCards } from '@/lib/factsheet'
 import type { WorkLog } from '@/lib/storage'
 import type { CardProgress, HistoryItem, QACard } from '@/lib/types'
 import { BottomTabBar } from '@/components/BottomTabBar'
-import { c, font } from '@/lib/theme'
+import { c, font, radius } from '@/lib/theme'
 import { Feather } from '@expo/vector-icons'
 
 const PRINCIPAL_IMAGE = require('../assets/tora_koutyou.webp')
@@ -45,7 +45,7 @@ function EqBars() {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 1.5, height: 8 }}>
       {bars.map((v, i) => (
-        <Animated.View key={i} style={{ width: 2, height: 8, borderRadius: 1, backgroundColor: '#34d399', transform: [{ scaleY: v }] }} />
+        <Animated.View key={i} style={{ width: 2, height: 8, borderRadius: radius.xs, backgroundColor: '#34d399', transform: [{ scaleY: v }] }} />
       ))}
     </View>
   )
@@ -391,8 +391,8 @@ export default function TrainingScreen() {
               <View style={{ flexDirection: 'row', gap: 4, marginTop: 8 }}>
                 {drillCards.map((_, i) => (
                   <View key={i} style={[
-                    { flex: 1, height: 6, borderRadius: 3, backgroundColor: drillCategories[i] === 'mada' ? '#f472b6' : drillCategories[i] === 'seen' ? '#2dd4bf' : '#cbd5e1' },
-                    i === drillIdx && { borderWidth: 1.5, borderColor: '#475569', height: 8, borderRadius: 4 },
+                    { flex: 1, height: 6, borderRadius: radius.xs, backgroundColor: drillCategories[i] === 'mada' ? '#f472b6' : drillCategories[i] === 'seen' ? '#2dd4bf' : '#cbd5e1' },
+                    i === drillIdx && { borderWidth: 1.5, borderColor: '#475569', height: 8, borderRadius: radius.xs },
                     i < drillIdx && { opacity: 0.35 },
                   ]} />
                 ))}
@@ -543,39 +543,39 @@ const styles = StyleSheet.create({
   headerQuit: { fontSize: 12, fontWeight: '700', color: c.faint },
   content: { padding: 16, gap: 14, paddingBottom: 32 },
 
-  card: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: c.border, padding: 16 },
+  card: { backgroundColor: 'white', borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, padding: 16 },
   heroRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  principalAvatarSmall: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fde68a' },
+  principalAvatarSmall: { width: 40, height: 40, borderRadius: radius.xl, borderWidth: 1, borderColor: '#fde68a' },
   // 1on1のチャット風バー（カードの器に入れず、部屋に浮かぶメッセージとして表示）
   // 校長ヒーロー＝紺の「通信パネル」（通信室・先生証と同族の儀式面。接続中の1on1通信なのでダークが許される。
   // 黒モニターほど硬くせず、紺＋金縁＋発光する緑で「いかした」側に寄せる）
   principalHero: {
-    backgroundColor: c.ink, borderRadius: 16, borderWidth: 1, borderColor: '#1b2b42',
+    backgroundColor: c.ink, borderRadius: radius.lg, borderWidth: 1, borderColor: '#1b2b42',
     paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 10,
   },
-  principalHeroAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fcd34d' },
+  principalHeroAvatar: { width: 40, height: 40, borderRadius: radius.xl, borderWidth: 1, borderColor: '#fcd34d' },
   principalHeroName: { fontSize: 12, fontWeight: '900', color: '#f1f5f9' },
   // 研修カードのヒーロー見出し（アイコン＋タイトル）
   sectionHeroRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-  sectionHeroIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: c.bgSub, alignItems: 'center', justifyContent: 'center' },
+  sectionHeroIcon: { width: 40, height: 40, borderRadius: radius.lg, backgroundColor: c.bgSub, alignItems: 'center', justifyContent: 'center' },
   callAvatarDot: {
     position: 'absolute', bottom: 0, right: 0,
-    width: 11, height: 11, borderRadius: 6,
+    width: 11, height: 11, borderRadius: radius.sm,
     backgroundColor: '#34d399', borderWidth: 2, borderColor: c.ink,
   },
   connectedPill: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     backgroundColor: 'rgba(52,211,153,0.12)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.4)',
-    borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1,
+    borderRadius: radius.full, paddingHorizontal: 6, paddingVertical: 1,
   },
   connectedText: { fontSize: 8, fontWeight: '700', color: '#6ee7b7' },
   principalLine: { fontSize: 13, color: '#cbd5e1', lineHeight: 20 },
-  principalComment: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19, backgroundColor: c.bgSub, borderRadius: 12, padding: 10 },
+  principalComment: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19, backgroundColor: c.bgSub, borderRadius: radius.md, padding: 10 },
 
   sectionTitle: { fontSize: 14, fontWeight: '900', color: c.text, marginBottom: 4 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   // 「まだ」バッジはピンク系（まだ＝研修のあなたの判断＝ピンクの語彙で統一）
-  pendingBadge: { backgroundColor: '#fce7f3', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 4 },
+  pendingBadge: { backgroundColor: '#fce7f3', borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 4 },
   pendingBadgeText: { fontSize: 10, fontWeight: '700', color: '#be185d' },
   sectionDesc: { fontSize: 12, color: c.textSub, lineHeight: 18, marginBottom: 12 },
   bold: { fontWeight: '700', color: c.textMid },
@@ -595,62 +595,62 @@ const styles = StyleSheet.create({
   matRowPending: { fontSize: 11, fontWeight: '700', color: c.primaryStrong },
   matRowChevron: { fontSize: 15, color: c.faint },
   // カード一覧の入口ボタン（行タップ=おまかせ出題と押し分けられる独立ボタン）
-  listBtn: { alignItems: 'center', gap: 2, borderWidth: 1, borderColor: c.border, backgroundColor: c.bg, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 6 },
+  listBtn: { alignItems: 'center', gap: 2, borderWidth: 1, borderColor: c.border, backgroundColor: c.bg, borderRadius: radius.md, paddingHorizontal: 9, paddingVertical: 6 },
   listBtnText: { fontSize: 8, fontWeight: '700', color: c.textSub },
   // カード一覧シート
   listOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  listSheet: { backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 18, paddingTop: 18, maxHeight: '88%' },
+  listSheet: { backgroundColor: 'white', borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, paddingHorizontal: 18, paddingTop: 18, maxHeight: '88%' },
   listHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   listTitle: { fontSize: 14, fontFamily: font.round, color: c.textStrong },
   listCounts: { fontSize: 11, fontWeight: '700', color: c.textSub, marginTop: 2 },
   listClose: { fontSize: 18, color: c.textSub, fontWeight: '700', paddingHorizontal: 4 },
   listSecLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, color: c.textSub, marginBottom: 6 },
-  listCovBar: { height: 4, borderRadius: 999, backgroundColor: c.bgSub, overflow: 'hidden', marginTop: 6, maxWidth: 220 },
-  listCovFill: { height: '100%', borderRadius: 999, backgroundColor: '#2dd4bf' },
+  listCovBar: { height: 4, borderRadius: radius.full, backgroundColor: c.bgSub, overflow: 'hidden', marginTop: 6, maxWidth: 220 },
+  listCovFill: { height: '100%', borderRadius: radius.full, backgroundColor: '#2dd4bf' },
   listFooter: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: 10, paddingBottom: 18 },
   // 紙のカード（研修フラッシュカードと同族の紙色）
-  listCard: { width: '48%', minHeight: 88, borderRadius: 12, borderWidth: 1, borderColor: '#fde68a', backgroundColor: '#fffbeb', padding: 10, paddingTop: 14, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  listCard: { width: '48%', minHeight: 88, borderRadius: radius.md, borderWidth: 1, borderColor: '#fde68a', backgroundColor: '#fffbeb', padding: 10, paddingTop: 14, alignItems: 'center', justifyContent: 'center', gap: 6 },
   listCardFlip: { backgroundColor: 'white', borderColor: c.pinkMuted },
   listCardQ: { fontSize: 11, color: c.textMid, lineHeight: 16, textAlign: 'center' },
   listCardA: { fontSize: 11, fontWeight: '700', color: c.textStrong, lineHeight: 16, textAlign: 'center' },
-  listPill: { position: 'absolute', top: -7, right: 8, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
+  listPill: { position: 'absolute', top: -7, right: 8, borderRadius: radius.full, paddingHorizontal: 6, paddingVertical: 1 },
   listPillMada: { backgroundColor: '#fce7f3' },
   listPillSeen: { backgroundColor: '#ecfdf5' },
   listPillNone: { backgroundColor: c.bgSub },
   listPillText: { fontSize: 9, fontWeight: '700' },
-  listActionBtn: { borderWidth: 1, borderColor: c.pinkMuted, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 3, backgroundColor: 'white' },
+  listActionBtn: { borderWidth: 1, borderColor: c.pinkMuted, borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 3, backgroundColor: 'white' },
   listActionText: { fontSize: 10, fontWeight: '700', color: c.primaryStrong },
   // 終了サマリの一覧導線
-  listGhostBtn: { borderWidth: 1, borderColor: c.pinkBorder, backgroundColor: 'white', borderRadius: 12, paddingVertical: 11, alignItems: 'center' },
+  listGhostBtn: { borderWidth: 1, borderColor: c.pinkBorder, backgroundColor: 'white', borderRadius: radius.md, paddingVertical: 11, alignItems: 'center' },
   listGhostBtnText: { fontSize: 13, fontWeight: '700', color: c.primaryStrong },
 
   // 研修中の教材表示（フルタイトル）
   drillMaterialTitle: { fontSize: 12, fontWeight: '700', color: c.textMid },
 
-  primaryBtn: { backgroundColor: c.primaryStrong, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
+  primaryBtn: { backgroundColor: c.primaryStrong, borderRadius: radius.md, paddingVertical: 12, alignItems: 'center' },
   primaryBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-  secondaryBtn: { flex: 1, borderWidth: 1, borderColor: c.borderStrong, borderRadius: 12, paddingVertical: 12, alignItems: 'center', backgroundColor: '#fff' },
+  secondaryBtn: { flex: 1, borderWidth: 1, borderColor: c.borderStrong, borderRadius: radius.md, paddingVertical: 12, alignItems: 'center', backgroundColor: '#fff' },
   secondaryBtnText: { fontSize: 13, fontWeight: '700', color: c.textMid },
 
   drillProgress: { fontSize: 11, fontWeight: '700', color: c.faint },
-  drillCard: { backgroundColor: c.paper, borderRadius: 16, borderWidth: 1, borderColor: c.paperBorder, padding: 20, minHeight: 160, justifyContent: 'center' },
+  drillCard: { backgroundColor: c.paper, borderRadius: radius.lg, borderWidth: 1, borderColor: c.paperBorder, padding: 20, minHeight: 160, justifyContent: 'center' },
   drillLabelQ: { fontSize: 10, fontWeight: '700', color: '#b45309', letterSpacing: 2, marginBottom: 6 },
   drillLabelA: { fontSize: 10, fontWeight: '700', color: '#059669', letterSpacing: 2, marginTop: 14, marginBottom: 6 },
   drillQuestion: { fontSize: 16, fontWeight: '700', color: c.text, lineHeight: 24 },
   drillAnswer: { fontSize: 14, color: c.textMid, lineHeight: 21 },
-  revealBtn: { backgroundColor: c.text, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  markBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  revealBtn: { backgroundColor: c.text, borderRadius: radius.md, paddingVertical: 14, alignItems: 'center' },
+  markBtn: { flex: 1, borderRadius: radius.md, paddingVertical: 14, alignItems: 'center' },
   markBtnRow: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
 
   doneTitle: { fontSize: 20, fontWeight: '900', color: c.text, marginBottom: 4 },
   doneScore: { fontSize: 13, color: c.textMid, marginBottom: 14 },
   doneCoverage: { fontSize: 11, color: c.textSub, marginTop: -8, marginBottom: 14 },
   barLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  barLegendDot: { width: 6, height: 6, borderRadius: 3 },
+  barLegendDot: { width: 6, height: 6, borderRadius: radius.xs },
   barLegendText: { fontSize: 9, fontWeight: '700', color: c.textSub },
 
   zoomOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
-  zoomCircle: { width: 220, height: 220, borderRadius: 110, overflow: 'hidden', borderWidth: 4, borderColor: '#fcd34d', backgroundColor: '#fff' },
+  zoomCircle: { width: 220, height: 220, borderRadius: radius.full, overflow: 'hidden', borderWidth: 4, borderColor: '#fcd34d', backgroundColor: '#fff' },
   // 新しい校長画像は正方形なので、旧構図用の縦長クロップ（歪む）をやめて全体をcover表示にする
   zoomImage: { width: '100%', height: '100%' },
 

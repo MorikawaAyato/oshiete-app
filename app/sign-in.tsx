@@ -2,7 +2,7 @@ import { useSignIn, useSignUp } from '@clerk/clerk-expo'
 import { useState } from 'react'
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native'
 import { SafeAreaView } from 'react-native'
-import { c, font } from '@/lib/theme'
+import { c, font, radius } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 
 // メール＋確認コード方式のログイン（パスワードなし）。
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: c.link, marginBottom: 48 },
   card: {
     backgroundColor: 'white',
-    borderRadius: 20,
+    borderRadius: radius.xl,
     padding: 28,
     width: '100%',
     shadowColor: '#000',
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderWidth: 1,
     borderColor: c.border,
-    borderRadius: 12,
+    borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: c.primaryStrong,
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: radius.md,
     width: '100%',
     alignItems: 'center',
   },

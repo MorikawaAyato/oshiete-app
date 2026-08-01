@@ -27,7 +27,7 @@ import {
 } from '@/lib/storage'
 import type { ExamEntry, ExamSuccessRecord, MailMessage, WorkLog } from '@/lib/storage'
 import type { HistoryItem, UnitProgress, UnitStatus } from '@/lib/types'
-import { btn, c, font } from '@/lib/theme'
+import { btn, c, font, radius } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 import StampText from '@/components/StampText'
 
@@ -679,7 +679,7 @@ export default function HomeScreen() {
             <Text style={styles.appSubtitle}>オシエテ先生</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
               <TouchableOpacity onPress={() => setShowTeacherAvatar(true)} activeOpacity={0.75}>
-                <View style={{ width: 36, height: 36, borderRadius: 18, overflow: 'hidden', backgroundColor: 'white' }}>
+                <View style={{ width: 36, height: 36, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: 'white' }}>
                   <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: 36, height: 36, transform: [{ translateY: avatarNudgeY(teacherProfile.avatarId, 36) }] }} />
                 </View>
               </TouchableOpacity>
@@ -1222,7 +1222,7 @@ export default function HomeScreen() {
           <Modal visible={showStudentAvatar} transparent animationType="fade" onRequestClose={() => setShowStudentAvatar(false)}>
             <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowStudentAvatar(false)}>
               {/* サモエドは白いので、先生と同じ白背景だと沈む。生徒ごとのキャラ色の淡ティントを敷いて映えさせる */}
-              <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white', backgroundColor: selectedStudent?.tint ?? c.bgSub }}>
+              <View style={{ width: 208, height: 208, borderRadius: radius.full, overflow: 'hidden', borderWidth: 4, borderColor: 'white', backgroundColor: selectedStudent?.tint ?? c.bgSub }}>
                 {selectedStudent && <Image source={selectedStudent.avatar} style={{ width: '100%', height: '100%' }} />}
               </View>
             </Pressable>
@@ -1233,7 +1233,7 @@ export default function HomeScreen() {
       {/* アバター拡大表示 */}
       <Modal visible={showTeacherAvatar} transparent animationType="fade" onRequestClose={() => setShowTeacherAvatar(false)}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowTeacherAvatar(false)}>
-          <View style={{ width: 208, height: 208, borderRadius: 104, overflow: 'hidden', borderWidth: 4, borderColor: 'white', backgroundColor: 'white' }}>
+          <View style={{ width: 208, height: 208, borderRadius: radius.full, overflow: 'hidden', borderWidth: 4, borderColor: 'white', backgroundColor: 'white' }}>
             <Image source={getTeacherAvatarImage(teacherProfile.avatarId)} style={{ width: '100%', height: '100%', transform: [{ translateY: avatarNudgeY(teacherProfile.avatarId, 208) }] }} />
           </View>
         </Pressable>
@@ -1626,14 +1626,14 @@ const styles = StyleSheet.create({
   headerIcons: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
   mailIconBtn: { alignItems: 'center', gap: 2, position: 'relative' },
   mailIconCircle: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 40, height: 40, borderRadius: radius.xl,
     backgroundColor: 'white', borderWidth: 1, borderColor: c.borderStrong,
     alignItems: 'center', justifyContent: 'center',
   },
   mailIconEmoji: { fontSize: 20 },
   mailBadge: {
     position: 'absolute', top: -4, right: -4,
-    backgroundColor: c.danger, borderRadius: 8,
+    backgroundColor: c.danger, borderRadius: radius.sm,
     minWidth: 16, height: 16,
     alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 3,
@@ -1641,7 +1641,7 @@ const styles = StyleSheet.create({
   mailBadgeText: { color: 'white', fontSize: 9, fontWeight: '900' },
   teacherIconBtn: { alignItems: 'center', gap: 2 },
   teacherIconCircle: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 40, height: 40, borderRadius: radius.xl,
     backgroundColor: 'white', borderWidth: 1, borderColor: c.borderStrong,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -1651,25 +1651,25 @@ const styles = StyleSheet.create({
   todaySection: { gap: 10 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { fontSize: 13, fontFamily: font.round, color: c.skyStrong, letterSpacing: 0.8 },
-  sectionClearPill: { borderWidth: 1, borderColor: c.pinkBorder, backgroundColor: 'white', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  sectionClearPill: { borderWidth: 1, borderColor: c.pinkBorder, backgroundColor: 'white', borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 5 },
   sectionClear: { fontSize: 11, color: c.primaryStrong, fontWeight: '700' },
 
   // 状態1：アップロード
   // 教材を作るカード（アップロードUIの器。選択後の授業カードと同じ文法）
-  createCard: { backgroundColor: 'white', borderRadius: 20, borderWidth: 1, borderColor: c.border, padding: 12, gap: 10 },
-  inputModeTabs: { flexDirection: 'row', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: c.border },
+  createCard: { backgroundColor: 'white', borderRadius: radius.xl, borderWidth: 1, borderColor: c.border, padding: 12, gap: 10 },
+  inputModeTabs: { flexDirection: 'row', borderRadius: radius.md, overflow: 'hidden', borderWidth: 1, borderColor: c.border },
   inputModeTab: { flex: 1, paddingVertical: 8, alignItems: 'center', backgroundColor: 'white' },
   inputModeTabActive: { backgroundColor: c.primaryStrong },
   inputModeTabInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   inputModeTabText: { fontSize: 13, fontWeight: '600', color: c.textSub },
   inputModeTabTextActive: { color: 'white' },
-  textInputCard: { backgroundColor: 'white', borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: c.skySoft, padding: 16, gap: 10 },
+  textInputCard: { backgroundColor: 'white', borderRadius: radius.xl, borderWidth: 2, borderStyle: 'dashed', borderColor: c.skySoft, padding: 16, gap: 10 },
   textInputArea: { height: 120, fontSize: 14, color: c.text, lineHeight: 22 },
   textInputFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   textInputCount: { fontSize: 11, color: c.textSub, textAlign: 'right' },
   uploadCard: {
     backgroundColor: 'white',
-    borderRadius: 20,
+    borderRadius: radius.xl,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderColor: c.skySoft,
@@ -1690,27 +1690,27 @@ const styles = StyleSheet.create({
   // 初回ヒーロー（教材0件のときだけ。生徒の顔は生徒カード側が担う）
   heroCard: { alignItems: 'center', paddingTop: 4, marginBottom: 12 },
   heroTitle: { fontSize: 22, fontFamily: 'Yomogi_400Regular', fontWeight: 'bold', color: c.textStrong },
-  keepsakePhoto: { alignSelf: 'flex-start', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 6, padding: 8, paddingBottom: 14, transform: [{ rotate: '-2deg' }] },
-  keepsakePhotoImg: { width: 96, height: 96, borderRadius: 3 },
+  keepsakePhoto: { alignSelf: 'flex-start', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: radius.sm, padding: 8, paddingBottom: 14, transform: [{ rotate: '-2deg' }] },
+  keepsakePhotoImg: { width: 96, height: 96, borderRadius: radius.xs },
   keepsakePhotoCaption: { marginTop: 6, textAlign: 'center', fontSize: 10, color: c.textSub, fontFamily: 'Yomogi_400Regular' },
-  keepsakePaper: { backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperBorder, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },
+  keepsakePaper: { backgroundColor: c.paper, borderWidth: 1, borderColor: c.paperBorder, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10 },
   keepsakePaperTitle: { fontSize: 10, fontWeight: '700', color: c.paperText, marginBottom: 6 },
   keepsakeRow: { flexDirection: 'row', gap: 8, paddingVertical: 3, alignItems: 'flex-start' },
   keepsakeMark: { fontSize: 14, fontWeight: '700', color: c.redpen },
   keepsakeQ: { fontSize: 11, color: c.textSub },
   keepsakeA: { fontSize: 14, color: c.textStrong, fontFamily: 'Yomogi_400Regular' },
-  heroOfflinePill: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'center', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 8 },
-  heroOfflineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.borderStrong },
+  heroOfflinePill: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'center', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: radius.full, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 8 },
+  heroOfflineDot: { width: 8, height: 8, borderRadius: radius.xs, backgroundColor: c.borderStrong },
   heroOfflineText: { fontSize: 12, fontWeight: '700', color: c.textSub },
-  heroBubble: { alignSelf: 'center', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 18, paddingHorizontal: 18, paddingVertical: 8, transform: [{ rotate: '-2deg' }], marginBottom: 10 },
+  heroBubble: { alignSelf: 'center', backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: radius.xl, paddingHorizontal: 18, paddingVertical: 8, transform: [{ rotate: '-2deg' }], marginBottom: 10 },
   heroBubbleTail: { position: 'absolute', bottom: -6, left: '50%', marginLeft: -6, width: 12, height: 12, backgroundColor: 'white', borderRightWidth: 1, borderBottomWidth: 1, borderColor: c.border, transform: [{ rotate: '45deg' }] },
   heroSub: { fontSize: 12, color: c.textSub, marginTop: 6, textAlign: 'center', lineHeight: 18 },
 
   // 組み立て台の生徒カード（生徒＋教材＝授業）
-  studentBand: { backgroundColor: 'white', borderRadius: 20, borderWidth: 1, borderColor: c.border, padding: 12 },
-  bandAvatarWrap: { borderRadius: 999, padding: 2, borderWidth: 2, borderColor: 'transparent' },
+  studentBand: { backgroundColor: 'white', borderRadius: radius.xl, borderWidth: 1, borderColor: c.border, padding: 12 },
+  bandAvatarWrap: { borderRadius: radius.full, padding: 2, borderWidth: 2, borderColor: 'transparent' },
   bandAvatarSel: { borderColor: c.primary },
-  bandAvatar: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, borderColor: c.border },
+  bandAvatar: { width: 52, height: 52, borderRadius: radius.xxl, borderWidth: 1, borderColor: c.border },
   bandName: { fontSize: 12, fontFamily: font.round, color: c.textStrong },
   plusGlyph: { textAlign: 'center', fontSize: 16, fontWeight: '700', color: c.faint, marginVertical: -2 },
 
@@ -1718,14 +1718,14 @@ const styles = StyleSheet.create({
   pendingCard: { gap: 12 },
   thumbRowWrap: { flexDirection: 'row', alignItems: 'center' },
   thumbRow: { flex: 1 },
-  thumb: { width: 72, height: 72, borderRadius: 12, marginRight: 8 },
+  thumb: { width: 72, height: 72, borderRadius: radius.md, marginRight: 8 },
   thumbCounter: { paddingLeft: 10, fontSize: 15, fontWeight: '700', color: c.textSub },
-  analyzeBtn: { ...btn.primary, borderRadius: 14, paddingVertical: 16 },
+  analyzeBtn: { ...btn.primary, borderRadius: radius.lg, paddingVertical: 16 },
   analyzeBtnLoading: { backgroundColor: c.pinkMuted },
   analyzeBtnText: { ...btn.primaryText, fontSize: 16 },
   photoActions: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderColor: c.pinkBorder, borderRadius: 14, overflow: 'hidden',
+    borderWidth: 1, borderColor: c.pinkBorder, borderRadius: radius.lg, overflow: 'hidden',
   },
   photoActionBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, backgroundColor: c.pinkTint },
   photoActionText: { fontSize: 14, color: c.primary, fontWeight: '600' },
@@ -1734,7 +1734,7 @@ const styles = StyleSheet.create({
   // 状態3：分割カード
   lessonCard: {
     backgroundColor: 'white',
-    borderRadius: 20,
+    borderRadius: radius.xl,
     overflow: 'hidden',
     shadowColor: c.link,
     shadowOffset: { width: 0, height: 4 },
@@ -1752,12 +1752,12 @@ const styles = StyleSheet.create({
   lessonLengthLabel: { fontSize: 11, fontWeight: '600', color: c.textSub },
   lessonLengthValue: { fontSize: 12, fontWeight: '700', color: c.textStrong },
   lessonMaterial: { flex: 1, padding: 14, gap: 8 },
-  lessonThumb: { width: '100%', aspectRatio: 1.7, borderRadius: 12 },
+  lessonThumb: { width: '100%', aspectRatio: 1.7, borderRadius: radius.md },
   lessonThumbText: { backgroundColor: c.pinkSoft, alignItems: 'center', justifyContent: 'center' },
   lessonMaterialTitle: { fontSize: 13, fontWeight: '700', color: c.textStrong, lineHeight: 18 },
   lessonThumbOpenBadge: {
     position: 'absolute', bottom: 5, right: 5,
-    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: radius.full,
     paddingHorizontal: 7, paddingVertical: 2, minWidth: 34, alignItems: 'center',
   },
   lessonThumbOpenText: { fontSize: 9, fontWeight: '700', color: 'white' },
@@ -1767,10 +1767,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     gap: 8, backgroundColor: c.pinkTint,
   },
-  lessonStudentAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 1 },
+  lessonStudentAvatar: { width: 64, height: 64, borderRadius: radius.xxl, borderWidth: 1 },
   lessonStudentName: { fontSize: 12, fontFamily: font.round, color: c.textStrong },
   lessonStudentEmpty: {
-    width: 64, height: 64, borderRadius: 32,
+    width: 64, height: 64, borderRadius: radius.xxl,
     backgroundColor: c.pinkSoft, alignItems: 'center', justifyContent: 'center',
   },
   lessonStudentPickText: { fontSize: 13, fontWeight: '700', color: c.primary, textAlign: 'center' },
@@ -1782,13 +1782,13 @@ const styles = StyleSheet.create({
   unitMapEyebrow: { fontSize: 10, fontWeight: '700', letterSpacing: 2, color: c.faint },
   unitMapCount: { fontSize: 10, fontWeight: '700', color: c.faint },
   unitNode: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 32, height: 32, borderRadius: radius.lg,
     borderWidth: 1, borderColor: c.border, backgroundColor: 'white',
     alignItems: 'center', justifyContent: 'center',
   },
   unitSectionLine: { fontSize: 11, color: c.textSub, marginTop: 2 },
   unitNodeGhost: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 32, height: 32, borderRadius: radius.lg,
     borderWidth: 1, borderColor: c.borderStrong, borderStyle: 'dashed', backgroundColor: c.bgSub,
   },
   unitNodeDone: { borderColor: '#a7f3d0', backgroundColor: '#ecfdf5' },
@@ -1803,7 +1803,7 @@ const styles = StyleSheet.create({
   // 授業スタートボタン
   startBtn: {
     backgroundColor: c.primaryStrong,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     paddingVertical: 18,
     alignItems: 'center',
     marginTop: 10,
@@ -1824,7 +1824,7 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 32, alignSelf: 'center',
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
     paddingHorizontal: 20, paddingVertical: 12,
-    borderRadius: 24,
+    borderRadius: radius.xxl,
   },
   toastText: { color: 'white', fontSize: 14, fontWeight: '600' },
 
@@ -1833,11 +1833,11 @@ const styles = StyleSheet.create({
   quickRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   jobCard: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: 16,
+    backgroundColor: 'white', borderWidth: 1, borderColor: c.border, borderRadius: radius.lg,
     paddingHorizontal: 11, paddingVertical: 12,
   },
   jobTitle: { flex: 1, fontSize: 12, fontWeight: '800', color: c.textStrong },
-  jobBadge: { borderRadius: 999, paddingHorizontal: 7, paddingVertical: 1 },
+  jobBadge: { borderRadius: radius.full, paddingHorizontal: 7, paddingVertical: 1 },
   jobBadgeText: { fontSize: 10, fontWeight: '700' },
   recentSection: {
     marginHorizontal: -20,
@@ -1850,13 +1850,13 @@ const styles = StyleSheet.create({
   },
   recentEmpty: { fontSize: 13, color: c.textSub, textAlign: 'center', paddingVertical: 16 },
   recentItem: {
-    backgroundColor: 'white', borderRadius: 14, flexDirection: 'row', alignItems: 'center', overflow: 'hidden',
+    backgroundColor: 'white', borderRadius: radius.lg, flexDirection: 'row', alignItems: 'center', overflow: 'hidden',
     shadowColor: c.faint, shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
   },
   recentItemActive: { backgroundColor: c.pinkTint, borderWidth: 1.5, borderColor: c.pinkBorder },
   recentMain: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 },
-  recentThumb: { width: 52, height: 52, borderRadius: 10, flexShrink: 0 },
+  recentThumb: { width: 52, height: 52, borderRadius: radius.md, flexShrink: 0 },
   recentInfo: { flex: 1, minWidth: 0 },
   recentTitle: { fontSize: 13, fontWeight: '600', color: c.text },
   recentDate: { fontSize: 10, color: c.textSub, marginTop: 2, fontWeight: '300' },
@@ -1870,33 +1870,33 @@ const styles = StyleSheet.create({
   studentSheetContainer: { flex: 1, justifyContent: 'flex-end' },
   studentSheetOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
   studentSheetBottom: {
-    backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: 'white', borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl,
     paddingHorizontal: 16, paddingBottom: 40, paddingTop: 8,
   },
   studentSheetHandle: {
     width: 36, height: 4, backgroundColor: c.border,
-    borderRadius: 2, alignSelf: 'center', marginBottom: 16,
+    borderRadius: radius.xs, alignSelf: 'center', marginBottom: 16,
   },
   profileRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: c.bgSub, marginBottom: 12,
   },
-  profileAvatar: { width: 56, height: 56, borderRadius: 28 },
+  profileAvatar: { width: 56, height: 56, borderRadius: radius.xxl },
   profileName: { fontSize: 16, fontFamily: font.round, color: c.textStrong },
   profileTagline: { fontSize: 12, color: c.textSub, marginTop: 3 },
   // この生徒との記録（前回の授業・宿題状態）
-  profileRecord: { backgroundColor: c.bg, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, gap: 6, marginTop: 12 },
+  profileRecord: { backgroundColor: c.bg, borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 10, gap: 6, marginTop: 12 },
   profileRecordRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   profileRecordLabel: { fontSize: 11, fontWeight: '700', color: c.faint, flexShrink: 0 },
   profileRecordValue: { fontSize: 12, color: c.textMid, flex: 1 },
   sheetChangeBtn: {
-    backgroundColor: c.bgSub, borderRadius: 14,
+    backgroundColor: c.bgSub, borderRadius: radius.lg,
     paddingVertical: 14, alignItems: 'center', marginBottom: 8,
   },
   sheetChangeBtnText: { fontSize: 14, fontFamily: font.round, color: c.textMid },
   sheetCloseBtn: {
-    backgroundColor: c.bg, borderRadius: 14,
+    backgroundColor: c.bg, borderRadius: radius.lg,
     paddingVertical: 14, alignItems: 'center',
   },
   sheetCloseBtnText: { fontSize: 14, fontWeight: '500', color: c.textSub },
@@ -1907,10 +1907,10 @@ const styles = StyleSheet.create({
   },
   pickerItem: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 4, paddingVertical: 12, borderRadius: 14,
+    paddingHorizontal: 4, paddingVertical: 12, borderRadius: radius.lg,
   },
   pickerItemSel: { backgroundColor: c.pinkTint },
-  pickerItemAvatar: { width: 48, height: 48, borderRadius: 24 },
+  pickerItemAvatar: { width: 48, height: 48, borderRadius: radius.xxl },
   pickerItemInfo: { flex: 1, minWidth: 0 },
   pickerItemName: { fontSize: 14, fontFamily: font.round, color: c.textStrong },
   pickerItemNameSel: { color: c.primary },
@@ -1930,7 +1930,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: c.bg,
   },
   inboxAvatar: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 40, height: 40, borderRadius: radius.xl,
     backgroundColor: c.skyBg, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
     flexShrink: 0, marginTop: 2,
   },
@@ -1938,44 +1938,44 @@ const styles = StyleSheet.create({
   inboxBody: { flex: 1 },
   inboxMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   inboxFrom: { fontSize: 12, fontWeight: '700', color: c.text },
-  inboxUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: c.danger },
+  inboxUnreadDot: { width: 7, height: 7, borderRadius: radius.xs, backgroundColor: c.danger },
   inboxDate: { fontSize: 10, color: c.textSub, marginLeft: 'auto' },
   inboxSubject: { fontSize: 12, fontWeight: '600', color: c.text, marginTop: 1 },
   inboxContent: { fontSize: 13, color: c.textMid, lineHeight: 19, marginTop: 6 },
-  inboxOpenBtn: { alignSelf: 'flex-start', backgroundColor: c.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, marginTop: 10 },
+  inboxOpenBtn: { alignSelf: 'flex-start', backgroundColor: c.primary, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 8, marginTop: 10 },
   inboxOpenBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   inboxOpenBtnRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
 
   // 昇進試験
   titleChipLocked: { backgroundColor: c.bg },
   titleChipTextLocked: { color: c.borderStrong },
-  examBtn: { backgroundColor: '#f59e0b', borderRadius: 12, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
+  examBtn: { backgroundColor: '#f59e0b', borderRadius: radius.md, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
   examBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   examHint: { fontSize: 10, color: c.textSub, marginTop: 10 },
-  examSpeech: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: c.bgSub, borderRadius: 14, padding: 12, marginBottom: 14 },
+  examSpeech: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: c.bgSub, borderRadius: radius.lg, padding: 12, marginBottom: 14 },
   examSpeechText: { flex: 1, fontSize: 13, color: c.textMid, lineHeight: 19 },
   examProgress: { fontSize: 11, fontWeight: '700', color: c.faint, marginBottom: 4 },
   examQuestion: { fontSize: 14, fontWeight: '700', color: c.text, lineHeight: 21, marginBottom: 10 },
-  examInput: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: 12, padding: 12, fontSize: 14, color: c.text, minHeight: 80, textAlignVertical: 'top' },
-  examNavBtn: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#fff' },
+  examInput: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: radius.md, padding: 12, fontSize: 14, color: c.text, minHeight: 80, textAlignVertical: 'top' },
+  examNavBtn: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#fff' },
   examNavBtnText: { fontSize: 12, fontWeight: '700', color: c.textMid },
-  examNextBtn: { flex: 1, backgroundColor: '#d97706', borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
+  examNextBtn: { flex: 1, backgroundColor: '#d97706', borderRadius: radius.md, paddingVertical: 10, alignItems: 'center' },
   examNextBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   examErrorText: { fontSize: 11, color: c.dangerText, marginTop: 8 },
   examMsgText: { fontSize: 13, fontWeight: '700', color: c.textMid },
   examVerdict: { fontSize: 22, fontWeight: '900', color: c.text, textAlign: 'center', marginBottom: 4 },
   examScore: { fontSize: 13, color: c.textMid, textAlign: 'center', marginBottom: 14, lineHeight: 19 },
-  examResultCard: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 10 },
+  examResultCard: { borderWidth: 1, borderColor: c.border, borderRadius: radius.md, padding: 12, marginBottom: 10 },
   examResultQ: { fontSize: 12, fontWeight: '700', color: c.text, marginBottom: 4, lineHeight: 18 },
   examResultA: { fontSize: 12, color: c.textSub, lineHeight: 18 },
   examResultModel: { fontSize: 12, color: c.dangerText, marginTop: 3, lineHeight: 18 },
   examResultComment: { fontSize: 12, color: '#b45309', marginTop: 3, lineHeight: 18 },
-  examCloseBtn: { backgroundColor: c.text, borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 12 },
+  examCloseBtn: { backgroundColor: c.text, borderRadius: radius.md, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 12 },
   examCloseBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   // 宿題
-  hwBadge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, marginHorizontal: 16, marginTop: 12 },
-  hwBadgeIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'white', borderWidth: 1, borderColor: '#fde68a', alignItems: 'center', justifyContent: 'center' },
+  hwBadge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 12, marginHorizontal: 16, marginTop: 12 },
+  hwBadgeIconWrap: { width: 44, height: 44, borderRadius: radius.xl, backgroundColor: 'white', borderWidth: 1, borderColor: '#fde68a', alignItems: 'center', justifyContent: 'center' },
   hwBadgeIcon: { width: 26, height: 26 },
   hwBadgeTitle: { fontSize: 12, fontWeight: '700', color: '#92400e' },
   hwBadgeSub: { fontSize: 11, color: '#b45309', marginTop: 1 },
@@ -1985,14 +1985,14 @@ const styles = StyleSheet.create({
   hwBadgeTitleMuted: { fontSize: 12, fontWeight: '700', color: c.textMid },
   hwBadgeSubMuted: { fontSize: 11, color: c.textSub, marginTop: 1 },
   hwHint: { fontSize: 12, color: c.textSub, marginBottom: 10, lineHeight: 18 },
-  hwCandidate: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 8, backgroundColor: '#fff' },
+  hwCandidate: { borderWidth: 1, borderColor: c.border, borderRadius: radius.md, padding: 12, marginBottom: 8, backgroundColor: '#fff' },
   hwCandidateSel: { borderColor: '#fbbf24', backgroundColor: '#fffbeb' },
   hwCandidateText: { fontSize: 13, color: c.textMid, lineHeight: 19 },
   hwCandidateTextSel: { color: '#92400e', fontWeight: '600' },
-  hwAssignBtn: { backgroundColor: '#f59e0b', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 12 },
+  hwAssignBtn: { backgroundColor: '#f59e0b', borderRadius: radius.md, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 12 },
   hwAssignBtnDisabled: { backgroundColor: c.bgSub },
   hwAssignBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-  hwAnswerCard: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 12, marginBottom: 10 },
+  hwAnswerCard: { borderWidth: 1, borderColor: c.border, borderRadius: radius.md, padding: 12, marginBottom: 10 },
   hwAnswerQ: { fontSize: 12, fontWeight: '700', color: c.textMid, marginBottom: 4, lineHeight: 18 },
   hwAnswerText: { fontSize: 13, color: c.text, lineHeight: 19, fontWeight: '600' },
   hwPenMark: { color: c.textSub, fontWeight: '400' },
@@ -2001,15 +2001,15 @@ const styles = StyleSheet.create({
   hwModelWord: { fontWeight: '700', color: c.redpen },
   hwMarkO: { fontWeight: '700', color: '#10b981' },
   hwMarkX: { fontWeight: '700', color: '#f43f5e' },
-  hwMarkBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  hwMarkBtn: { width: 34, height: 34, borderRadius: radius.lg, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   hwMarkBtnCorrect: { backgroundColor: '#10b981', borderColor: '#10b981' },
   hwMarkBtnWrong: { backgroundColor: '#f43f5e', borderColor: '#f43f5e' },
   hwMarkBtnText: { fontSize: 16, fontWeight: '700', color: c.borderStrong },
   hwMarkBtnTextSel: { color: '#fff' },
   hwResultText: { fontSize: 11, color: c.textSub, lineHeight: 17 },
   hwThanksRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginTop: 6, marginBottom: 4 },
-  hwThanksAvatar: { width: 32, height: 32, borderRadius: 16 },
-  hwThanksText: { flex: 1, fontSize: 12, color: c.textMid, lineHeight: 18, backgroundColor: c.bgSub, borderRadius: 12, padding: 10 },
+  hwThanksAvatar: { width: 32, height: 32, borderRadius: radius.lg },
+  hwThanksText: { flex: 1, fontSize: 12, color: c.textMid, lineHeight: 18, backgroundColor: c.bgSub, borderRadius: radius.md, padding: 10 },
 
   // 先生証シート
   tcSheetBottom: { backgroundColor: c.ink, paddingHorizontal: 0, paddingBottom: 0, paddingTop: 0, maxHeight: '92%' },
@@ -2019,12 +2019,12 @@ const styles = StyleSheet.create({
   journalTitle: { fontSize: 13, fontWeight: '900', letterSpacing: 1, color: c.text },
   journalNav: { fontSize: 16, color: c.faint, paddingHorizontal: 6 },
   journalMonth: { fontSize: 12, fontWeight: '700', color: c.textMid, fontVariant: ['tabular-nums'] },
-  journalGrid: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: c.bgSub, borderRadius: 16, borderWidth: 1, borderColor: c.border, padding: 10 },
+  journalGrid: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: c.bgSub, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, padding: 10 },
   journalWeekday: { width: '14.28%', textAlign: 'center', fontSize: 9, fontWeight: '700', color: c.faint, marginBottom: 4 },
-  journalCell: { width: '14.28%', alignItems: 'center', paddingVertical: 3, borderRadius: 8, gap: 1 },
+  journalCell: { width: '14.28%', alignItems: 'center', paddingVertical: 3, borderRadius: radius.sm, gap: 1 },
   journalCellToday: { backgroundColor: c.pinkTint },
   journalCellSel: { backgroundColor: c.ink },
-  journalDetail: { marginTop: 12, borderRadius: 16, borderWidth: 1, borderColor: c.border, backgroundColor: c.bgSub, padding: 12, gap: 6 },
+  journalDetail: { marginTop: 12, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, backgroundColor: c.bgSub, padding: 12, gap: 6 },
   journalDetailDate: { fontSize: 12, fontWeight: '700', color: c.textMid, marginBottom: 2 },
   journalDetailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   journalDetailText: { flex: 1, fontSize: 11, lineHeight: 16, color: c.textSub },
@@ -2032,30 +2032,30 @@ const styles = StyleSheet.create({
   journalDay: { fontSize: 11, color: c.faint, fontVariant: ['tabular-nums'] },
   journalDayActive: { color: c.textMid, fontWeight: '700' },
   journalDots: { flexDirection: 'row', gap: 2, height: 6 },
-  journalDot: { width: 6, height: 6, borderRadius: 3 },
+  journalDot: { width: 6, height: 6, borderRadius: radius.xs },
   journalLegend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 12 },
   journalLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   journalLegendText: { fontSize: 10, fontWeight: '600', color: c.textSub },
   tcCardContainer: {
     width: 240, height: 353, alignSelf: 'center', marginVertical: 24,
-    overflow: 'hidden', borderRadius: 22,
+    overflow: 'hidden', borderRadius: radius.xl,
   },
   tcCard: {
     flex: 1,
-    borderRadius: 22, backgroundColor: c.skyStrong,
+    borderRadius: radius.xl, backgroundColor: c.skyStrong,
     overflow: 'hidden', padding: 20, justifyContent: 'space-between',
     shadowColor: '#000', shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.5, shadowRadius: 28, elevation: 18,
   },
   tcCardBack: { backgroundColor: 'white', padding: 0 },
-  tcDeco: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.05)' },
+  tcDeco: { position: 'absolute', borderRadius: radius.full, backgroundColor: 'rgba(255,255,255,0.05)' },
   tcHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   tcAppLabel: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 3.5 },
   tcCardLabel: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.85)', letterSpacing: 3, marginTop: 2 },
   tcStar: { fontSize: 14, color: 'rgba(255,255,255,0.18)' },
   tcAvatarWrap: { alignItems: 'center' },
   tcAvatarCircle: {
-    width: 88, height: 88, borderRadius: 44,
+    width: 88, height: 88, borderRadius: radius.full,
     backgroundColor: 'white', overflow: 'hidden',
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.65)',
     alignItems: 'center', justifyContent: 'center',
@@ -2066,7 +2066,7 @@ const styles = StyleSheet.create({
   tcNameSuffix: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.7)' },
   tcNameEmpty: { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.35)' },
   tcTitleBadge: {
-    paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 4, borderRadius: radius.xl,
     backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
   },
   tcTitleText: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5 },
@@ -2079,9 +2079,9 @@ const styles = StyleSheet.create({
   examLogEmpty: { fontSize: 12, color: c.textSub, textAlign: 'center', lineHeight: 20, paddingVertical: 40 },
   examLogRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
   examLogRowBorder: { borderTopWidth: 1, borderTopColor: c.bgSub },
-  examLogDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fcd34d' },
+  examLogDot: { width: 8, height: 8, borderRadius: radius.xs, backgroundColor: '#fcd34d' },
   examLogDate: { width: 78, fontSize: 11, fontWeight: '700', color: c.textSub, fontVariant: ['tabular-nums'] },
-  examLogAvatar: { width: 26, height: 26, borderRadius: 13, borderWidth: 1, borderColor: c.border },
+  examLogAvatar: { width: 26, height: 26, borderRadius: radius.md, borderWidth: 1, borderColor: c.border },
   examLogText: { flex: 1, fontSize: 13, fontWeight: '600', color: c.textMid },
   tcBackHeader: {
     paddingHorizontal: 14, paddingVertical: 10,
@@ -2092,20 +2092,20 @@ const styles = StyleSheet.create({
   teacherSectionLabel: { fontSize: 10, fontWeight: '700', color: c.textSub, letterSpacing: 1, marginBottom: 8 },
   teacherNameInput: {
     paddingHorizontal: 14, paddingVertical: 11,
-    borderRadius: 12, borderWidth: 1, borderColor: c.border,
+    borderRadius: radius.md, borderWidth: 1, borderColor: c.border,
     fontSize: 14, fontWeight: '500', color: c.textStrong, backgroundColor: c.bgSub,
   },
   avatarGrid: { flexDirection: 'row', gap: 6 },
   avatarCell: {
-    flex: 1, borderRadius: 12, paddingVertical: 6,
+    flex: 1, borderRadius: radius.md, paddingVertical: 6,
     backgroundColor: c.bg, borderWidth: 2, borderColor: 'transparent',
     alignItems: 'center', gap: 4, overflow: 'hidden',
   },
   avatarCellSel: { backgroundColor: c.skyBg, borderColor: c.sky },
-  avatarCellImage: { width: 38, height: 38, borderRadius: 19 },
+  avatarCellImage: { width: 38, height: 38, borderRadius: radius.xl },
   avatarCellLabel: { fontSize: 9, fontWeight: '700', color: c.textSub },
   titleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  titleChip: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, backgroundColor: c.bgSub },
+  titleChip: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: radius.xl, backgroundColor: c.bgSub },
   titleChipSel: { backgroundColor: c.link },
   titleChipText: { fontSize: 12, fontWeight: '600', color: c.textMid },
   titleChipTextSel: { color: 'white' },

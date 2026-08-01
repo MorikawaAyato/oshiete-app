@@ -60,6 +60,20 @@ export const c = {
 
 // 丸ゴシック（Zen Maru Gothic）。見出し・生徒名・ボタン文字だけに使い、本文はシステムフォントのまま。
 // fontFamily を指定した Text には fontWeight を併用しない（Android で標準フォントに落ちる）
+// 角丸の段階（5段＋full）。個別の数値指定を禁止し、必ずこの段に吸着させる。
+// 経緯: borderRadiusの異なる値が25種類に散らばり（11,13,17,19等の場当たり値を含む）、
+// 1〜2pxの揺れが「なんとなく素人っぽい」印象の源になっていた。web側は実質 full/12/16 の3段で規律が取れている。
+// RNは半径が要素の半分を超えると円/カプセルに丸めるので、小さい要素にxsを当てても見た目は壊れない。
+export const radius = {
+  xs: 4, // 極小（ドット・バー・写真の角）
+  sm: 8, // 小さめの部品（チップ・小ボタン）
+  md: 12, // 標準カード・入力欄
+  lg: 16, // 大きめの器
+  xl: 20, // シート・ヒーローカード
+  xxl: 28, // 全画面シートの肩
+  full: 999, // ピル・円
+} as const
+
 export const font = {
   round: 'ZenMaruGothic_700Bold',
   roundHeavy: 'ZenMaruGothic_900Black',

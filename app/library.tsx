@@ -19,7 +19,7 @@ import type { HistoryItem } from '@/lib/types'
 import { STUDENTS } from '@/lib/students'
 import { Feather } from '@expo/vector-icons'
 import { BottomTabBar } from '@/components/BottomTabBar'
-import { btn, c, font } from '@/lib/theme'
+import { btn, c, font, radius } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 
 type SheetMode = 'main' | 'detail' | 'rename' | 'group' | 'new-group' | 'delete'
@@ -648,23 +648,23 @@ const styles = StyleSheet.create({
   },
   groupEditInput: {
     flex: 1, borderWidth: 1, borderColor: c.skySoft,
-    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: radius.md, paddingHorizontal: 10, paddingVertical: 6,
     fontSize: 13, color: c.textStrong, backgroundColor: 'white',
   },
   groupSaveBtn: {
-    backgroundColor: c.link, borderRadius: 10,
+    backgroundColor: c.link, borderRadius: radius.md,
     paddingHorizontal: 12, paddingVertical: 6,
   },
   groupSaveBtnDisabled: { backgroundColor: c.skyBorder },
   groupSaveBtnText: { fontSize: 12, fontFamily: font.round, color: 'white' },
   groupDeleteConfirmText: { flex: 1, fontSize: 12, color: c.textMid },
   groupDeleteConfirmBtn: {
-    backgroundColor: c.danger, borderRadius: 10,
+    backgroundColor: c.danger, borderRadius: radius.md,
     paddingHorizontal: 12, paddingVertical: 6,
   },
   groupDeleteConfirmBtnText: { fontSize: 12, fontFamily: font.round, color: 'white' },
   groupXBtn: {
-    width: 28, height: 28, borderRadius: 14,
+    width: 28, height: 28, borderRadius: radius.lg,
     backgroundColor: c.border, alignItems: 'center', justifyContent: 'center',
   },
   groupXBtnText: { fontSize: 14, color: c.textSub, fontWeight: '600' },
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
 
   card: {
     width: CARD_W, margin: 3,
-    backgroundColor: 'white', borderRadius: 12, overflow: 'hidden',
+    backgroundColor: 'white', borderRadius: radius.md, overflow: 'hidden',
     borderWidth: 2, borderColor: 'transparent',
     shadowColor: c.faint, shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1, shadowRadius: 3, elevation: 2,
@@ -697,29 +697,29 @@ const styles = StyleSheet.create({
   cardDateFaint: { fontSize: 9, color: c.textSub, marginTop: 2 },
   cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   cardLessonRow: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 1 },
-  cardLessonAvatar: { width: 12, height: 12, borderRadius: 6 },
+  cardLessonAvatar: { width: 12, height: 12, borderRadius: radius.sm },
   cardLessonText: { fontSize: 9, color: c.textSub, flexShrink: 1 },
-  progressBadge: { marginLeft: 'auto', backgroundColor: c.bgSub, borderRadius: 999, paddingHorizontal: 5, paddingVertical: 1 },
+  progressBadge: { marginLeft: 'auto', backgroundColor: c.bgSub, borderRadius: radius.full, paddingHorizontal: 5, paddingVertical: 1 },
   progressBadgeDone: { backgroundColor: '#d1fae5' },
   progressBadgeText: { fontSize: 9, fontWeight: '700', color: c.textSub },
   progressBadgeTextDone: { color: '#059669' },
   emptySlot: {
     width: CARD_W, aspectRatio: 1, margin: 3, marginLeft: 9,
-    borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: c.border,
+    borderRadius: radius.md, borderWidth: 2, borderStyle: 'dashed', borderColor: c.border,
     alignItems: 'center', justifyContent: 'center', gap: 2,
   },
   emptySlotPlus: { fontSize: 20, color: c.faint, lineHeight: 24 },
   emptySlotText: { fontSize: 10, fontWeight: '600', color: c.textSub },
   cardMenuBtn: {
     position: 'absolute', top: 4, right: 4,
-    width: 22, height: 22, borderRadius: 11,
+    width: 22, height: 22, borderRadius: radius.md,
     backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center', justifyContent: 'center',
   },
   cardMenuDot: { color: 'white', fontSize: 12, lineHeight: 18 },
   activeBadge: {
     position: 'absolute', top: 4, left: 4,
-    backgroundColor: c.primary, borderRadius: 8,
+    backgroundColor: c.primary, borderRadius: radius.sm,
     paddingHorizontal: 5, paddingVertical: 1,
   },
   activeBadgeText: { color: 'white', fontSize: 8, fontWeight: '700' },
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
   footerInputRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   footerInput: {
     flex: 1, borderWidth: 1.5, borderColor: c.pinkMuted,
-    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8,
     fontSize: 13, color: c.textStrong, backgroundColor: 'white',
   },
   footerCreateBtn: {
@@ -748,13 +748,13 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheetWrap: { justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: 'white', borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl,
     paddingHorizontal: 16, paddingBottom: 40, paddingTop: 8,
     maxHeight: '85%',
   },
   sheetHandle: {
     width: 36, height: 4, backgroundColor: c.border,
-    borderRadius: 2, alignSelf: 'center', marginBottom: 12,
+    borderRadius: radius.xs, alignSelf: 'center', marginBottom: 12,
   },
   sheetItemTitle: {
     fontSize: 14, fontWeight: '600', color: c.textStrong,
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
   newGroupRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 4, paddingVertical: 14,
-    borderWidth: 1, borderColor: c.pinkBorder, borderRadius: 14,
+    borderWidth: 1, borderColor: c.pinkBorder, borderRadius: radius.lg,
     marginTop: 8, marginBottom: 8,
   },
   newGroupRowIcon: { fontSize: 18, color: c.primary, width: 24, textAlign: 'center', fontWeight: '700' },
@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
   detailDate: { fontSize: 11, color: c.textSub },
 
   renameInput: {
-    borderWidth: 1.5, borderColor: c.border, borderRadius: 12,
+    borderWidth: 1.5, borderColor: c.border, borderRadius: radius.md,
     paddingHorizontal: 14, paddingVertical: 12,
     fontSize: 14, color: c.textStrong,
     marginVertical: 12,
@@ -812,30 +812,30 @@ const styles = StyleSheet.create({
   },
 
   selectBtnPrimary: {
-    backgroundColor: c.primaryStrong, borderRadius: 16,
+    backgroundColor: c.primaryStrong, borderRadius: radius.lg,
     paddingVertical: 18, alignItems: 'center',
     shadowColor: c.primary, shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
   },
   selectBtnPrimaryText: { color: 'white', fontFamily: font.roundHeavy, fontSize: 18 },
   selectBtnSecondary: {
-    backgroundColor: c.skyTint, borderRadius: 14, borderWidth: 1, borderColor: c.skyBorder,
+    backgroundColor: c.skyTint, borderRadius: radius.lg, borderWidth: 1, borderColor: c.skyBorder,
     paddingVertical: 14, alignItems: 'center',
   },
   selectBtnSecondaryText: { color: c.link, fontFamily: font.round, fontSize: 14 },
 
-  primaryBtn: { ...btn.primary, borderRadius: 16, marginBottom: 8 },
+  primaryBtn: { ...btn.primary, borderRadius: radius.lg, marginBottom: 8 },
   primaryBtnDisabled: { backgroundColor: c.pinkMuted },
   primaryBtnText: { color: 'white', fontFamily: font.round, fontSize: 15 },
 
   deleteBtn: {
-    backgroundColor: c.danger, borderRadius: 16,
+    backgroundColor: c.danger, borderRadius: radius.lg,
     paddingVertical: 14, alignItems: 'center', marginBottom: 8,
   },
   deleteBtnText: { color: 'white', fontFamily: font.round, fontSize: 15 },
 
   cancelBtn: {
-    backgroundColor: c.bgSub, borderRadius: 16,
+    backgroundColor: c.bgSub, borderRadius: radius.lg,
     paddingVertical: 14, alignItems: 'center',
   },
   cancelBtnText: { color: c.textSub, fontFamily: font.round, fontSize: 14 },

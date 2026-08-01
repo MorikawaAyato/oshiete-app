@@ -9,7 +9,7 @@ import { STUDENTS } from '@/lib/students'
 import type { Section, Factsheet, FactsheetSection, QACard, HistoryItem } from '@/lib/types'
 import { loadFactsheet, loadHistory, updateHistoryFactsheet } from '@/lib/storage'
 import { applyCardCorrection, undoCardCorrection, hideCard, unhideCard, isCardHidden } from '@/lib/factsheet'
-import { c, font } from '@/lib/theme'
+import { c, font, radius } from '@/lib/theme'
 import BouncyPressable from '@/components/BouncyPressable'
 
 export default function PreviewScreen() {
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
 
   flowItem: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   flowNum: {
-    width: 28, height: 28, borderRadius: 14,
+    width: 28, height: 28, borderRadius: radius.lg,
     backgroundColor: c.pinkSoft, borderWidth: 1, borderColor: c.pinkBorder,
     justifyContent: 'center', alignItems: 'center', marginTop: 2,
   },
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
 
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   sectionNum: {
-    width: 28, height: 28, borderRadius: 14,
+    width: 28, height: 28, borderRadius: radius.lg,
     backgroundColor: c.pinkSoft, borderWidth: 1, borderColor: c.pinkBorder,
     justifyContent: 'center', alignItems: 'center',
   },
@@ -509,12 +509,12 @@ const styles = StyleSheet.create({
 
   summaryBox: {
     borderLeftWidth: 3, borderLeftColor: c.pinkMuted,
-    backgroundColor: c.pinkTint, borderRadius: 8,
+    backgroundColor: c.pinkTint, borderRadius: radius.sm,
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: 14,
   },
   summaryText: { fontSize: 13, color: c.textMid, lineHeight: 20 },
 
-  table: { borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: c.border, marginBottom: 14 },
+  table: { borderRadius: radius.md, overflow: 'hidden', borderWidth: 1, borderColor: c.border, marginBottom: 14 },
   tableHeader: { flexDirection: 'row', backgroundColor: c.bgSub },
   tableHeaderCell: { flex: 1, fontSize: 12, fontWeight: '700', color: c.textMid, padding: 8 },
   tableRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: c.bgSub },
@@ -525,14 +525,14 @@ const styles = StyleSheet.create({
   stepsBox: { marginBottom: 14, gap: 8 },
   stepItem: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   stepBullet: {
-    width: 22, height: 22, borderRadius: 11,
+    width: 22, height: 22, borderRadius: radius.md,
     backgroundColor: c.skyBorder, justifyContent: 'center', alignItems: 'center',
   },
   stepBulletText: { fontSize: 11, fontWeight: 'bold', color: c.link },
   stepItemText: { flex: 1, fontSize: 13, color: c.text, lineHeight: 19 },
 
   compItem: {
-    backgroundColor: c.bg, borderRadius: 8,
+    backgroundColor: c.bg, borderRadius: radius.sm,
     padding: 10, borderWidth: 1, borderColor: c.border,
   },
   compLabel: { fontSize: 12, fontWeight: '700', color: c.link, marginBottom: 2 },
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   detailText: { flex: 1, fontSize: 13, color: c.text, lineHeight: 21 },
 
   keywordsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
-  kwBadge: { backgroundColor: c.skyTint, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  kwBadge: { backgroundColor: c.skyTint, borderRadius: radius.xl, paddingHorizontal: 10, paddingVertical: 4 },
   kwText: { fontSize: 11, fontWeight: '600', color: c.link },
 
   // バンク描画ビュー用
@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
   bankNum: { fontSize: 12, color: c.textSub, width: 20, textAlign: 'right', marginTop: 2, fontVariant: ['tabular-nums'] },
   bankStatement: { fontSize: 13, color: c.text, lineHeight: 21 },
   bankStatementHidden: { fontSize: 14, lineHeight: 21, color: c.faint, textDecorationLine: 'line-through' },
-  cappedNote: { marginBottom: 14, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: c.paperLine, backgroundColor: c.paper, borderRadius: 14 },
+  cappedNote: { marginBottom: 14, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: c.paperLine, backgroundColor: c.paper, borderRadius: radius.lg },
   cappedNoteText: { fontSize: 13, lineHeight: 19, color: c.paperText },
   hiddenTag: { fontSize: 10, color: c.faint },
   correctedRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
@@ -563,27 +563,27 @@ const styles = StyleSheet.create({
   bankQ: { fontSize: 13, color: c.text, lineHeight: 20, fontWeight: '600' },
   bankEditBtn: { paddingHorizontal: 4, marginTop: 1 },
   bankEditBtnText: { fontSize: 14, color: c.faint },
-  editWrap: { gap: 6, borderWidth: 1, borderColor: c.pinkBorder, borderRadius: 10, padding: 10, backgroundColor: c.bg },
+  editWrap: { gap: 6, borderWidth: 1, borderColor: c.pinkBorder, borderRadius: radius.md, padding: 10, backgroundColor: c.bg },
   editNote: { fontSize: 11, lineHeight: 15, color: c.faint },
-  editInput: { borderWidth: 1, borderColor: '#fca5a5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, fontSize: 13, color: c.text, backgroundColor: 'white', minHeight: 44 },
+  editInput: { borderWidth: 1, borderColor: '#fca5a5', borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 6, fontSize: 13, color: c.text, backgroundColor: 'white', minHeight: 44 },
   editBtns: { flexDirection: 'row', gap: 8 },
-  editSave: { backgroundColor: c.redpen, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
+  editSave: { backgroundColor: c.redpen, borderRadius: radius.sm, paddingHorizontal: 14, paddingVertical: 6 },
   editSaveText: { color: 'white', fontSize: 12, fontWeight: '700' },
-  editCancel: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
+  editCancel: { borderWidth: 1, borderColor: c.borderStrong, borderRadius: radius.sm, paddingHorizontal: 14, paddingVertical: 6 },
   editCancelText: { color: c.textSub, fontSize: 12, fontWeight: '700' },
-  principalToast: { position: 'absolute', bottom: 130, alignSelf: 'center', backgroundColor: c.ink, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10 },
+  principalToast: { position: 'absolute', bottom: 130, alignSelf: 'center', backgroundColor: c.ink, borderRadius: radius.full, paddingHorizontal: 18, paddingVertical: 10 },
   principalToastText: { color: 'white', fontSize: 13, fontWeight: '600' },
 
   hiddenPillSpace: { minWidth: 56 },
 
   startClassBtn: {
     marginHorizontal: 16, marginBottom: 8, paddingVertical: 13,
-    backgroundColor: c.primaryStrong, borderRadius: 14, alignItems: 'center',
+    backgroundColor: c.primaryStrong, borderRadius: radius.lg, alignItems: 'center',
   },
   startClassBtnText: { fontSize: 15, fontFamily: font.round, color: 'white' },
   startClassBtnDisabled: {
     marginHorizontal: 16, marginBottom: 8, paddingVertical: 13,
-    backgroundColor: c.bgSub, borderRadius: 14, alignItems: 'center',
+    backgroundColor: c.bgSub, borderRadius: radius.lg, alignItems: 'center',
     borderWidth: 1, borderColor: c.border,
   },
   startClassBtnDisabledText: { fontSize: 13, color: c.textSub },
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white', borderTopWidth: 1, borderTopColor: c.border,
   },
   navBtn: {
-    flex: 1, paddingVertical: 12, borderRadius: 12,
+    flex: 1, paddingVertical: 12, borderRadius: radius.md,
     borderWidth: 1.5, borderColor: c.borderStrong, alignItems: 'center',
   },
   navBtnNext: { borderColor: c.link, backgroundColor: c.skyBg },
