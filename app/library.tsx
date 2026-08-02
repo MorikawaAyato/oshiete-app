@@ -215,10 +215,6 @@ export default function LibraryScreen() {
   const renderCard = ({ item }: { item: HistoryItem }) => {
     const isActive = currentHistoryId === item.id
     const title = item.title.replace(TITLE_RE, '')
-    // 前回の授業：この教材のrecapのうち一番新しいものの生徒と日付（オンライン授業の「配った相手」を主役に）
-    const lastLesson = Object.entries(item.recaps ?? {}).reduce<{ studentId: string; at: number } | null>(
-      (acc, [studentId, r]) => (r.savedAt > (acc?.at ?? 0) ? { studentId, at: r.savedAt } : acc), null)
-    const lastStudent = lastLesson ? STUDENTS.find((s) => s.id === lastLesson.studentId) : null
     // 授業の達成度：この教材の単元のうち完了した数（先生の判断の記録）
     const cardCount = item.factsheet?.cards?.length ?? 0
     const entry = unitProgress[item.id]
@@ -245,17 +241,17 @@ export default function LibraryScreen() {
             <Text style={styles.cardTitle} numberOfLines={2}>
               {title}
             </Text>
+            {/* メタ情報は1行に統合：テスト（生徒の顔＋日付）と進捗だけ。「前回の授業」行は廃止
+                （誰に教えたかはテストチップの顔が、状態は進捗バッジが語る。ユーザー判断） */}
             <View style={styles.cardMetaRow}>
-              {lastStudent && lastLesson ? (
-                <View style={styles.cardLessonRow}>
-                  <Image source={lastStudent.avatar} style={styles.cardLessonAvatar} />
-                  <Text style={styles.cardLessonText} numberOfLines={1}>
-                    {new Date(lastLesson.at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
+              {examEntry && !examEntry.doneAt ? (
+                <View style={styles.cardExamRow}>
+                  {examStudent && <Image source={examStudent.avatar} style={[styles.cardLessonAvatar, { backgroundColor: examStudent.tint }]} />}
+                  <Text style={[styles.cardExamText, examUrgent && { color: c.redpen }]} numberOfLines={1}>
+                    {examEntry.round > 1 ? '追試' : 'テスト'} {Number(examEntry.date.split('-')[1])}/{Number(examEntry.date.split('-')[2])}
                   </Text>
                 </View>
-              ) : (
-                <Text style={styles.cardDateFaint}>授業はこれから</Text>
-              )}
+              ) : <View style={{ flex: 1 }} />}
               {/* 授業の達成度（完了単元数）。全単元完了は緑で強調。追補中は総数を確定表示しない */}
               {units.length > 0 && (
                 <View style={[styles.progressBadge, doneUnits === units.length && !item.factsheet?.partial && styles.progressBadgeDone]}>
@@ -265,15 +261,6 @@ export default function LibraryScreen() {
                 </View>
               )}
             </View>
-            {examEntry && !examEntry.doneAt && (
-              <View style={styles.cardExamRow}>
-                {examStudent && <Image source={examStudent.avatar} style={[styles.cardLessonAvatar, { backgroundColor: examStudent.tint }]} />}
-                <Feather name="file-text" size={11} color={examUrgent ? c.redpen : c.link} />
-                <Text style={[styles.cardExamText, examUrgent && { color: c.redpen }]} numberOfLines={1}>
-                  {Number(examEntry.date.split('-')[1])}/{Number(examEntry.date.split('-')[2])}{examEntry.round > 1 ? ' 追試' : ''}
-                </Text>
-              </View>
-            )}
           </View>
         </TouchableOpacity>
         <TouchableOpacity
@@ -714,7 +701,7 @@ const styles = StyleSheet.create({
   cardDateFaint: { fontSize: 9, color: c.textSub, marginTop: 2 },
   cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   cardLessonRow: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 1 },
-  cardExamRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  cardExamRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 },
   cardExamText: { fontSize: 10, fontWeight: '700', color: c.link, flexShrink: 1 },
   cardLessonAvatar: { width: 12, height: 12, borderRadius: radius.sm },
   cardLessonText: { fontSize: 9, color: c.textSub, flexShrink: 1 },
