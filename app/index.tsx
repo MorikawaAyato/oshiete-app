@@ -862,13 +862,15 @@ export default function HomeScreen() {
               <View style={styles.photoActions}>
                 {pendingImages.length < MAX_IMAGES && (
                   <>
-                    <TouchableOpacity style={styles.photoActionBtn} onPress={() => openPicker('add')}>
+                    <TouchableOpacity style={[styles.photoActionBtn, analyzing && styles.photoActionBtnDisabled]} onPress={() => openPicker('add')} disabled={analyzing}>
                       <Text style={styles.photoActionText}>＋ 写真を追加する</Text>
                     </TouchableOpacity>
                     <View style={styles.photoActionDivider} />
                   </>
                 )}
-                <TouchableOpacity style={styles.photoActionBtn} onPress={() => openPicker('replace')}>
+                {/* 読み込み中は変更/追加を無効化：分析は呼び出し時の写真を持ったまま走るため、
+                    途中で差し替えると旧写真の結果が新写真の画面を上書きする競合が起きる（A案） */}
+                <TouchableOpacity style={[styles.photoActionBtn, analyzing && styles.photoActionBtnDisabled]} onPress={() => openPicker('replace')} disabled={analyzing}>
                   <Text style={styles.photoActionText}>写真を変更する</Text>
                 </TouchableOpacity>
               </View>
@@ -1730,6 +1732,7 @@ const styles = StyleSheet.create({
   },
   photoActionBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, backgroundColor: c.pinkTint },
   photoActionText: { fontSize: 14, color: c.primary, fontWeight: '600' },
+  photoActionBtnDisabled: { opacity: 0.4 },
   photoActionDivider: { width: 1, height: 28, backgroundColor: c.pinkBorder },
 
   // 状態3：分割カード
