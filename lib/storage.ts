@@ -659,3 +659,12 @@ export async function renameGroupInStorage(oldName: string, newName: string): Pr
 export async function deleteGroupFromStorage(groupName: string): Promise<void> {
   await updateHistoryByGroup(groupName, undefined)
 }
+
+// ライブラリのグループ開閉状態（閉じたものだけ記憶）
+const COLLAPSED_GROUPS_KEY = 'oshiete_collapsed_groups'
+export async function loadCollapsedGroups(): Promise<Set<string>> {
+  try { const raw = await AsyncStorage.getItem(COLLAPSED_GROUPS_KEY); return new Set(raw ? (JSON.parse(raw) as string[]) : []) } catch { return new Set() }
+}
+export async function saveCollapsedGroups(keys: Set<string>): Promise<void> {
+  try { await AsyncStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify([...keys])) } catch {}
+}

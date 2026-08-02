@@ -1,7 +1,7 @@
 import {
   View, Text, FlatList, TouchableOpacity, Image, StyleSheet,
   Modal, TextInput, KeyboardAvoidingView, Platform, Pressable,
-  ScrollView, Dimensions, Alert,
+  ScrollView, Dimensions, Alert, LayoutAnimation,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -13,6 +13,7 @@ import {
   renameGroupInStorage, deleteGroupFromStorage, updateHistoryPreview,
   loadUnitProgressMap, unitsFromEntry,
   loadExamDays, examDateLabel, dateKeyAfterDays,
+  loadCollapsedGroups, saveCollapsedGroups,
 } from '@/lib/storage'
 import type { ExamEntry } from '@/lib/storage'
 import type { UnitProgress } from '@/lib/types'
@@ -51,9 +52,21 @@ export default function LibraryScreen() {
   const [createGroupValue, setCreateGroupValue] = useState('')
 
   const [examDays, setExamDays] = useState<Record<string, ExamEntry>>({})
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  // グループ開閉（webと同じ文法：ヘッダー行タップ・状態は端末に記憶・畳んでも選択中の1行は残す=案G）
+  const toggleGroup = (name: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name); else next.add(name)
+      void saveCollapsedGroups(next)
+      return next
+    })
+  }
   useEffect(() => {
     loadUnitProgressMap().then(setUnitProgress)
     void loadExamDays().then(setExamDays)
+    void loadCollapsedGroups().then(setCollapsed)
     Promise.all([loadHistory(), loadSavedGroups()]).then(([h, g]) => {
       setHistory(h)
       // 履歴内のgroupNameがsavedGroupsに含まれていない場合はマージして保存
@@ -227,14 +240,13 @@ export default function LibraryScreen() {
     const examUrgent = !!examEntry && !examEntry.doneAt && examEntry.date <= dateKeyAfterDays(2) && doneUnits < units.length
     return (
       <View style={[styles.card, isActive && styles.cardActive]}>
-        <TouchableOpacity onPress={() => viewItem(item)} activeOpacity={0.85}>
+        {/* リスト行構成（webと同じ）：サムネ72px固定＝文字領域が画面幅に追従し、チップ見切れが構造ごと消える */}
+        <TouchableOpacity onPress={() => viewItem(item)} activeOpacity={0.85} style={styles.cardRowTouch}>
           {item.thumbnails[0] ? (
             <Image source={{ uri: item.thumbnails[0] }} style={styles.cardThumb} />
           ) : (
             <View style={[styles.cardThumb, { backgroundColor: c.pinkBorder, overflow: 'hidden' }]}>
-              <View style={{ position: 'absolute', top: -30, left: 0, right: 0, bottom: -70 }}>
-                <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
-              </View>
+              <Image source={require('../assets/text.webp')} style={{ width: '100%', height: '100%', opacity: 0.9 }} resizeMode="cover" />
             </View>
           )}
           <View style={[styles.cardInfo, isActive && styles.cardInfoActive]}>
@@ -268,7 +280,7 @@ export default function LibraryScreen() {
           onPress={() => openSheet(item)}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <Feather name="more-vertical" size={13} color="white" />
+          <Feather name="more-vertical" size={13} color={c.textSub} />
         </TouchableOpacity>
         {isActive && (
           <View style={styles.activeBadge}>
@@ -331,7 +343,7 @@ export default function LibraryScreen() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                <View style={styles.groupHeader}>
+                <TouchableOpacity style={styles.groupHeader} activeOpacity={0.7} onPress={() => toggleGroup(name)}>
                   <Feather name="folder" size={14} color={c.faint} />
                   <Text style={styles.groupTitle}>{name}</Text>
                   <Text style={styles.groupCount}>{items.length}件</Text>
@@ -350,22 +362,23 @@ export default function LibraryScreen() {
                   >
                     <Feather name="trash-2" size={14} color={c.textSub} />
                   </TouchableOpacity>
-                </View>
-              )}
-              {items.length === 0 ? (
-                <TouchableOpacity onPress={() => router.back()} style={styles.emptySlot}>
-                  <Text style={styles.emptySlotPlus}>＋</Text>
-                  <Text style={styles.emptySlotText}>教材を追加</Text>
+                  <Feather name="chevron-right" size={16} color={c.faint} style={{ transform: [{ rotate: collapsed.has(name) ? '0deg' : '90deg' }] }} />
                 </TouchableOpacity>
-              ) : (
-                <FlatList
-                  data={items}
-                  keyExtractor={item => item.id}
-                  numColumns={3}
-                  scrollEnabled={false}
-                  contentContainerStyle={styles.grid}
-                  renderItem={renderCard}
-                />
+              )}
+              {/* 畳んだら選択中の1行だけ残す（案G）。選択中がなければ完全に畳む */}
+              {(!collapsed.has(name) || items.some((it) => it.id === currentHistoryId)) && (
+                items.length === 0 ? (
+                  <TouchableOpacity onPress={() => router.back()} style={styles.emptySlot}>
+                    <Text style={styles.emptySlotPlus}>＋</Text>
+                    <Text style={styles.emptySlotText}>教材を追加</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.groupItems}>
+                    {(collapsed.has(name) ? items.filter((it) => it.id === currentHistoryId) : items).map((item) => (
+                      <View key={item.id}>{renderCard({ item })}</View>
+                    ))}
+                  </View>
+                )
               )}
             </View>
           ))}
@@ -374,14 +387,9 @@ export default function LibraryScreen() {
               {groups.length > 0 && (
                 <Text style={styles.ungroupedLabel}>未分類</Text>
               )}
-              <FlatList
-                data={ungrouped}
-                keyExtractor={item => item.id}
-                numColumns={3}
-                scrollEnabled={false}
-                contentContainerStyle={styles.grid}
-                renderItem={renderCard}
-              />
+              <View style={styles.groupItems}>
+                {ungrouped.map((item) => <View key={item.id}>{renderCard({ item })}</View>)}
+              </View>
             </View>
           )}
         </ScrollView>
@@ -636,7 +644,7 @@ const styles = StyleSheet.create({
   bodyScroll: { flex: 1 },
   bodyContent: { paddingBottom: 8 },
 
-  groupSection: { marginBottom: 4 },
+  groupSection: { marginBottom: 10, backgroundColor: 'white', borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, overflow: 'hidden' },
   groupHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 16, paddingVertical: 10,
@@ -682,18 +690,17 @@ const styles = StyleSheet.create({
   grid: { paddingHorizontal: 6, paddingBottom: 4 },
 
   card: {
-    width: CARD_W, margin: 3,
     backgroundColor: 'white', borderRadius: radius.md, overflow: 'hidden',
     borderWidth: 2, borderColor: 'transparent',
-    shadowColor: c.faint, shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1, shadowRadius: 3, elevation: 2,
   },
+  cardRowTouch: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 8, paddingRight: 40 },
+  groupItems: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, padding: 6, gap: 6 },
   cardActive: { borderColor: c.primary, shadowColor: c.primary, shadowOpacity: 0.2 },
-  cardThumb: { width: '100%', aspectRatio: 1, backgroundColor: c.border },
+  cardThumb: { width: 72, height: 72, borderRadius: radius.sm, backgroundColor: c.border },
   cardThumbEmpty: { alignItems: 'center', justifyContent: 'center' },
   cardThumbText: { backgroundColor: c.pinkSoft },
   cardThumbIcon: { position: 'absolute', top: 0, left: 0, bottom: 0, right: 0, opacity: 0.55 },
-  cardInfo: { padding: 6, backgroundColor: 'white' },
+  cardInfo: { flex: 1, minWidth: 0 },
   cardInfoActive: { backgroundColor: c.pinkTint },
   cardTitle: { fontSize: 10, fontWeight: '600', color: c.textStrong, lineHeight: 14, minHeight: 28 },
   // cardTitleActive廃止: 選択=白地＋ピンク枠線＋ラベルの原則。タイトルまでピンクにするとピンクの規律（CTA一撃）が緩む
@@ -709,21 +716,21 @@ const styles = StyleSheet.create({
   progressBadgeDone: { backgroundColor: '#d1fae5' },
   progressBadgeText: { fontSize: 9, fontWeight: '700', color: c.textSub },
   progressBadgeTextDone: { color: c.successText },
-  emptySlot: {
-    width: CARD_W, aspectRatio: 1, margin: 3, marginLeft: 9,
+  emptySlot: { // リスト行型（旧: 正方形タイル）
+    margin: 8, paddingVertical: 18,
     borderRadius: radius.md, borderWidth: 2, borderStyle: 'dashed', borderColor: c.border,
-    alignItems: 'center', justifyContent: 'center', gap: 2,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
   },
   emptySlotPlus: { fontSize: 20, color: c.faint, lineHeight: 24 },
   emptySlotText: { fontSize: 10, fontWeight: '600', color: c.textSub },
   cardMenuBtn: {
-    position: 'absolute', top: 4, right: 4,
-    width: 22, height: 22, borderRadius: radius.md,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    position: 'absolute', right: 8, top: '50%', marginTop: -13,
+    width: 26, height: 26, borderRadius: radius.full,
+    backgroundColor: c.bgSub,
     alignItems: 'center', justifyContent: 'center',
   },
   cardMenuDot: { color: 'white', fontSize: 12, lineHeight: 18 },
-  activeBadge: {
+  activeBadge: { // サムネ左上（行型）
     position: 'absolute', top: 4, left: 4,
     backgroundColor: c.primary, borderRadius: radius.sm,
     paddingHorizontal: 5, paddingVertical: 1,
