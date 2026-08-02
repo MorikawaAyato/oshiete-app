@@ -270,7 +270,7 @@ export default function LibraryScreen() {
                 {examStudent && <Image source={examStudent.avatar} style={[styles.cardLessonAvatar, { backgroundColor: examStudent.tint }]} />}
                 <Feather name="file-text" size={11} color={examUrgent ? c.redpen : c.link} />
                 <Text style={[styles.cardExamText, examUrgent && { color: c.redpen }]} numberOfLines={1}>
-                  {examEntry.round > 1 ? '追試' : 'テスト'} {Number(examEntry.date.split('-')[1])}/{Number(examEntry.date.split('-')[2])}
+                  {Number(examEntry.date.split('-')[1])}/{Number(examEntry.date.split('-')[2])}{examEntry.round > 1 ? ' 追試' : ''}
                 </Text>
               </View>
             )}
