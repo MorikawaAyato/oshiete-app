@@ -482,7 +482,8 @@ export default function TrainingScreen() {
         {(() => {
           const listItem = history.find((h) => h.id === cardListMaterialId)
           const listCards = visibleCards(listItem?.factsheet?.cards ?? [], listItem?.factsheet?.hidden)
-          if (!listItem || listCards.length === 0) return <View />
+          // 空でも透明な壁にしない（Modalはvisibleのため、素のViewを返すと全画面の見えない壁になる）
+          if (!listItem || listCards.length === 0) return <Pressable style={styles.listOverlay} onPress={() => setCardListMaterialId(null)} />
           // 状態は2軸：確認の軸（確認済み/未確認）と判定の印（まだ）。ピルは「まだ」「未確認」だけに
           // 付け、確認済みで印なしは無印＝正常状態にする（「まだ」も確認済みなので3分割ラベルは矛盾する）
           const statusOf = (cd: QACard) => drillPendingKeys.has(drillKey(cd)) ? 'mada' : cardProgressMap[drillKey(cd)] ? 'seen' : 'none'
@@ -509,7 +510,10 @@ export default function TrainingScreen() {
                     <Text style={styles.listClose}>×</Text>
                   </TouchableOpacity>
                 </View>
-                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
+                {/* flex:1 は高さ未確定の親（maxHeightのみのシート）内で高さ0に潰れる（実機バグ：
+                    ヘッダーとCTAだけ表示されカード一覧が消えた）。flexShrink:1＝内容ぶん伸び、
+                    シートの上限に当たったら縮んでスクロールになる */}
+                <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
                   {groups.map((g, gi) => (
                     <View key={gi} style={{ marginTop: 10 }}>
                       {!!g.title && <Text style={styles.listSecLabel}>{secs.length > 0 ? `${gi + 1}. ` : ''}{g.title}</Text>}
