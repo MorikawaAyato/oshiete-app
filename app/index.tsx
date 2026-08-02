@@ -548,7 +548,8 @@ export default function HomeScreen() {
         }
       }
 
-      const title = res.imageDescription.split('。')[0].slice(0, 30)
+      // タイトルはAIが直接返すものを優先（notes経由の導出は廃止＝メモ生成停止に伴う）。フォールバックは従来どおり本文の先頭
+      const title = res.title || res.imageDescription.split('。')[0].slice(0, 30)
       const saved = await saveToHistory({
         title,
         imageDescription: res.imageDescription,

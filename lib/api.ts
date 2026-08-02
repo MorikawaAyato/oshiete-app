@@ -101,7 +101,7 @@ export async function analyzeText(
 export async function analyzeImages(
   images: { data: string; mimeType: string }[],
   existingGroups: { groupName: string; titles: string[] }[] = [],
-): Promise<{ imageDescription: string; notes: string; suggestedGroupName?: string; error?: string }> {
+): Promise<{ imageDescription: string; title?: string; notes: string; suggestedGroupName?: string; error?: string }> {
   return postJson('/api/analyze', { images, existingGroups }, 120_000)
 }
 
