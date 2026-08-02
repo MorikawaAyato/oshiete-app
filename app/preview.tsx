@@ -89,9 +89,13 @@ export default function PreviewScreen() {
     const newAnswer = editCardValue.trim()
     setEditingCardIdx(null)
     if (!viewId || !newAnswer || !bankFs?.cards) return
-    const res = applyCardCorrection(bankFs.cards, bankFs.errata, cardIdx, newAnswer)
+    // 差分は保存済みの最新版に載せる：画面を開いた時点のスナップショットで上書きすると、
+    // 裏の追補や連続タップの直前の編集が消えるため（教材が消えていたら破棄）
+    const base = await loadFactsheet(viewId)
+    if (!base?.cards?.length) return
+    const res = applyCardCorrection(base.cards, base.errata, cardIdx, newAnswer)
     if (res) {
-      const nextFs = { ...bankFs, cards: res.cards, facts: res.facts, errata: res.errata }
+      const nextFs = { ...base, cards: res.cards, facts: res.facts, errata: res.errata }
       await updateHistoryFactsheet(viewId, nextFs)
       setBankFs(nextFs)
       setPrincipalToast('訂正を教材に反映しました')
@@ -114,9 +118,12 @@ export default function PreviewScreen() {
   // ✎修正を取り消して原文に戻す
   const undoCorrectionFromView = async (source: string) => {
     if (!viewId || !bankFs?.cards) return
-    const res = undoCardCorrection(bankFs.cards, bankFs.errata, source)
+    // 保存済みの最新版に対して取り消す（スナップショット上書きだと他の編集・追補が消える）
+    const base = await loadFactsheet(viewId)
+    if (!base?.cards?.length) return
+    const res = undoCardCorrection(base.cards, base.errata, source)
     if (res) {
-      const nextFs = { ...bankFs, cards: res.cards, facts: res.facts, errata: res.errata }
+      const nextFs = { ...base, cards: res.cards, facts: res.facts, errata: res.errata }
       await updateHistoryFactsheet(viewId, nextFs)
       setBankFs(nextFs)
       setPrincipalToast('元に戻しました')
@@ -127,21 +134,24 @@ export default function PreviewScreen() {
   // カードの非表示/復帰（先生の取捨選択。物理削除せずhiddenオーバーレイ＝進度を壊さない・可逆）
   const toggleHiddenFromView = async (source: string) => {
     if (!viewId || !bankFs?.cards) return
-    if (isCardHidden(bankFs, source)) {
-      const hidden = unhideCard(bankFs, source)
+    // 保存済みの最新版に対して切り替える（スナップショット上書きだと他の編集・追補が消える）
+    const base = await loadFactsheet(viewId)
+    if (!base?.cards?.length) return
+    if (isCardHidden(base, source)) {
+      const hidden = unhideCard(base, source)
       if (!hidden) return
-      const nextFs = { ...bankFs, hidden }
+      const nextFs = { ...base, hidden }
       await updateHistoryFactsheet(viewId, nextFs)
       setBankFs(nextFs)
       setPrincipalToast('カードを戻しました')
     } else {
-      const hidden = hideCard(bankFs, source)
+      const hidden = hideCard(base, source)
       if (!hidden) {
         setPrincipalToast('最後の1枚は外せません')
         setTimeout(() => setPrincipalToast(null), 2400)
         return
       }
-      const nextFs = { ...bankFs, hidden }
+      const nextFs = { ...base, hidden }
       await updateHistoryFactsheet(viewId, nextFs)
       setBankFs(nextFs)
       setPrincipalToast('カードを外しました（授業・研修に出なくなります）')

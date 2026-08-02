@@ -173,11 +173,16 @@ export default function ChatScreen() {
     }
   }, [])
 
+  // 授業の世代番号：await（プリント生成・分類API）中に退出・リセットされた場合、
+  // await後の継続処理（セッション確定・記録・セリフ配信）を捨てるためのガード
+  const lessonGen = useRef(0)
+
   // 授業開始：選ばれた単元のカードからプリントを作り、答案（正誤つき）を生成して教室へ
   const initPrint = async () => {
     if (!student) return
     setStartError(false)
     setStarting(true)
+    const gen = lessonGen.current
     try {
       const factsheet = await loadFactsheet(currentHistoryId)
       const cards = factsheet?.cards ?? []
@@ -214,6 +219,7 @@ export default function ChatScreen() {
         // 誤解素材が未生成（追補の完了前）なら、接続中の演出の裏でサーバに作ってもらう
         (factsheet?.misconceptions?.length ?? 0) === 0 ? factsheet?.facts ?? [] : undefined,
       )
+      if (gen !== lessonGen.current) return // 接続中に退出した授業：結果を適用するとホームに帰った後でセッションが復活する
       // 接続中に作られた誤解素材は保存して使い回す（追補が完了していたら追補側を勝たせるので上書きしない）
       if (res.misconceptions?.length && currentHistoryId) {
         const cur = await loadFactsheet(currentHistoryId)
@@ -495,10 +501,6 @@ export default function ChatScreen() {
   }
 
 
-  // 授業の世代番号：分類APIのawait（最大2.5秒）中に退出・リセットされた場合、
-  // await後の継続処理（記録・セリフ配信）を捨てるためのガード
-  const lessonGen = useRef(0)
-
   const handleBack = () => {
     if (chatMessages.length > 0 && printStage !== 'done') {
       Alert.alert(
@@ -518,7 +520,9 @@ export default function ChatScreen() {
         ],
       )
     } else {
-      if (printStage === 'done') { lessonGen.current++; resetChatSession() }
+      // 接続中（プリント生成のawait待ち）に戻る場合も授業を破棄する：世代を進めないと
+      // 生成完了時に結果が適用され、ホームに帰った後でセッションが復活する
+      if (printStage === 'done' || starting) { lessonGen.current++; resetChatSession() }
       router.back()
     }
   }

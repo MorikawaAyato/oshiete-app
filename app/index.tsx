@@ -94,6 +94,10 @@ export default function HomeScreen() {
   const refineInFlight = useRef<Set<string>>(new Set()) // 網羅追補（フェーズ2）の多重発火防止
   // 授業中の教材ID：授業（＋振り返り）が続いている間は追補をマージしない（単元区切りを足元から動かさない）
   const lessonMaterialRef = useRef<string | null>(null)
+  // 生徒選択の最新値ミラー：バックグラウンド生成の完了（数分後もありうる）時に立てるテスト・メールは、
+  // 開始時の古いクロージャではなく完了時点で選ばれている生徒に帰属させる（Web版と同じ意味論）
+  const selectedStudentIdRef = useRef(selectedStudentId)
+  useEffect(() => { selectedStudentIdRef.current = selectedStudentId }, [selectedStudentId])
   const [inputMode, setInputMode] = useState<'photo' | 'text'>('photo')
   const [textInput, setTextInput] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -330,6 +334,17 @@ export default function HomeScreen() {
       // サーバは生成不能でも200+factsheetなし/カード0で返すことがある。その場合も失敗としてCTAの再試行に回す
       const cardCount = res.factsheet?.cards?.length ?? 0
       if (res.factsheet) {
+        // 適用直前に保存済みの最新状態を確認する（生成は数十秒〜数分かかり、その間に世界が変わる）。
+        // 教材が削除済みなら破棄。既に使えるバンクがある教材（作り直し・格上げ）では、
+        // 生成中に先生が訂正・取捨選択していたら消さないよう破棄し、授業中も単元区切りを
+        // 足元から動かさないため適用しない（初回生成＝バンク無しは常に適用してよい）
+        const latest = (await loadHistory()).find((h) => h.id === histId)
+        if (!latest) return
+        const lfs = latest.factsheet
+        if (lfs?.cards?.length) {
+          if (lfs.errata?.length || lfs.hidden?.length) return
+          if (lessonMaterialRef.current === histId) return
+        }
         await updateHistoryFactsheet(histId, res.factsheet)
         const items = await loadHistory()
         setHistory(items)
@@ -355,7 +370,8 @@ export default function HomeScreen() {
 
   // テストの予定を立てる（まだ無ければ）＋提案メール
   const proposeExamDay = async (histId: string, cardCount: number) => {
-    const student = STUDENTS.find((s) => s.id === selectedStudentId) ?? STUDENTS[0]
+    // refで読む：呼び出し元（バックグラウンド生成・追補）の完了は選択変更をまたぐことがある
+    const student = STUDENTS.find((s) => s.id === selectedStudentIdRef.current) ?? STUDENTS[0]
     const entry = await ensureExamDay(histId, (await unitsFor(histId, cardCount)).length, student.id)
     if (entry) {
       const title = (await loadHistory()).find((h) => h.id === histId)?.title ?? '教材'
@@ -743,7 +759,8 @@ export default function HomeScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>今日の仕事</Text>
             {hasContent && (
-              <TouchableOpacity onPress={clearSelection} style={styles.sectionClearPill}>
+              /* 読み込み中は選択解除させない：解析完了時のsetStateが後勝ちで選択を復活させるため（教材タップの同ガードと同じ理由） */
+              <TouchableOpacity onPress={clearSelection} style={[styles.sectionClearPill, analyzing && styles.photoActionBtnDisabled]} disabled={analyzing}>
                 <Text style={styles.sectionClear}>選択をやめる ×</Text>
               </TouchableOpacity>
             )}

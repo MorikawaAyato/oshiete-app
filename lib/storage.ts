@@ -470,20 +470,33 @@ export async function saveMail(msgs: MailMessage[]): Promise<void> {
   try { await AsyncStorage.setItem(MAIL_KEY, JSON.stringify(msgs)) } catch {}
 }
 
+// MAIL_KEYの読み書き（load→save）は直列化する：並行実行だと片方のloadがもう片方のsave前の
+// 古い一覧を掴み、後勝ちの上書きで追加・既読が消えるため。失敗しても列は止めない
+let mailQueue: Promise<unknown> = Promise.resolve()
+function withMailQueue<T>(work: () => Promise<T>): Promise<T> {
+  const run = mailQueue.then(work, work)
+  mailQueue = run.then(() => undefined, () => undefined)
+  return run
+}
+
 export async function addMail(msg: MailMessage): Promise<MailMessage[]> {
-  const current = await loadMail()
-  const updated = [msg, ...current]
-  await saveMail(updated)
-  enqueue({ t: 'progress', p: { mails: { add: [msg] } } })
-  return updated
+  return withMailQueue(async () => {
+    const current = await loadMail()
+    const updated = [msg, ...current]
+    await saveMail(updated)
+    enqueue({ t: 'progress', p: { mails: { add: [msg] } } })
+    return updated
+  })
 }
 
 export async function markMailRead(id: string): Promise<MailMessage[]> {
-  const current = await loadMail()
-  const updated = current.map((m) => m.id === id ? { ...m, read: true } : m)
-  await saveMail(updated)
-  enqueue({ t: 'progress', p: { mails: { markRead: [id] } } })
-  return updated
+  return withMailQueue(async () => {
+    const current = await loadMail()
+    const updated = current.map((m) => m.id === id ? { ...m, read: true } : m)
+    await saveMail(updated)
+    enqueue({ t: 'progress', p: { mails: { markRead: [id] } } })
+    return updated
+  })
 }
 
 // 昇進試験の案内メールを送った称号名
