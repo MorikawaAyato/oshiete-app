@@ -12,7 +12,9 @@ import {
   loadSavedGroups, saveGroupsList, moveItemToGroup,
   renameGroupInStorage, deleteGroupFromStorage, updateHistoryPreview,
   loadUnitProgressMap, unitsFromEntry,
+  loadExamDays, examDateLabel, dateKeyAfterDays,
 } from '@/lib/storage'
+import type { ExamEntry } from '@/lib/storage'
 import type { UnitProgress } from '@/lib/types'
 import { fetchPreviewContent } from '@/lib/api'
 import type { HistoryItem } from '@/lib/types'
@@ -48,8 +50,10 @@ export default function LibraryScreen() {
   const [creatingGroup, setCreatingGroup] = useState(false)
   const [createGroupValue, setCreateGroupValue] = useState('')
 
+  const [examDays, setExamDays] = useState<Record<string, ExamEntry>>({})
   useEffect(() => {
     loadUnitProgressMap().then(setUnitProgress)
+    void loadExamDays().then(setExamDays)
     Promise.all([loadHistory(), loadSavedGroups()]).then(([h, g]) => {
       setHistory(h)
       // 履歴内のgroupNameがsavedGroupsに含まれていない場合はマージして保存
@@ -221,6 +225,10 @@ export default function LibraryScreen() {
     const units = unitsFromEntry(entry, cardCount)
     const statuses = entry && entry.count === cardCount ? entry.status : {}
     const doneUnits = units.filter((_, i) => statuses[i] === 'done').length
+    // 生徒のテスト：日付だけだと「誰のテストか」が見えないため、顔つきの日付にする（色はスカイ=テスト専用の意味色）
+    const examEntry = examDays[item.id]
+    const examStudent = examEntry && !examEntry.doneAt ? STUDENTS.find((st) => st.id === examEntry.studentId) : null
+    const examUrgent = !!examEntry && !examEntry.doneAt && examEntry.date <= dateKeyAfterDays(2) && doneUnits < units.length
     return (
       <View style={[styles.card, isActive && styles.cardActive]}>
         <TouchableOpacity onPress={() => viewItem(item)} activeOpacity={0.85}>
@@ -252,11 +260,20 @@ export default function LibraryScreen() {
               {units.length > 0 && (
                 <View style={[styles.progressBadge, doneUnits === units.length && !item.factsheet?.partial && styles.progressBadgeDone]}>
                   <Text style={[styles.progressBadgeText, doneUnits === units.length && !item.factsheet?.partial && styles.progressBadgeTextDone]}>
-                    {item.factsheet?.partial ? '整理中…' : `${doneUnits === units.length ? '✓ ' : ''}${doneUnits}/${units.length}`}
+                    {item.factsheet?.partial ? '仕上げ中…' : `${doneUnits === units.length ? '✓ ' : ''}${doneUnits}/${units.length}`}
                   </Text>
                 </View>
               )}
             </View>
+            {examEntry && !examEntry.doneAt && (
+              <View style={styles.cardExamRow}>
+                {examStudent && <Image source={examStudent.avatar} style={[styles.cardLessonAvatar, { backgroundColor: examStudent.tint }]} />}
+                <Feather name="file-text" size={11} color={examUrgent ? c.redpen : c.link} />
+                <Text style={[styles.cardExamText, examUrgent && { color: c.redpen }]} numberOfLines={1}>
+                  テスト：{examDateLabel(examEntry.date)}{examEntry.round > 1 ? '（追試）' : ''}
+                </Text>
+              </View>
+            )}
           </View>
         </TouchableOpacity>
         <TouchableOpacity
@@ -697,6 +714,8 @@ const styles = StyleSheet.create({
   cardDateFaint: { fontSize: 9, color: c.textSub, marginTop: 2 },
   cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   cardLessonRow: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 1 },
+  cardExamRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  cardExamText: { fontSize: 10, fontWeight: '700', color: c.link, flexShrink: 1 },
   cardLessonAvatar: { width: 12, height: 12, borderRadius: radius.sm },
   cardLessonText: { fontSize: 9, color: c.textSub, flexShrink: 1 },
   progressBadge: { marginLeft: 'auto', backgroundColor: c.bgSub, borderRadius: radius.full, paddingHorizontal: 5, paddingVertical: 1 },
