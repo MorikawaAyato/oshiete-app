@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
   headerCountMax: { color: c.faint },
 
   bodyScroll: { flex: 1 },
-  bodyContent: { paddingBottom: 8 },
+  bodyContent: { paddingTop: 12, paddingBottom: 8 },
 
   groupSection: { marginBottom: 12, backgroundColor: 'white', borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, overflow: 'hidden' },
   groupHeader: {
