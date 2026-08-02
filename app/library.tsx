@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
   bodyScroll: { flex: 1 },
   bodyContent: { paddingBottom: 8 },
 
-  groupSection: { marginBottom: 10, backgroundColor: 'white', borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, overflow: 'hidden' },
+  groupSection: { marginBottom: 12, backgroundColor: 'white', borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, overflow: 'hidden' },
   groupHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 16, paddingVertical: 10,
